@@ -33,14 +33,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             // Lấy token từ header của request
             String jwt = getJwtFromRequest(request);
 
-            // Nếu token hợp lệ, cho phép đi tiếp vào Controller
+            // Nếu token hợp lệ về mặt cấu trúc và thời hạn
             if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt)) {
 
                 // Giải mã lấy email
                 String email = tokenProvider.getEmailFromJwt(jwt);
 
-                // Load thông tin user (kèm theo Role) từ database
+                // Load thông tin user từ database (sẽ tự động map cột is_active vào isEnabled)
                 UserDetails userDetails = customUserDetailsService.loadUserByUsername(email);
+
+                // Kiểm tra xem tài khoản có đang bị khóa không
+                if (!userDetails.isEnabled()) {
+                    // Ném ngoại lệ để dừng việc cấp quyền.
+                    // Request này sẽ rớt xuống catch, không được gán vào SecurityContext
+                    // và bị JwtAuthenticationEntryPoint tóm cổ trả về 401 Unauthorized.
+                    throw new RuntimeException("Tài khoản đã bị khóa. Token cũ không còn hiệu lực!");
+                }
 
                 // Báo cho Spring Security biết là "Người này hợp lệ, cho vào!"
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
