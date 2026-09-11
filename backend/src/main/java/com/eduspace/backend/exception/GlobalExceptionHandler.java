@@ -2,6 +2,9 @@ package com.eduspace.backend.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -15,10 +18,30 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+	@ExceptionHandler(BadCredentialsException.class)
+	public ResponseEntity<ApiError> handleBadCredentials(BadCredentialsException ex) {
+		return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+				.body(new ApiError("UNAUTHORIZED", "Sai email hoặc mật khẩu."));
+	}
+
+	@ExceptionHandler(AuthenticationException.class)
+	public ResponseEntity<ApiError> handleAuthentication(AuthenticationException ex) {
+		return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+				.body(new ApiError("UNAUTHORIZED", "Vui lòng đăng nhập để thực hiện chức năng này."));
+	}
+
+	@ExceptionHandler(AccessDeniedException.class)
+	public ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException ex) {
+		return ResponseEntity.status(HttpStatus.FORBIDDEN)
+				.body(new ApiError("FORBIDDEN", "Bạn không có quyền truy cập tài nguyên này."));
+	}
+
 	@ExceptionHandler(MethodArgumentNotValidException.class)
 	public ResponseEntity<ApiError> handleValidation(MethodArgumentNotValidException ex) {
+		String errorMessage = ex.getBindingResult().getAllErrors().get(0).getDefaultMessage();
+
 		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-				.body(new ApiError("VALIDATION_ERROR", "Du lieu dau vao khong hop le."));
+				.body(new ApiError("VALIDATION_ERROR", errorMessage));
 	}
 
 	@ExceptionHandler(Exception.class)
