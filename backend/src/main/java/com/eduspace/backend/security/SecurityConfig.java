@@ -28,8 +28,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 public class SecurityConfig {
 
 	private final JwtAuthenticationFilter jwtAuthenticationFilter;
+	private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
-	public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+	public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
+	                      JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint) {
+		this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
 		this.jwtAuthenticationFilter = jwtAuthenticationFilter;
 	}
 
@@ -42,6 +45,7 @@ public class SecurityConfig {
 	SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 		http.csrf(csrf -> csrf.disable())
 				.cors(cors -> cors.configurationSource(corsConfigurationSource()))
+				.exceptionHandling(exception -> exception.authenticationEntryPoint(jwtAuthenticationEntryPoint))
 				.authorizeHttpRequests(auth -> auth.requestMatchers("/health", "/api/auth/login").permitAll()
 						.anyRequest().authenticated())
 		        .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
