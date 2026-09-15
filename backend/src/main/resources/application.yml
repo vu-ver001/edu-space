@@ -2,9 +2,9 @@ spring:
   application:
     name: eduspace-backend
   datasource:
-    url: jdbc:mysql://localhost:3306/eduspace?createDatabaseIfNotExist=true&serverTimezone=Asia/Ho_Chi_Minh&characterEncoding=UTF-8
-    username: root
-    password: 24112005
+    url: jdbc:mysql://localhost:3307/eduspace?createDatabaseIfNotExist=true&serverTimezone=Asia/Ho_Chi_Minh&characterEncoding=UTF-8
+    username: eduspace
+    password: eduspace
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
@@ -15,4 +15,4 @@ spring:
         format_sql: true
 
 server:
-  port: 8080
+  port: 8081
