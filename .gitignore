@@ -24,3 +24,5 @@ Thumbs.db
 
 # Docker data
 data/
+docs/
+test/
