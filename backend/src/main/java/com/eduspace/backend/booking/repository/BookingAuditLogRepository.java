@@ -14,7 +14,6 @@ import com.eduspace.backend.booking.entity.BookingAuditLog;
 @Repository
 public interface BookingAuditLogRepository extends JpaRepository<BookingAuditLog, Long> {
 
-    @Query("SELECT bal FROM BookingAuditLog bal LEFT JOIN FETCH bal.performedBy " +
-           "WHERE bal.bookingId = :bookingId ORDER BY bal.performedAt DESC")
+    @Query("SELECT bal FROM BookingAuditLog bal WHERE bal.bookingId = :bookingId ORDER BY bal.performedAt DESC")
     List<BookingAuditLog> findByBookingIdOrderByPerformedAtDesc(@Param("bookingId") Long bookingId);
 }
