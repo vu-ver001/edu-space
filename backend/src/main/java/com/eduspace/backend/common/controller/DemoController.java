@@ -1,4 +1,4 @@
-package com.eduspace.backend.controller;
+package com.eduspace.backend.common.controller;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;

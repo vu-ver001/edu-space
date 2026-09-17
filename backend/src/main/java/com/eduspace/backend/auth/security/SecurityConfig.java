@@ -1,4 +1,4 @@
-package com.eduspace.backend.security;
+package com.eduspace.backend.auth.security;
 
 import java.util.List;
 import org.springframework.context.annotation.Bean;
@@ -41,6 +41,18 @@ public class SecurityConfig {
 	@Bean
 	SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 		http.csrf(csrf -> csrf.disable())
+		        .sessionManagement(session -> session.sessionCreationPolicy(org.springframework.security.config.http.SessionCreationPolicy.STATELESS))
+		        .exceptionHandling(errors -> errors
+		                .authenticationEntryPoint((request, response, error) -> {
+		                    response.setStatus(401);
+		                    response.setContentType("application/json;charset=UTF-8");
+		                    response.getWriter().write("{\"code\":\"UNAUTHENTICATED\",\"message\":\"Bạn cần đăng nhập.\",\"details\":[]}");
+		                })
+		                .accessDeniedHandler((request, response, error) -> {
+		                    response.setStatus(403);
+		                    response.setContentType("application/json;charset=UTF-8");
+		                    response.getWriter().write("{\"code\":\"FORBIDDEN\",\"message\":\"Bạn không có quyền truy cập.\",\"details\":[]}");
+		                }))
 				.cors(cors -> cors.configurationSource(corsConfigurationSource()))
 				.authorizeHttpRequests(auth -> auth.requestMatchers("/health", "/api/auth/login").permitAll()
 						.anyRequest().authenticated())

@@ -1,4 +1,4 @@
-package com.eduspace.backend.dto;
+package com.eduspace.backend.auth.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

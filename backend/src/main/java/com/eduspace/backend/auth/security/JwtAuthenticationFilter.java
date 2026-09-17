@@ -1,4 +1,4 @@
-package com.eduspace.backend.security;
+package com.eduspace.backend.auth.security;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -41,6 +41,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 // Load thông tin user (kèm theo Role) từ database
                 UserDetails userDetails = customUserDetailsService.loadUserByUsername(email);
+                if (!userDetails.isEnabled() || !userDetails.isAccountNonLocked()) {
+                    throw new org.springframework.security.authentication.DisabledException("Tài khoản không khả dụng");
+                }
 
                 // Báo cho Spring Security biết là "Người này hợp lệ, cho vào!"
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
@@ -50,6 +53,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         } catch (Exception ex) {
+            SecurityContextHolder.clearContext();
             System.out.println("Lỗi xác thực user trong filter: " + ex.getMessage());
         }
 

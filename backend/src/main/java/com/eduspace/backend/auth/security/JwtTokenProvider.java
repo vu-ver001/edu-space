@@ -1,4 +1,4 @@
-package com.eduspace.backend.security;
+package com.eduspace.backend.auth.security;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;

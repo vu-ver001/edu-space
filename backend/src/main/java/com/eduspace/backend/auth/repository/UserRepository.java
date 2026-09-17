@@ -1,6 +1,6 @@
-package com.eduspace.backend.repository;
+package com.eduspace.backend.auth.repository;
 
-import com.eduspace.backend.entity.User;
+import com.eduspace.backend.auth.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import java.util.Optional;

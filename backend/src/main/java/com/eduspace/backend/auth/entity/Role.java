@@ -1,4 +1,4 @@
-package com.eduspace.backend.entity;
+package com.eduspace.backend.auth.entity;
 
 public enum Role {
     STUDENT,

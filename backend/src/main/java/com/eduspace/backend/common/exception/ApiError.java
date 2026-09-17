@@ -1,4 +1,4 @@
-package com.eduspace.backend.exception;
+package com.eduspace.backend.common.exception;
 
 import java.util.Collections;
 import java.util.List;

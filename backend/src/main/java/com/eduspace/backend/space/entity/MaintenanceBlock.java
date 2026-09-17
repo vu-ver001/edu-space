@@ -1,4 +1,4 @@
-package com.eduspace.backend.entity;
+package com.eduspace.backend.space.entity;
 
 import com.eduspace.backend.space.entity.Space;
 

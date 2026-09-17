@@ -1,8 +1,8 @@
-package com.eduspace.backend.config;
+package com.eduspace.backend.auth.config;
 
-import com.eduspace.backend.entity.Role;
-import com.eduspace.backend.entity.User;
-import com.eduspace.backend.repository.UserRepository;
+import com.eduspace.backend.auth.entity.Role;
+import com.eduspace.backend.auth.entity.User;
+import com.eduspace.backend.auth.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;

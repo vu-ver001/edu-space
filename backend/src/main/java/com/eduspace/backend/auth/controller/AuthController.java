@@ -1,9 +1,9 @@
-package com.eduspace.backend.controller;
+package com.eduspace.backend.auth.controller;
 
 import jakarta.validation.Valid;
-import com.eduspace.backend.dto.AuthResponse;
-import com.eduspace.backend.dto.LoginRequest;
-import com.eduspace.backend.security.JwtTokenProvider;
+import com.eduspace.backend.auth.dto.response.AuthResponse;
+import com.eduspace.backend.auth.dto.request.LoginRequest;
+import com.eduspace.backend.auth.security.JwtTokenProvider;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;

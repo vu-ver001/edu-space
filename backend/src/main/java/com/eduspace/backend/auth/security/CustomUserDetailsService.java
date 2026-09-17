@@ -1,7 +1,7 @@
-package com.eduspace.backend.security;
+package com.eduspace.backend.auth.security;
 
-import com.eduspace.backend.entity.User;
-import com.eduspace.backend.repository.UserRepository;
+import com.eduspace.backend.auth.entity.User;
+import com.eduspace.backend.auth.repository.UserRepository;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -33,6 +33,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         return new org.springframework.security.core.userdetails.User(
                 user.getEmail(),
                 user.getPassword(),
+                user.isActive(), true, true, true,
                 Collections.singleton(authority)
         );
     }

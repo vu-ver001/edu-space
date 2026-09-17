@@ -1,4 +1,4 @@
-package com.eduspace.backend.security;
+package com.eduspace.backend.auth.security;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;

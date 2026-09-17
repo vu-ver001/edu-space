@@ -1,4 +1,4 @@
-package com.eduspace.backend.dto;
+package com.eduspace.backend.auth.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
