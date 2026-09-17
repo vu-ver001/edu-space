@@ -10,6 +10,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class RejectBookingRequest {
 
-    @NotBlank(message = "Lý do từ chối không được để trống")
+    @NotBlank(message = "Lý do từ chối không được để trống theo quy tắc R-20")
     private String rejectReason;
 }

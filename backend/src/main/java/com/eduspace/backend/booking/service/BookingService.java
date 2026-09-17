@@ -290,6 +290,11 @@ public class BookingService {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> BusinessException.notFound("BOOKING_NOT_FOUND", "Không tìm thấy booking với ID: " + id));
 
+        Long currentUserId = resolveStudentId(userEmail);
+        if (!userEmail.contains("staff") && !userEmail.contains("admin") && !booking.getStudentId().equals(currentUserId)) {
+            throw BusinessException.forbidden("FORBIDDEN_CANCEL", "Bạn không có quyền hủy booking của người khác");
+        }
+
         if (booking.getStatus() != BookingStatus.PENDING_APPROVAL && booking.getStatus() != BookingStatus.CONFIRMED) {
             throw BusinessException.badRequest("CANNOT_CANCEL_STATUS", 
                     "Không thể hủy booking ở trạng thái: " + booking.getStatus().getDisplayName());
