@@ -119,6 +119,18 @@ public class BookingController {
         return ResponseEntity.ok(bookingService.getPendingBookingsForStaff());
     }
 
+    /**
+     * Tra cứu Timeline lịch phòng theo khoảng thời gian (phục vụ hiển thị giao diện Space Timeline cho Staff/SV):
+     * GET /api/bookings/timeline?spaceId=1&from=2026-09-18T00:00:00&to=2026-09-18T23:59:59
+     */
+    @GetMapping("/timeline")
+    public ResponseEntity<List<BookingResponse>> getSpaceTimeline(
+            @RequestParam Long spaceId,
+            @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime from,
+            @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime to) {
+        return ResponseEntity.ok(bookingService.getSpaceTimeline(spaceId, from, to));
+    }
+
     private String resolveCurrentUserEmail(String fallbackEmail) {
         String authEmail = SecurityUtils.getCurrentUserEmail();
         if (authEmail != null && !authEmail.isBlank() && !"anonymousUser".equalsIgnoreCase(authEmail)) {

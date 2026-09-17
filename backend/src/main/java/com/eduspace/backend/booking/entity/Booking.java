@@ -42,6 +42,9 @@ public class Booking {
     @Column(name = "selected_seats", length = 255)
     private String selectedSeats;
 
+    @Column(name = "table_id")
+    private Long tableId;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     @Builder.Default

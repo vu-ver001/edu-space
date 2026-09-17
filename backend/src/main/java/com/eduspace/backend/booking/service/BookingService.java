@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import com.eduspace.backend.booking.dto.request.CreateBookingRequest;
@@ -26,12 +27,14 @@ import com.eduspace.backend.booking.repository.BookingRepository;
 import com.eduspace.backend.booking.repository.StudentScheduleRepository;
 import com.eduspace.backend.common.exception.BusinessException;
 import com.eduspace.backend.security.SecurityUtils;
+import com.eduspace.backend.space.entity.SpaceTable;
+import com.eduspace.backend.space.repository.SpaceTableRepository;
 
 /**
  * Phân hệ Quản lý Đặt chỗ Lõi (Module M04).
  * Phụ trách: Nguyễn Thị Khánh Vân (Lead kỹ thuật).
  * 
- * Hoàn toàn độc lập, không phụ thuộc mã nguồn của thành viên khác.
+ * Hỗ trợ đầy đủ các phương thức đặt: WHOLE_SPACE, PER_SEAT, PER_TABLE.
  */
 @Service
 @RequiredArgsConstructor
@@ -42,6 +45,7 @@ public class BookingService {
     private final BookingAuditLogRepository auditLogRepository;
     private final StudentScheduleRepository studentScheduleRepository;
     private final AvailabilityService availabilityService;
+    private final SpaceTableRepository spaceTableRepository;
 
     /**
      * API Tạo booking với 10 BƯỚC VALIDATE TUẦN TỰ BẮT BUỘC (02_Yeu_cau_logic §4.2):
@@ -93,16 +97,82 @@ public class BookingService {
         boolean isWholeSpace = !isPerSeat && !isPerTable;
 
         List<String> requestedSeats = request.getSelectedSeats();
-        if (isWholeSpace && requestedSeats != null && !requestedSeats.isEmpty()) {
-            throw BusinessException.badRequest("SEAT_SELECTION_NOT_ALLOWED", 
-                    "Không gian loại [" + space.getSpaceTypeName() + "] chỉ áp dụng đặt trọn gói toàn bộ không gian, không hỗ trợ chọn vị trí ghế/bàn riêng lẻ.");
+        Long requestedTableId = request.getTableId();
+
+        if (isWholeSpace && ((requestedSeats != null && !requestedSeats.isEmpty()) || requestedTableId != null)) {
+            throw BusinessException.badRequest("SELECTION_NOT_ALLOWED", 
+                    "Không gian loại [" + space.getSpaceTypeName() + "] chỉ áp dụng đặt trọn gói toàn bộ không gian, không hỗ trợ chọn vị trí ghế hoặc bàn riêng lẻ.");
+        }
+
+        SpaceTable targetTable = null;
+        if (isPerTable) {
+            if (requestedTableId == null) {
+                throw BusinessException.badRequest("TABLE_REQUIRED", 
+                        "Không gian loại [" + space.getSpaceTypeName() + "] yêu cầu chọn bàn cụ thể, vui lòng chọn mã bàn.");
+            }
+            if (spaceTableRepository != null) {
+                targetTable = spaceTableRepository.findById(requestedTableId)
+                        .orElseThrow(() -> BusinessException.notFound("TABLE_NOT_FOUND", 
+                                "Không tìm thấy bàn với mã ID: " + requestedTableId));
+                if (!targetTable.getSpace().getId().equals(space.getId())) {
+                    throw BusinessException.badRequest("TABLE_SPACE_MISMATCH", 
+                            "Bàn đã chọn không thuộc không gian " + space.getName());
+                }
+                if (targetTable.getDeletedAt() != null || (targetTable.getStatus() != null && !"AVAILABLE".equalsIgnoreCase(targetTable.getStatus().name()))) {
+                    throw BusinessException.badRequest("TABLE_NOT_AVAILABLE", 
+                            "Bàn [" + targetTable.getTableCode() + "] hiện đang tạm ngưng sử dụng hoặc đang bảo trì.");
+                }
+                if (request.getParticipantCount() > targetTable.getCapacity()) {
+                    throw BusinessException.badRequest("CAPACITY_EXCEEDED", 
+                            "Số người tham gia (" + request.getParticipantCount() + ") vượt quá sức chứa của bàn " + targetTable.getTableCode() + " (" + targetTable.getCapacity() + " chỗ)");
+                }
+            }
         }
 
         // BƯỚC 5: Kiểm tra booking đang chiếm chỗ của phòng
         List<Booking> overlappingSpaceBookings = bookingRepository.findOverlappingSpaceBookings(
                 space.getId(), startTime, endTime, AvailabilityService.OCCUPYING_STATUSES
         );
-        if (requestedSeats != null && !requestedSeats.isEmpty()) {
+
+        if (isPerTable) {
+            // 5a. Kiểm tra nếu phòng bị đặt trọn gói trong khung giờ
+            boolean wholeRoomOccupied = overlappingSpaceBookings.stream()
+                    .anyMatch(b -> b.getTableId() == null && b.getSelectedSeatsList().isEmpty());
+            if (wholeRoomOccupied) {
+                Booking conflictBooking = overlappingSpaceBookings.stream()
+                        .filter(b -> b.getTableId() == null && b.getSelectedSeatsList().isEmpty())
+                        .findFirst().orElse(overlappingSpaceBookings.get(0));
+                ConflictDetail conflict = ConflictDetail.builder()
+                        .type("BOOKING")
+                        .referenceId(conflictBooking.getId())
+                        .startTime(conflictBooking.getStartTime())
+                        .endTime(conflictBooking.getEndTime())
+                        .description("Toàn bộ phòng đã có người đặt trước trong khung giờ này (Trạng thái: " + conflictBooking.getStatus().getDisplayName() + ")")
+                        .build();
+                throw BusinessException.conflict("BOOKING_TIME_CONFLICT", 
+                        "Phòng đã có lịch đặt toàn bộ trong khoảng thời gian yêu cầu", 
+                        Collections.singletonList(conflict));
+            }
+
+            // 5b. Kiểm tra xung đột chính bàn này
+            Optional<Booking> tableConflictOpt = overlappingSpaceBookings.stream()
+                    .filter(b -> b.getTableId() != null && b.getTableId().equals(requestedTableId))
+                    .findFirst();
+            if (tableConflictOpt.isPresent()) {
+                Booking conflictBooking = tableConflictOpt.get();
+                String tCode = targetTable != null ? targetTable.getTableCode() : ("#" + requestedTableId);
+                ConflictDetail conflict = ConflictDetail.builder()
+                        .type("TABLE_BOOKING")
+                        .referenceId(conflictBooking.getId())
+                        .startTime(conflictBooking.getStartTime())
+                        .endTime(conflictBooking.getEndTime())
+                        .description("Bàn [" + tCode + "] đã có người đặt trong khung giờ này (Trạng thái: " + conflictBooking.getStatus().getDisplayName() + ")")
+                        .build();
+                throw BusinessException.conflict("TABLE_ALREADY_OCCUPIED", 
+                        "Bàn [" + tCode + "] vừa có người đặt trong khung giờ này. Vui lòng chọn bàn khác.",
+                        Collections.singletonList(conflict));
+            }
+        } else if (requestedSeats != null && !requestedSeats.isEmpty()) {
             // 5a. Kiểm tra nếu phòng bị đặt trọn gói trong khung giờ
             boolean wholeRoomOccupied = overlappingSpaceBookings.stream()
                     .anyMatch(b -> b.getSelectedSeatsList().isEmpty());
@@ -122,7 +192,7 @@ public class BookingService {
                         Collections.singletonList(conflict));
             }
 
-            // 5b. Kiểm tra xung đột từng vị trí ghế / bàn (Seat/Table concurrency lock)
+            // 5b. Kiểm tra xung đột từng vị trí ghế (Seat concurrency lock)
             java.util.Set<String> occupiedSeats = overlappingSpaceBookings.stream()
                     .flatMap(b -> b.getSelectedSeatsList().stream())
                     .collect(Collectors.toSet());
@@ -133,12 +203,11 @@ public class BookingService {
 
             if (!conflictingSeats.isEmpty()) {
                 String itemsStr = String.join(", ", conflictingSeats);
-                String unitName = isPerTable ? "bàn" : "ghế";
                 throw BusinessException.conflict("SEAT_ALREADY_OCCUPIED", 
-                        "Vị trí " + unitName + " [" + itemsStr + "] vừa có người đặt trong khung giờ này. Vui lòng chọn vị trí khác.");
+                        "Vị trí ghế [" + itemsStr + "] vừa có người đặt trong khung giờ này. Vui lòng chọn vị trí khác.");
             }
         } else {
-            // Đặt trọn phòng: nếu có bất kỳ booking nào (trọn phòng hoặc từng ghế) thì không thể đặt trọn phòng
+            // Đặt trọn phòng: nếu có bất kỳ booking nào (trọn phòng, theo ghế, hoặc theo bàn) thì không thể đặt trọn phòng
             if (!overlappingSpaceBookings.isEmpty()) {
                 Booking conflictBooking = overlappingSpaceBookings.get(0);
                 ConflictDetail conflict = ConflictDetail.builder()
@@ -229,6 +298,7 @@ public class BookingService {
                 .participantCount(actualParticipantCount)
                 .purpose(request.getPurpose() != null ? request.getPurpose() : "Học tập & Thảo luận")
                 .status(initialStatus)
+                .tableId(requestedTableId)
                 .build();
 
         if (request.getSelectedSeats() != null && !request.getSelectedSeats().isEmpty()) {
@@ -523,6 +593,30 @@ public class BookingService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Lấy danh sách booking của một phòng trong khoảng thời gian cụ thể (hỗ trợ hiển thị Space Timeline).
+     */
+    public List<BookingResponse> getSpaceTimeline(Long spaceId, LocalDateTime fromTime, LocalDateTime toTime) {
+        if (spaceId == null) {
+            throw BusinessException.badRequest("SPACE_ID_REQUIRED", "Mã phòng không được để trống");
+        }
+        if (fromTime == null || toTime == null) {
+            throw BusinessException.badRequest("TIME_RANGE_REQUIRED", "Khoảng thời gian tra cứu không được để trống");
+        }
+        if (!fromTime.isBefore(toTime)) {
+            throw BusinessException.badRequest("INVALID_TIME_RANGE", "Thời điểm bắt đầu phải trước thời điểm kết thúc");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        List<Booking> bookings = bookingRepository.findTimelineBookings(
+                spaceId, fromTime, toTime, AvailabilityService.OCCUPYING_STATUSES
+        );
+
+        return bookings.stream()
+                .map(b -> toBookingResponse(b, now))
+                .collect(Collectors.toList());
+    }
+
     public BookingResponse toBookingResponse(Booking booking, LocalDateTime now) {
         boolean canCancel = (booking.getStatus() == BookingStatus.PENDING_APPROVAL || booking.getStatus() == BookingStatus.CONFIRMED)
                 && now.isBefore(booking.getStartTime());
@@ -540,6 +634,15 @@ public class BookingService {
         boolean requiresApproval = space != null && space.isRequiresApproval();
         String building = space != null ? space.getBuilding() : "Khu vực chính";
         String floor = space != null ? space.getFloor() : "Tầng 1";
+
+        String tableCode = null;
+        if (booking.getTableId() != null && spaceTableRepository != null) {
+            try {
+                tableCode = spaceTableRepository.findById(booking.getTableId())
+                        .map(SpaceTable::getTableCode)
+                        .orElse(null);
+            } catch (Exception ignored) {}
+        }
 
         return BookingResponse.builder()
                 .id(booking.getId())
@@ -568,6 +671,8 @@ public class BookingService {
                 .canCancel(canCancel)
                 .canCheckIn(canCheckIn)
                 .selectedSeats(booking.getSelectedSeatsList())
+                .tableId(booking.getTableId())
+                .tableCode(tableCode)
                 .build();
     }
 
