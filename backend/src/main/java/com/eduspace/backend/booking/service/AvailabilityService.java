@@ -41,6 +41,7 @@ import com.eduspace.backend.checkin.policy.service.PolicyService;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@Transactional(readOnly = true)
 public class AvailabilityService {
 
     private final BookingRepository bookingRepository;
