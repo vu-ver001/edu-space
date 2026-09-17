@@ -55,9 +55,16 @@ public class GlobalExceptionHandler {
 
 	// ================= END KT =================
 
+	@ExceptionHandler(BusinessException.class)
+	public ResponseEntity<ApiError> handleBusinessException(BusinessException ex) {
+		return ResponseEntity.status(ex.getStatus())
+				.body(new ApiError(ex.getCode(), ex.getMessage()));
+	}
+
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<ApiError> handleUnknown(Exception ex) {
 		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
 				.body(new ApiError("INTERNAL_ERROR", "Loi he thong chua xu ly."));
 	}
 }
+
