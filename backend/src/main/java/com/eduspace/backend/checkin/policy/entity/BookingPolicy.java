@@ -1,4 +1,4 @@
-package com.eduspace.backend.booking.entity;
+package com.eduspace.backend.checkin.policy.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -28,6 +28,9 @@ public class BookingPolicy {
 
     @Column(length = 255)
     private String description;
+
+    @Column(name = "updated_by")
+    private String updatedBy;
 
     @Column(name = "updated_at")
     @Builder.Default
