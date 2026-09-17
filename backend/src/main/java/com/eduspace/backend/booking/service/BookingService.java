@@ -25,7 +25,9 @@ import com.eduspace.backend.booking.repository.BookingAuditLogRepository;
 import com.eduspace.backend.booking.repository.BookingRepository;
 import com.eduspace.backend.booking.repository.StudentScheduleRepository;
 import com.eduspace.backend.common.exception.BusinessException;
-import com.eduspace.backend.security.SecurityUtils;
+import com.eduspace.backend.auth.security.SecurityUtils;
+import com.eduspace.backend.auth.repository.UserRepository;
+import com.eduspace.backend.auth.entity.User;
 
 /**
  * Phân hệ Quản lý Đặt chỗ Lõi (Module M04).
@@ -42,6 +44,8 @@ public class BookingService {
     private final BookingAuditLogRepository auditLogRepository;
     private final StudentScheduleRepository studentScheduleRepository;
     private final AvailabilityService availabilityService;
+    private final UserRepository userRepository;
+    private final java.time.Clock checkInClock;
 
     /**
      * API Tạo booking với 10 BƯỚC VALIDATE TUẦN TỰ BẮT BUỘC (02_Yeu_cau_logic §4.2):
@@ -277,6 +281,7 @@ public class BookingService {
     public BookingResponse getBookingById(Long id, String userEmail) {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> BusinessException.notFound("BOOKING_NOT_FOUND", "Không tìm thấy booking với ID: " + id));
+        requireOwnerOrStaff(booking, userEmail);
 
         return toBookingResponse(booking, LocalDateTime.now());
     }
@@ -286,14 +291,10 @@ public class BookingService {
      */
     @Transactional
     public BookingResponse cancelBooking(Long id, String userEmail, String reason) {
-        LocalDateTime now = LocalDateTime.now();
-        Booking booking = bookingRepository.findById(id)
+        Booking booking = bookingRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> BusinessException.notFound("BOOKING_NOT_FOUND", "Không tìm thấy booking với ID: " + id));
-
-        Long currentUserId = resolveStudentId(userEmail);
-        if (!userEmail.contains("staff") && !userEmail.contains("admin") && !booking.getStudentId().equals(currentUserId)) {
-            throw BusinessException.forbidden("FORBIDDEN_CANCEL", "Bạn không có quyền hủy booking của người khác");
-        }
+        requireOwnerOrStaff(booking, userEmail);
+        LocalDateTime now = LocalDateTime.now(checkInClock);
 
         if (booking.getStatus() != BookingStatus.PENDING_APPROVAL && booking.getStatus() != BookingStatus.CONFIRMED) {
             throw BusinessException.badRequest("CANNOT_CANCEL_STATUS", 
@@ -328,9 +329,9 @@ public class BookingService {
      */
     @Transactional
     public BookingResponse approveBooking(Long id, String staffEmail) {
-        LocalDateTime now = LocalDateTime.now();
-        Booking booking = bookingRepository.findById(id)
+        Booking booking = bookingRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> BusinessException.notFound("BOOKING_NOT_FOUND", "Không tìm thấy booking với ID: " + id));
+        LocalDateTime now = LocalDateTime.now(checkInClock);
 
         if (booking.getStatus() != BookingStatus.PENDING_APPROVAL) {
             throw BusinessException.badRequest("INVALID_STATUS_FOR_APPROVAL", 
@@ -338,24 +339,7 @@ public class BookingService {
         }
 
         if (!now.isBefore(booking.getStartTime())) {
-            booking.setStatus(BookingStatus.EXPIRED);
-            booking.setExpiredAt(now);
-            booking.setExpireReason("PENDING_APPROVAL_TIMEOUT");
-            bookingRepository.save(booking);
-
-            BookingAuditLog audit = BookingAuditLog.builder()
-                    .bookingId(booking.getId())
-                    .action(AuditAction.EXPIRE_TIMEOUT)
-                    .performedBy(resolveStudentId(staffEmail))
-                    .performedByEmail(staffEmail)
-                    .performedAt(now)
-                    .reason("PENDING_APPROVAL_TIMEOUT")
-                    .note("Staff cố duyệt khi đã quá giờ bắt đầu -> Tự chuyển sang EXPIRED")
-                    .build();
-            auditLogRepository.save(audit);
-
-            throw BusinessException.conflict("BOOKING_APPROVAL_EXPIRED", 
-                    "Không thể duyệt booking vì đã quá giờ bắt đầu sử dụng. Yêu cầu đã chuyển sang Hết hạn.");
+            throw BusinessException.conflict("BOOKING_APPROVAL_EXPIRED", "Đã quá thời hạn xử lý; scheduler sẽ chuyển booking sang EXPIRED.");
         }
 
         List<Booking> conflicts = bookingRepository.findOverlappingSpaceBookingsExcluding(
@@ -393,9 +377,9 @@ public class BookingService {
             throw BusinessException.badRequest("REJECT_REASON_REQUIRED", "Lý do từ chối không được để trống theo quy tắc R-20");
         }
 
-        LocalDateTime now = LocalDateTime.now();
-        Booking booking = bookingRepository.findById(id)
+        Booking booking = bookingRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> BusinessException.notFound("BOOKING_NOT_FOUND", "Không tìm thấy booking với ID: " + id));
+        LocalDateTime now = LocalDateTime.now(checkInClock);
 
         if (booking.getStatus() != BookingStatus.PENDING_APPROVAL) {
             throw BusinessException.badRequest("INVALID_STATUS_FOR_REJECTION", 
@@ -403,13 +387,7 @@ public class BookingService {
         }
 
         if (!now.isBefore(booking.getStartTime())) {
-            booking.setStatus(BookingStatus.EXPIRED);
-            booking.setExpiredAt(now);
-            booking.setExpireReason("PENDING_APPROVAL_TIMEOUT");
-            bookingRepository.save(booking);
-
-            throw BusinessException.conflict("BOOKING_APPROVAL_EXPIRED", 
-                    "Không thể từ chối booking vì đã quá giờ bắt đầu. Yêu cầu đã chuyển sang Hết hạn.");
+            throw BusinessException.conflict("BOOKING_APPROVAL_EXPIRED", "Đã quá thời hạn xử lý; scheduler sẽ chuyển booking sang EXPIRED.");
         }
 
         booking.setStatus(BookingStatus.REJECTED);
@@ -433,70 +411,6 @@ public class BookingService {
         return toBookingResponse(booking, now);
     }
 
-    /**
-     * Check-in booking.
-     */
-    @Transactional
-    public BookingResponse checkIn(Long id, String userEmail) {
-        LocalDateTime now = LocalDateTime.now();
-        Booking booking = bookingRepository.findById(id)
-                .orElseThrow(() -> BusinessException.notFound("BOOKING_NOT_FOUND", "Không tìm thấy booking với ID: " + id));
-
-        if (booking.getStatus() != BookingStatus.CONFIRMED) {
-            throw BusinessException.badRequest("INVALID_STATUS_FOR_CHECKIN", 
-                    "Chỉ có thể check-in cho booking Đã xác nhận. Trạng thái hiện tại: " + booking.getStatus().getDisplayName());
-        }
-
-        long openMinutes = availabilityService.getPolicyLong("CHECKIN_OPEN_MINUTES", 15L);
-        long graceMinutes = availabilityService.getPolicyLong("CHECKIN_GRACE_MINUTES", 15L);
-
-        LocalDateTime openWindow = booking.getStartTime().minusMinutes(openMinutes);
-        LocalDateTime closeWindow = booking.getStartTime().plusMinutes(graceMinutes);
-
-        if (now.isBefore(openWindow)) {
-            throw BusinessException.badRequest("CHECKIN_TOO_EARLY", 
-                    "Cửa sổ check-in chỉ mở trước giờ bắt đầu " + openMinutes + " phút (mở lúc " + openWindow.toLocalTime() + ")");
-        }
-
-        if (now.isAfter(closeWindow)) {
-            booking.setStatus(BookingStatus.NO_SHOW);
-            bookingRepository.save(booking);
-
-            BookingAuditLog audit = BookingAuditLog.builder()
-                    .bookingId(booking.getId())
-                    .action(AuditAction.NO_SHOW_TIMEOUT)
-                    .performedBy(resolveStudentId(userEmail))
-                    .performedByEmail(userEmail)
-                    .performedAt(now)
-                    .reason("CHECKIN_WINDOW_EXPIRED")
-                    .note("Quá hạn check-in (" + closeWindow.toLocalTime() + ") -> Đánh dấu NO_SHOW")
-                    .build();
-            auditLogRepository.save(audit);
-
-            throw BusinessException.badRequest("CHECKIN_WINDOW_EXPIRED", 
-                    "Đã quá thời hạn cho phép check-in. Booking đã được đánh dấu Vắng mặt (NO_SHOW).");
-        }
-
-        booking.setStatus(BookingStatus.CHECKED_IN);
-        booking.setCheckedInAt(now);
-        booking.setCheckedInBy(resolveStudentId(userEmail));
-        bookingRepository.save(booking);
-
-        BookingAuditLog audit = BookingAuditLog.builder()
-                .bookingId(booking.getId())
-                .action(AuditAction.CHECK_IN)
-                .performedBy(resolveStudentId(userEmail))
-                .performedByEmail(userEmail)
-                .performedAt(now)
-                .reason("Xác nhận có mặt sử dụng phòng")
-                .note("Check-in thành công")
-                .build();
-        auditLogRepository.save(audit);
-
-        log.info("Booking #{} check-in thành công bởi {}", booking.getId(), userEmail);
-        return toBookingResponse(booking, now);
-    }
-
     @Transactional(readOnly = true)
     public List<BookingResponse> getPendingBookingsForStaff() {
         LocalDateTime now = LocalDateTime.now();
@@ -508,6 +422,9 @@ public class BookingService {
 
     @Transactional(readOnly = true)
     public List<BookingAuditLogResponse> getBookingAuditLogs(Long bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> BusinessException.notFound("BOOKING_NOT_FOUND", "Không tìm thấy booking."));
+        requireOwnerOrStaff(booking, SecurityUtils.getCurrentUserEmail());
         return auditLogRepository.findByBookingIdOrderByPerformedAtDesc(bookingId).stream()
                 .map(log -> BookingAuditLogResponse.builder()
                         .id(log.getId())
@@ -544,7 +461,7 @@ public class BookingService {
         return BookingResponse.builder()
                 .id(booking.getId())
                 .studentId(booking.getStudentId())
-                .studentName("Sinh viên #" + booking.getStudentId())
+                .studentName(userRepository.findById(booking.getStudentId()).map(User::getFullName).orElse(null))
                 .studentEmail(resolveEmailFromStudentId(booking.getStudentId()))
                 .spaceId(booking.getSpaceId())
                 .spaceName(spaceName)
@@ -564,6 +481,7 @@ public class BookingService {
                 .expireReason(booking.getExpireReason())
                 .expiredAt(booking.getExpiredAt())
                 .checkedInAt(booking.getCheckedInAt())
+                .checkedInBy(booking.getCheckedInBy())
                 .createdAt(booking.getCreatedAt())
                 .canCancel(canCancel)
                 .canCheckIn(canCheckIn)
@@ -571,19 +489,24 @@ public class BookingService {
                 .build();
     }
 
+    private void requireOwnerOrStaff(Booking booking, String email) {
+        Long actorId = resolveStudentId(email);
+        if (!SecurityUtils.hasRole("STAFF") && !SecurityUtils.hasRole("ADMIN")
+                && !actorId.equals(booking.getStudentId())) {
+            throw BusinessException.forbidden("BOOKING_FORBIDDEN", "Bạn không có quyền truy cập booking này.");
+        }
+    }
+
     private Long resolveStudentId(String email) {
-        if (email == null) return 3L;
-        if (email.contains("staff")) return 2L;
-        if (email.contains("admin")) return 1L;
-        if (email.contains("khanhvan")) return 4L;
-        return 3L; // Lê Minh Tân default student
+        if (email == null || email.isBlank() || "anonymousUser".equals(email)) {
+            throw new BusinessException("UNAUTHENTICATED", "Bạn cần đăng nhập.", org.springframework.http.HttpStatus.UNAUTHORIZED);
+        }
+        return userRepository.findByEmail(email).filter(User::isActive)
+                .map(User::getId)
+                .orElseThrow(() -> new BusinessException("UNAUTHENTICATED", "Tài khoản không khả dụng.", org.springframework.http.HttpStatus.UNAUTHORIZED));
     }
 
     private String resolveEmailFromStudentId(Long id) {
-        if (id == null) return "student@eduspace.vn";
-        if (id == 1L) return "admin@eduspace.vn";
-        if (id == 2L) return "staff@eduspace.vn";
-        if (id == 4L) return "khanhvan@eduspace.vn";
-        return "student@eduspace.vn";
+        return userRepository.findById(id).map(User::getEmail).orElse(null);
     }
 }
