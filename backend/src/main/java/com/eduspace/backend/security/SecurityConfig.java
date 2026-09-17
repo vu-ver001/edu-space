@@ -28,9 +28,15 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 public class SecurityConfig {
 
 	private final JwtAuthenticationFilter jwtAuthenticationFilter;
+	private final CustomAccessDeniedHandler accessDeniedHandler;
+	private final CustomAuthenticationEntryPoint authenticationEntryPoint;
 
-	public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+	public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
+						  CustomAccessDeniedHandler accessDeniedHandler,
+						  CustomAuthenticationEntryPoint authenticationEntryPoint) {
 		this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+		this.accessDeniedHandler = accessDeniedHandler;
+		this.authenticationEntryPoint = authenticationEntryPoint;
 	}
 
 	@Bean
@@ -42,9 +48,16 @@ public class SecurityConfig {
 	SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 		http.csrf(csrf -> csrf.disable())
 				.cors(cors -> cors.configurationSource(corsConfigurationSource()))
-				.authorizeHttpRequests(auth -> auth.requestMatchers("/health", "/api/auth/login").permitAll()
+				.exceptionHandling(ex -> ex
+						.accessDeniedHandler(accessDeniedHandler)
+						.authenticationEntryPoint(authenticationEntryPoint))
+				.authorizeHttpRequests(auth -> auth
+						.requestMatchers("/health", "/api/auth/login", "/api/auth/**").permitAll()
+						.requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/admin/policies", "/api/admin/policies/**").hasRole("ADMIN")
+						.requestMatchers("/api/admin/policies/history").hasRole("ADMIN")
+						.requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "STAFF")
 						.anyRequest().authenticated())
-		        .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 		return http.build();
 	}
 

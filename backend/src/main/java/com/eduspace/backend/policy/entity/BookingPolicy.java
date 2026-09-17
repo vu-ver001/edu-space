@@ -7,8 +7,8 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "booking_policies")
+@Entity(name = "SystemBookingPolicy")
+@Table(name = "system_booking_policies")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

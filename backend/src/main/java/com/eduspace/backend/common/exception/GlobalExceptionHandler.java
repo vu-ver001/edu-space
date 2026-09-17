@@ -45,6 +45,12 @@ public class GlobalExceptionHandler {
 				.body(new ApiError("VALIDATION_ERROR", errorMessage));
 	}
 
+	@ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
+	public ResponseEntity<ApiError> handleTypeMismatch(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException ex) {
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+				.body(new ApiError("INVALID_PARAMETER", "Tham số '" + ex.getName() + "' không đúng định dạng."));
+	}
+
 	// ================= BEGIN KT =================
 
 	@ExceptionHandler(AppException.class)
@@ -59,6 +65,12 @@ public class GlobalExceptionHandler {
 	public ResponseEntity<ApiError> handleBusinessException(BusinessException ex) {
 		return ResponseEntity.status(ex.getStatus())
 				.body(new ApiError(ex.getCode(), ex.getMessage()));
+	}
+
+	@ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+	public ResponseEntity<ApiError> handleNotFound(org.springframework.web.servlet.resource.NoResourceFoundException ex) {
+		return ResponseEntity.status(HttpStatus.NOT_FOUND)
+				.body(new ApiError("NOT_FOUND", "Đường dẫn không tồn tại: " + ex.getResourcePath()));
 	}
 
 	@ExceptionHandler(Exception.class)

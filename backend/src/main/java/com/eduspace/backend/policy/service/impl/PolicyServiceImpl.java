@@ -6,8 +6,8 @@ import com.eduspace.backend.policy.dto.response.AuditLogResponse;
 import com.eduspace.backend.policy.dto.response.PolicyResponse;
 import com.eduspace.backend.policy.entity.AuditLog;
 import com.eduspace.backend.policy.entity.BookingPolicy;
+import com.eduspace.backend.policy.repository.AdminPolicyRepository;
 import com.eduspace.backend.policy.repository.AuditLogRepository;
-import com.eduspace.backend.policy.repository.BookingPolicyRepository;
 import com.eduspace.backend.policy.service.PolicyService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class PolicyServiceImpl implements PolicyService {
 
-    private final BookingPolicyRepository policyRepository;
+    private final AdminPolicyRepository policyRepository;
     private final AuditLogRepository auditLogRepository;
 
     @Override
