@@ -38,6 +38,7 @@ public class BookingResponse {
     private String expireReason;
     private LocalDateTime expiredAt;
     private LocalDateTime checkedInAt;
+    private Long checkedInBy;
     private LocalDateTime createdAt;
     private boolean canCancel;
     private boolean canCheckIn;

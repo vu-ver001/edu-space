@@ -25,12 +25,12 @@ import com.eduspace.backend.booking.entity.Booking;
 import com.eduspace.backend.booking.entity.BookingAuditLog;
 import com.eduspace.backend.booking.entity.BookingStatus;
 import com.eduspace.backend.booking.repository.BookingAuditLogRepository;
-import com.eduspace.backend.booking.repository.BookingPolicyRepository;
 import com.eduspace.backend.booking.repository.BookingRepository;
 import com.eduspace.backend.common.exception.BusinessException;
 import com.eduspace.backend.space.entity.Facility;
 import com.eduspace.backend.space.entity.Space;
 import com.eduspace.backend.space.repository.SpaceRepository;
+import com.eduspace.backend.checkin.policy.service.PolicyService;
 
 /**
  * Phân hệ Kiểm tra Khả dụng Tổng hợp & Tìm kiếm Phòng (Module M03).
@@ -45,8 +45,8 @@ public class AvailabilityService {
 
     private final BookingRepository bookingRepository;
     private final BookingAuditLogRepository auditLogRepository;
-    private final BookingPolicyRepository policyRepository;
     private final SpaceRepository spaceRepository;
+    private final PolicyService policyService;
 
     public static final List<BookingStatus> OCCUPYING_STATUSES = List.of(
             BookingStatus.PENDING_APPROVAL,
@@ -446,7 +446,7 @@ public class AvailabilityService {
         }
 
         long durationMinutes = ChronoUnit.MINUTES.between(startTime, endTime);
-        long maxMinutes = getPolicyLong("MAX_BOOKING_HOURS_PER_SLOT", 3L) * 60;
+        long maxMinutes = policyService.getCurrentPolicy().getMaxDurationMinutes();
         if (durationMinutes > maxMinutes) {
             throw BusinessException.badRequest("DURATION_EXCEEDED",
                     "Thời lượng đặt phòng tối đa là " + (maxMinutes / 60) + " giờ (" + maxMinutes + " phút)");
@@ -460,18 +460,10 @@ public class AvailabilityService {
     }
 
     public long getPolicyLong(String key, long defaultValue) {
-        return policyRepository.findByPolicyKey(key)
-                .map(p -> {
-                    try {
-                        return Long.parseLong(p.getPolicyValue());
-                    } catch (Exception e) {
-                        return defaultValue;
-                    }
-                })
-                .orElse(defaultValue);
+        return policyService.getLong(key, defaultValue);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<String> getOccupiedSeats(Long spaceId, LocalDateTime startTime, LocalDateTime endTime) {
         if (spaceId == null || startTime == null || endTime == null) {
             return Collections.emptyList();
