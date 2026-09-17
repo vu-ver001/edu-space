@@ -15,6 +15,13 @@ import com.eduspace.backend.booking.entity.BookingStatus;
 @Repository
 public interface BookingRepository extends JpaRepository<Booking, Long> {
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT b FROM Booking b WHERE b.id = :id")
+    Optional<Booking> findByIdForUpdate(@Param("id") Long id);
+
+    @Query("SELECT b.id FROM Booking b WHERE b.status = com.eduspace.backend.booking.entity.BookingStatus.CONFIRMED AND b.startTime < :threshold ORDER BY b.id")
+    List<Long> findNoShowCandidateIds(@Param("threshold") LocalDateTime threshold);
+
     default Optional<Booking> findByIdWithDetails(Long id) {
         return findById(id);
     }
@@ -94,7 +101,8 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     /**
      * Lấy các booking PENDING_APPROVAL đã quá giờ bắt đầu mà chưa xử lý (để chuyển EXPIRED).
      */
-    @Query("SELECT b FROM Booking b WHERE b.status = :status AND b.startTime <= :now")
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT b FROM Booking b WHERE b.status = :status AND b.startTime <= :now ORDER BY b.id")
     List<Booking> findPendingOverdueBookings(
             @Param("status") BookingStatus status,
             @Param("now") LocalDateTime now
@@ -123,7 +131,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     /**
      * Lấy các booking CONFIRMED đã quá hạn check-in (để chuyển NO_SHOW).
      */
-    @Query("SELECT b FROM Booking b WHERE b.status = :status AND b.startTime <= :checkInDeadlineThreshold")
+    @Query("SELECT b FROM Booking b WHERE b.status = :status AND b.startTime < :checkInDeadlineThreshold")
     List<Booking> findConfirmedNoShowBookings(
             @Param("status") BookingStatus status,
             @Param("checkInDeadlineThreshold") LocalDateTime checkInDeadlineThreshold
