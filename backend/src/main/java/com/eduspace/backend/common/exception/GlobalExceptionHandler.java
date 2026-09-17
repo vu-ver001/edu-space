@@ -54,6 +54,25 @@ public class GlobalExceptionHandler {
 
 	// ================= END KT =================
 
+	// ================= BEGIN KHANH VAN =================
+
+	@ExceptionHandler(BusinessException.class)
+	public ResponseEntity<ApiError> handleBusinessException(BusinessException ex) {
+		java.util.List<Object> details = ex.getDetails() != null ? new java.util.ArrayList<>(ex.getDetails()) : java.util.List.of();
+		ApiError error = new ApiError(ex.getCode(), ex.getMessage(), details);
+		return ResponseEntity.status(ex.getStatus()).body(error);
+	}
+
+	@ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
+	public ResponseEntity<ApiError> handleTypeMismatch(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException ex) {
+		String paramName = ex.getName();
+		String message = "Tham số [" + paramName + "] có định dạng không hợp lệ. Vui lòng kiểm tra lại (đặc biệt không để khoảng trắng hay ký tự xuống dòng ở cuối).";
+		ApiError error = new ApiError("INVALID_PARAMETER_FORMAT", message, java.util.List.of());
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+	}
+
+	// ================= END KHANH VAN =================
+
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<ApiError> handleUnknown(Exception ex) {
 		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

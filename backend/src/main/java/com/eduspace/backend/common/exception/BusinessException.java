@@ -4,6 +4,11 @@ import lombok.Getter;
 import org.springframework.http.HttpStatus;
 import java.util.List;
 
+/**
+ * Ngoại lệ nghiệp vụ dùng chung cho toàn hệ thống EduSpace (02_Yeu_cau_logic §12).
+ * Phụ trách khởi tạo: Nguyễn Thị Khánh Vân (Lead kỹ thuật).
+ * Các thành viên khác có thể tái sử dụng để ném lỗi nghiệp vụ có HTTP status và mã code tương ứng.
+ */
 @Getter
 public class BusinessException extends RuntimeException {
 
