@@ -24,7 +24,7 @@ import com.eduspace.backend.booking.entity.StudentSchedule;
 import com.eduspace.backend.booking.repository.BookingAuditLogRepository;
 import com.eduspace.backend.booking.repository.BookingRepository;
 import com.eduspace.backend.booking.repository.StudentScheduleRepository;
-import com.eduspace.backend.booking.exception.BusinessException;
+import com.eduspace.backend.common.exception.BusinessException;
 import com.eduspace.backend.security.SecurityUtils;
 
 /**

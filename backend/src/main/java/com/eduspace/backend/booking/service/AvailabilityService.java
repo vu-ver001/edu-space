@@ -27,7 +27,7 @@ import com.eduspace.backend.booking.entity.BookingStatus;
 import com.eduspace.backend.booking.repository.BookingAuditLogRepository;
 import com.eduspace.backend.booking.repository.BookingPolicyRepository;
 import com.eduspace.backend.booking.repository.BookingRepository;
-import com.eduspace.backend.booking.exception.BusinessException;
+import com.eduspace.backend.common.exception.BusinessException;
 
 /**
  * Phân hệ Kiểm tra Khả dụng Tổng hợp & Tìm kiếm Phòng (Module M03).
