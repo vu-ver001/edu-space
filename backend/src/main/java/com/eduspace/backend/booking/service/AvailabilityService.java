@@ -27,13 +27,16 @@ import com.eduspace.backend.booking.entity.BookingStatus;
 import com.eduspace.backend.booking.repository.BookingAuditLogRepository;
 import com.eduspace.backend.booking.repository.BookingRepository;
 import com.eduspace.backend.common.exception.BusinessException;
+import com.eduspace.backend.space.entity.Facility;
+import com.eduspace.backend.space.entity.Space;
+import com.eduspace.backend.space.repository.SpaceRepository;
 import com.eduspace.backend.checkin.policy.service.PolicyService;
 
 /**
  * Phân hệ Kiểm tra Khả dụng Tổng hợp & Tìm kiếm Phòng (Module M03).
  * Phụ trách: Nguyễn Thị Khánh Vân (Lead kỹ thuật).
  * 
- * Hoàn toàn độc lập, không phụ thuộc mã nguồn của thành viên khác.
+ * Tích hợp trực tiếp CSDL không gian của Kim Tuyến và hỗ trợ fallback dự phòng.
  */
 @Service
 @RequiredArgsConstructor
@@ -42,6 +45,7 @@ public class AvailabilityService {
 
     private final BookingRepository bookingRepository;
     private final BookingAuditLogRepository auditLogRepository;
+    private final SpaceRepository spaceRepository;
     private final PolicyService policyService;
 
     public static final List<BookingStatus> OCCUPYING_STATUSES = List.of(
@@ -131,8 +135,73 @@ public class AvailabilityService {
                 .facilities(List.of("Bảng trắng & Bút dạ", "Ổ cắm điện đa năng", "Điều hòa không khí 2 chiều")).build());
     }
 
+    private SpaceCatalogItem mapSpaceToCatalogItem(Space space) {
+        if (space == null) return null;
+        List<String> facilityNames = (space.getFacilities() != null)
+                ? space.getFacilities().stream()
+                        .filter(f -> f != null && f.getDeletedAt() == null)
+                        .map(Facility::getName)
+                        .collect(Collectors.toList())
+                : Collections.emptyList();
+
+        String bookingMode = (space.getSpaceType() != null && space.getSpaceType().getBookingMode() != null)
+                ? space.getSpaceType().getBookingMode().name()
+                : "WHOLE_SPACE";
+        boolean requiresApproval = space.getSpaceType() != null && space.getSpaceType().isRequiresApproval();
+        String typeName = space.getSpaceType() != null ? space.getSpaceType().getName() : "Phòng học tiêu chuẩn";
+        Long typeId = space.getSpaceType() != null ? space.getSpaceType().getId() : 1L;
+        String statusStr = space.getStatus() != null ? space.getStatus().name() : "AVAILABLE";
+
+        String img = (space.getId() != null && SPACE_CATALOG.containsKey(space.getId()))
+                ? SPACE_CATALOG.get(space.getId()).getImageUrl()
+                : "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&auto=format&fit=crop";
+
+        return SpaceCatalogItem.builder()
+                .id(space.getId())
+                .name(space.getName())
+                .spaceTypeId(typeId)
+                .spaceTypeName(typeName)
+                .bookingMode(bookingMode)
+                .requiresApproval(requiresApproval)
+                .building(space.getBuilding())
+                .floor(space.getFloor())
+                .capacity(space.getCapacity() != null ? space.getCapacity() : 10)
+                .status(statusStr)
+                .imageUrl(img)
+                .description(space.getDescription())
+                .facilities(facilityNames)
+                .build();
+    }
+
     public SpaceCatalogItem getSpaceCatalogItem(Long spaceId) {
+        if (spaceId == null) return null;
+        if (spaceRepository != null) {
+            try {
+                Optional<Space> opt = spaceRepository.findByIdAndDeletedAtIsNull(spaceId);
+                if (opt.isPresent()) {
+                    return mapSpaceToCatalogItem(opt.get());
+                }
+            } catch (Exception e) {
+                log.warn("Truy vấn SpaceRepository cho ID {} thất bại, chuyển fallback RAM: {}", spaceId, e.getMessage());
+            }
+        }
         return SPACE_CATALOG.get(spaceId);
+    }
+
+    public List<SpaceCatalogItem> getAllCatalogItems() {
+        if (spaceRepository != null) {
+            try {
+                List<Space> spaces = spaceRepository.findAllByDeletedAtIsNull();
+                if (spaces != null && !spaces.isEmpty()) {
+                    return spaces.stream()
+                            .map(this::mapSpaceToCatalogItem)
+                            .collect(Collectors.toList());
+                }
+            } catch (Exception e) {
+                log.warn("Truy vấn findAll từ SpaceRepository thất bại, chuyển fallback RAM: {}", e.getMessage());
+            }
+        }
+        return new ArrayList<>(SPACE_CATALOG.values());
     }
 
     /**
@@ -180,7 +249,7 @@ public class AvailabilityService {
         LocalDateTime now = LocalDateTime.now();
         expirePendingApproval(now);
 
-        SpaceCatalogItem space = SPACE_CATALOG.get(spaceId);
+        SpaceCatalogItem space = getSpaceCatalogItem(spaceId);
         if (space == null) {
             throw BusinessException.notFound("SPACE_NOT_FOUND", "Không tìm thấy phòng với ID: " + spaceId);
         }
@@ -235,7 +304,7 @@ public class AvailabilityService {
         final LocalDateTime effectiveStart = (rawStart != null && rawStart.isBefore(now)) ? now : rawStart;
         final LocalDateTime effectiveEnd = rawEnd;
 
-        return SPACE_CATALOG.values().stream()
+        return getAllCatalogItems().stream()
                 .filter(space -> "AVAILABLE".equalsIgnoreCase(space.getStatus()))
                 .filter(space -> {
                     if (filter.getParticipantCount() != null && space.getCapacity() < filter.getParticipantCount()) {
@@ -282,13 +351,13 @@ public class AvailabilityService {
     }
 
     public List<SpaceResponse> getAllSpaces() {
-        return SPACE_CATALOG.values().stream()
+        return getAllCatalogItems().stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
     public SpaceResponse getSpaceById(Long id) {
-        SpaceCatalogItem space = SPACE_CATALOG.get(id);
+        SpaceCatalogItem space = getSpaceCatalogItem(id);
         if (space == null) {
             throw BusinessException.notFound("SPACE_NOT_FOUND", "Không tìm thấy phòng với ID: " + id);
         }

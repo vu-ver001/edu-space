@@ -43,4 +43,6 @@ public class BookingResponse {
     private boolean canCancel;
     private boolean canCheckIn;
     private java.util.List<String> selectedSeats;
+    private Long tableId;
+    private String tableCode;
 }
