@@ -37,7 +37,7 @@ public class AdminPolicyController {
     }
 
     // Xem lịch sử thay đổi cấu hình chính sách (Audit log - Chỉ ADMIN)
-    @GetMapping("/history")
+    @GetMapping({"/history", "/audit-logs"})
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<AuditLogResponse>> getPolicyHistory() {
         return ResponseEntity.ok(policyService.getPolicyAuditLogs());

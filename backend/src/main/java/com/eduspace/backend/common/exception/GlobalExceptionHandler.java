@@ -9,6 +9,9 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Xu ly loi tap trung, tra ve dung ma HTTP chuan:
  * 400 validate, 401 chua dang nhap, 403 sai quyen, 404 khong thay, 409 xung dot.
@@ -44,6 +47,14 @@ public class GlobalExceptionHandler {
 				.body(new ApiError("VALIDATION_ERROR", errorMessage));
 	}
 
+	@ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
+	public ResponseEntity<ApiError> handleTypeMismatch(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException ex) {
+		String paramName = ex.getName();
+		String message = "Tham số [" + paramName + "] có định dạng không hợp lệ. Vui lòng kiểm tra lại (đặc biệt không để khoảng trắng hay ký tự xuống dòng ở cuối).";
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+				.body(new ApiError("INVALID_PARAMETER_FORMAT", message, List.of()));
+	}
+
 	// ================= BEGIN KT =================
 
 	@ExceptionHandler(AppException.class)
@@ -58,20 +69,18 @@ public class GlobalExceptionHandler {
 
 	@ExceptionHandler(BusinessException.class)
 	public ResponseEntity<ApiError> handleBusinessException(BusinessException ex) {
-		java.util.List<Object> details = ex.getDetails() != null ? new java.util.ArrayList<>(ex.getDetails()) : java.util.List.of();
+		List<Object> details = ex.getDetails() != null ? new ArrayList<>(ex.getDetails()) : List.of();
 		ApiError error = new ApiError(ex.getCode(), ex.getMessage(), details);
 		return ResponseEntity.status(ex.getStatus()).body(error);
 	}
 
-	@ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
-	public ResponseEntity<ApiError> handleTypeMismatch(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException ex) {
-		String paramName = ex.getName();
-		String message = "Tham số [" + paramName + "] có định dạng không hợp lệ. Vui lòng kiểm tra lại (đặc biệt không để khoảng trắng hay ký tự xuống dòng ở cuối).";
-		ApiError error = new ApiError("INVALID_PARAMETER_FORMAT", message, java.util.List.of());
-		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
-	}
-
 	// ================= END KHANH VAN =================
+
+	@ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+	public ResponseEntity<ApiError> handleNotFound(org.springframework.web.servlet.resource.NoResourceFoundException ex) {
+		return ResponseEntity.status(HttpStatus.NOT_FOUND)
+				.body(new ApiError("NOT_FOUND", "Đường dẫn không tồn tại: " + ex.getResourcePath()));
+	}
 
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<ApiError> handleUnknown(Exception ex) {
