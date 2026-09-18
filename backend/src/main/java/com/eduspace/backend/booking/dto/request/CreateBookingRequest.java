@@ -35,4 +35,6 @@ public class CreateBookingRequest {
     private String purpose;
 
     private java.util.List<String> selectedSeats;
+
+    private Long tableId;
 }
