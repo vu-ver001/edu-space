@@ -99,6 +99,16 @@ public class BookingService {
         boolean isPerTable = "PER_TABLE".equalsIgnoreCase(space.getBookingMode());
         boolean isWholeSpace = !isPerSeat && !isPerTable;
 
+        // LOGIC MỚI:
+        // - per-seat: Không bắt buộc nhập lý do sử dụng
+        // - per-table & whole-space: Bắt buộc phải nhập lý do sử dụng
+        if (!isPerSeat) {
+            if (request.getPurpose() == null || request.getPurpose().trim().isBlank()) {
+                throw BusinessException.badRequest("PURPOSE_REQUIRED", 
+                        "Mục đích sử dụng là bắt buộc đối với hình thức đặt toàn bộ không gian (whole-space) hoặc đặt bàn thảo luận nhóm (per-table).");
+            }
+        }
+
         List<String> requestedSeats = request.getSelectedSeats();
         Long requestedTableId = request.getTableId();
 
@@ -285,7 +295,10 @@ public class BookingService {
         }
 
         // BƯỚC 9: Xác định trạng thái ban đầu
-        boolean requiresApproval = space.isRequiresApproval();
+        // LOGIC MỚI:
+        // - per-seat: duyệt tự động (CONFIRMED), không cần chờ staff duyệt
+        // - per-table & whole-space: bắt buộc chờ staff duyệt (PENDING_APPROVAL)
+        boolean requiresApproval = !isPerSeat;
         BookingStatus initialStatus = requiresApproval ? BookingStatus.PENDING_APPROVAL : BookingStatus.CONFIRMED;
 
         // BƯỚC 10: Lưu booking và nhật ký thao tác
@@ -293,13 +306,17 @@ public class BookingService {
                 ? request.getSelectedSeats().size()
                 : request.getParticipantCount();
 
+        String finalPurpose = (request.getPurpose() != null && !request.getPurpose().trim().isBlank())
+                ? request.getPurpose().trim()
+                : (isPerSeat ? "Tự học cá nhân" : "Học tập & Thảo luận");
+
         Booking booking = Booking.builder()
                 .studentId(studentId)
                 .spaceId(space.getId())
                 .startTime(startTime)
                 .endTime(endTime)
                 .participantCount(actualParticipantCount)
-                .purpose(request.getPurpose() != null ? request.getPurpose() : "Học tập & Thảo luận")
+                .purpose(finalPurpose)
                 .status(initialStatus)
                 .tableId(requestedTableId)
                 .build();
