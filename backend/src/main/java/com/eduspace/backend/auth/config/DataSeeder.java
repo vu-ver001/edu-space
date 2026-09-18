@@ -12,6 +12,8 @@ import com.eduspace.backend.space.entity.SpaceStatus;
 import com.eduspace.backend.space.entity.SpaceType;
 import com.eduspace.backend.space.repository.SpaceRepository;
 import com.eduspace.backend.space.repository.SpaceTypeRepository;
+import com.eduspace.backend.checkin.policy.entity.BookingPolicy;
+import com.eduspace.backend.checkin.policy.repository.BookingPolicyRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -27,17 +29,20 @@ public class DataSeeder implements CommandLineRunner {
     private final SpaceRepository spaceRepository;
     private final SpaceTypeRepository spaceTypeRepository;
     private final BookingRepository bookingRepository;
+    private final BookingPolicyRepository bookingPolicyRepository;
 
     public DataSeeder(UserRepository userRepository,
                       PasswordEncoder passwordEncoder,
                       SpaceRepository spaceRepository,
                       SpaceTypeRepository spaceTypeRepository,
-                      BookingRepository bookingRepository) {
+                      BookingRepository bookingRepository,
+                      BookingPolicyRepository bookingPolicyRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.spaceRepository = spaceRepository;
         this.spaceTypeRepository = spaceTypeRepository;
         this.bookingRepository = bookingRepository;
+        this.bookingPolicyRepository = bookingPolicyRepository;
     }
 
     @Override
@@ -101,6 +106,19 @@ public class DataSeeder implements CommandLineRunner {
             Booking b5 = Booking.builder().studentId(3L).spaceId(2L).startTime(now.minusDays(1)).endTime(now.minusDays(1).plusHours(2)).participantCount(5).purpose("Học nhóm Anh").status(BookingStatus.EXPIRED).createdAt(now.minusDays(2)).build();
             bookingRepository.saveAll(List.of(b1, b2, b3, b4, b5));
             System.out.println("Đã khởi tạo booking mẫu để test thống kê!");
+        }
+
+        // 4. Khởi tạo cấu hình chính sách mặc định nếu chưa có
+        if (bookingPolicyRepository.count() == 0) {
+            LocalDateTime now = LocalDateTime.now();
+            bookingPolicyRepository.saveAll(List.of(
+                BookingPolicy.builder().policyKey("DAILY_BOOKING_QUOTA").policyValue("2").description("Số lượt đặt tối đa trong ngày").updatedBy("SYSTEM_INIT").updatedAt(now).build(),
+                BookingPolicy.builder().policyKey("MAX_DURATION_MINUTES").policyValue("180").description("Thời lượng tối đa mỗi lượt đặt (phút)").updatedBy("SYSTEM_INIT").updatedAt(now).build(),
+                BookingPolicy.builder().policyKey("RATE_LIMIT_HOURLY").policyValue("10").description("Giới hạn số request tạo booking mỗi giờ").updatedBy("SYSTEM_INIT").updatedAt(now).build(),
+                BookingPolicy.builder().policyKey("CHECKIN_OPEN_MINUTES").policyValue("15").description("Thời gian mở check-in sớm (phút)").updatedBy("SYSTEM_INIT").updatedAt(now).build(),
+                BookingPolicy.builder().policyKey("CHECKIN_GRACE_MINUTES").policyValue("15").description("Thời gian ân hạn check-in trễ (phút)").updatedBy("SYSTEM_INIT").updatedAt(now).build()
+            ));
+            System.out.println("Đã khởi tạo cấu hình chính sách mặc định!");
         }
     }
 }
