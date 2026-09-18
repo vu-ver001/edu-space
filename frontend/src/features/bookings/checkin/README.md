@@ -15,6 +15,8 @@ Các nút điều khiển cho phép tải lại dữ liệu, đặt lại dữ l
 
 Route `/checkin-demo` hiện dùng `services/checkInService.ts` với fixture để kiểm tra giao diện không cần backend.
 
+Route `/checkin` dùng `StudentCheckInPage` và adapter API thật. Cần có JWT trong `eduspace_token`; nếu phiên hết hạn, HTTP client chuyển về `/login`.
+
 ## Adapter API thật
 
 `services/checkInApiService.ts` gọi các endpoint hiện có:
