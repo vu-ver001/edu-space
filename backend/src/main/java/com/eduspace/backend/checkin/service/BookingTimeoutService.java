@@ -2,7 +2,7 @@ package com.eduspace.backend.checkin.service;
 
 import com.eduspace.backend.booking.entity.*;
 import com.eduspace.backend.booking.repository.*;
-import com.eduspace.backend.checkin.policy.service.PolicyService;
+import com.eduspace.backend.policy.service.PolicyService;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;

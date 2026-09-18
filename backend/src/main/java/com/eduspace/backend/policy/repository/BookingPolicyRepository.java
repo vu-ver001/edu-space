@@ -1,10 +1,10 @@
-package com.eduspace.backend.checkin.policy.repository;
+package com.eduspace.backend.policy.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
-import com.eduspace.backend.checkin.policy.entity.BookingPolicy;
+import com.eduspace.backend.policy.entity.BookingPolicy;
 
 
 
