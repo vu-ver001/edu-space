@@ -11,17 +11,9 @@ import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import com.eduspace.backend.booking.entity.AuditAction;
-import com.eduspace.backend.booking.entity.Booking;
-import com.eduspace.backend.booking.entity.BookingAuditLog;
-import com.eduspace.backend.booking.entity.BookingStatus;
-import com.eduspace.backend.booking.repository.BookingAuditLogRepository;
 import com.eduspace.backend.booking.repository.BookingRepository;
 import com.eduspace.backend.booking.service.AvailabilityService;
 import com.eduspace.backend.checkin.service.BookingTimeoutService;
-
-
-
 
 /**
  * Công việc chạy nền định kỳ (Scheduler) tự động chuyển trạng thái booking phụ thuộc thời gian:
@@ -37,13 +29,11 @@ import com.eduspace.backend.checkin.service.BookingTimeoutService;
 public class BookingStateScheduler {
 
     private final BookingRepository bookingRepository;
-    private final BookingAuditLogRepository auditLogRepository;
     private final AvailabilityService availabilityService;
     private final BookingTimeoutService bookingTimeoutService;
     private final Clock checkInClock;
 
     @Scheduled(fixedDelayString = "${booking.scheduler.delay-ms:30000}")
-    @Transactional
     public void runPeriodicStateTransitions() {
         LocalDateTime now = LocalDateTime.now(checkInClock);
 
@@ -63,21 +53,6 @@ public class BookingStateScheduler {
         }
 
         // 3. Quét CHECKED_IN qua endTime -> Chuyển sang COMPLETED
-        List<Booking> completedCandidates = bookingRepository.findCompletedCandidateBookings(BookingStatus.CHECKED_IN, now);
-        for (Booking b : completedCandidates) {
-            b.setStatus(BookingStatus.COMPLETED);
-            bookingRepository.save(b);
-
-            BookingAuditLog audit = BookingAuditLog.builder()
-                    .bookingId(b.getId())
-                    .action(AuditAction.COMPLETE_TIMEOUT)
-                    .performedBy(null) // SYSTEM
-                    .performedAt(now)
-                    .reason("SESSION_ENDED")
-                    .note("Hết giờ sử dụng phòng -> Đánh dấu COMPLETED thành công")
-                    .build();
-            auditLogRepository.save(audit);
-            log.info("[Scheduler] Booking #{} chuyển sang COMPLETED", b.getId());
-        }
+        availabilityService.completeOverdueCheckedIn(now);
     }
 }
