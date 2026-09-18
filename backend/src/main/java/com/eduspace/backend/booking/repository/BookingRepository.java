@@ -26,6 +26,11 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
         return findById(id);
     }
 
+    long countByCreatedAtBetween(LocalDateTime from, LocalDateTime to);
+
+    long countByStatusAndCreatedAtBetween(BookingStatus status, LocalDateTime from, LocalDateTime to);
+
+
     /**
      * Tìm các booking đang chiếm chỗ của một phòng giao nhau với khoảng thời gian [startTime, endTime].
      * Nhóm chiếm chỗ: PENDING_APPROVAL, CONFIRMED, CHECKED_IN

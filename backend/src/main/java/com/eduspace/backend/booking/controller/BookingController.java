@@ -16,9 +16,6 @@ import com.eduspace.backend.booking.service.BookingService;
 import com.eduspace.backend.auth.security.SecurityUtils;
 import com.eduspace.backend.common.exception.BusinessException;
 
-
-
-
 @RestController
 @RequestMapping("/api/bookings")
 @RequiredArgsConstructor
@@ -60,9 +57,9 @@ public class BookingController {
 
     /**
      * Xem lịch sử thao tác của booking:
-     * GET /api/bookings/{id}/audit-logs
+     * GET /api/bookings/{id}/history
      */
-    @GetMapping("/{id}/audit-logs")
+    @GetMapping({"/{id}/history"})
     public ResponseEntity<List<BookingAuditLogResponse>> getBookingAuditLogs(@PathVariable Long id) {
         return ResponseEntity.ok(bookingService.getBookingAuditLogs(id));
     }

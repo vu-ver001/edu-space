@@ -28,9 +28,15 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 public class SecurityConfig {
 
 	private final JwtAuthenticationFilter jwtAuthenticationFilter;
+	private final CustomAccessDeniedHandler accessDeniedHandler;
+	private final CustomAuthenticationEntryPoint authenticationEntryPoint;
 
-	public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+	public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
+						  CustomAccessDeniedHandler accessDeniedHandler,
+						  CustomAuthenticationEntryPoint authenticationEntryPoint) {
 		this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+		this.accessDeniedHandler = accessDeniedHandler;
+		this.authenticationEntryPoint = authenticationEntryPoint;
 	}
 
 	@Bean
@@ -41,22 +47,18 @@ public class SecurityConfig {
 	@Bean
 	SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 		http.csrf(csrf -> csrf.disable())
-		        .sessionManagement(session -> session.sessionCreationPolicy(org.springframework.security.config.http.SessionCreationPolicy.STATELESS))
-		        .exceptionHandling(errors -> errors
-		                .authenticationEntryPoint((request, response, error) -> {
-		                    response.setStatus(401);
-		                    response.setContentType("application/json;charset=UTF-8");
-		                    response.getWriter().write("{\"code\":\"UNAUTHENTICATED\",\"message\":\"Bạn cần đăng nhập.\",\"details\":[]}");
-		                })
-		                .accessDeniedHandler((request, response, error) -> {
-		                    response.setStatus(403);
-		                    response.setContentType("application/json;charset=UTF-8");
-		                    response.getWriter().write("{\"code\":\"FORBIDDEN\",\"message\":\"Bạn không có quyền truy cập.\",\"details\":[]}");
-		                }))
+				.sessionManagement(session -> session.sessionCreationPolicy(org.springframework.security.config.http.SessionCreationPolicy.STATELESS))
 				.cors(cors -> cors.configurationSource(corsConfigurationSource()))
-				.authorizeHttpRequests(auth -> auth.requestMatchers("/health", "/api/auth/login").permitAll()
+				.exceptionHandling(ex -> ex
+						.accessDeniedHandler(accessDeniedHandler)
+						.authenticationEntryPoint(authenticationEntryPoint))
+				.authorizeHttpRequests(auth -> auth
+						.requestMatchers("/health", "/api/auth/login", "/api/auth/**").permitAll()
+						.requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/admin/policies", "/api/admin/policies/**").hasRole("ADMIN")
+						.requestMatchers("/api/admin/policies/history").hasRole("ADMIN")
+						.requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "STAFF")
 						.anyRequest().authenticated())
-		        .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 		return http.build();
 	}
 

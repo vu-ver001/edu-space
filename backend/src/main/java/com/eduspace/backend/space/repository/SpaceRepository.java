@@ -22,6 +22,12 @@ public interface SpaceRepository extends JpaRepository<Space, Long> {
 
     List<Space> findAllBySpaceTypeIdAndDeletedAtIsNull(Long spaceTypeId);
 
+    long countByStatusAndDeletedAtIsNull(SpaceStatus status);
+
+    default long countByStatus(SpaceStatus status) {
+        return countByStatusAndDeletedAtIsNull(status);
+    }
+
     @Query("SELECT DISTINCT s FROM Space s " +
            "LEFT JOIN s.facilities f " +
            "WHERE s.deletedAt IS NULL " +

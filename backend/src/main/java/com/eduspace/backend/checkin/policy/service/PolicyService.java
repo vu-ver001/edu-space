@@ -28,8 +28,11 @@ public class PolicyService {
     }
 
     private long parse(String value) {
+        if (value == null || value.isBlank()) {
+            return 0L;
+        }
         try {
-            long parsed = Long.parseLong(value);
+            long parsed = Long.parseLong(value.trim());
             if (parsed < 0) throw new NumberFormatException();
             return parsed;
         } catch (NumberFormatException ex) {
@@ -45,7 +48,11 @@ public class PolicyService {
     public PolicyResponse getCurrentPolicy() {
         Map<String, Long> values = new HashMap<>();
         var rows = policies.findAll();
-        rows.forEach(p -> values.put(p.getPolicyKey(), parse(p.getPolicyValue())));
+        rows.forEach(p -> {
+            if (p.getPolicyKey() != null && !p.getPolicyKey().isBlank()) {
+                values.put(p.getPolicyKey(), parse(p.getPolicyValue()));
+            }
+        });
         int grace = Math.toIntExact(values.getOrDefault("CHECKIN_GRACE_MINUTES", 15L));
         var latest = rows.stream().filter(p -> p.getUpdatedAt() != null)
                 .max(Comparator.comparing(BookingPolicy::getUpdatedAt));
