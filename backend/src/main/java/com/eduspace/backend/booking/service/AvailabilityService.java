@@ -244,6 +244,30 @@ public class AvailabilityService {
     }
 
     /**
+     * Quét chuyển các booking CHECKED_IN đã quá endTime sang COMPLETED.
+     */
+    @Transactional
+    public void completeOverdueCheckedIn(LocalDateTime now) {
+        List<Booking> completedCandidates = bookingRepository.findCompletedCandidateBookings(BookingStatus.CHECKED_IN, now);
+        for (Booking b : completedCandidates) {
+            b.setStatus(BookingStatus.COMPLETED);
+            bookingRepository.save(b);
+
+            BookingAuditLog audit = BookingAuditLog.builder()
+                    .bookingId(b.getId())
+                    .action(AuditAction.COMPLETE_TIMEOUT)
+                    .performedBy(null)
+                    .performedByEmail("system@eduspace.vn")
+                    .performedAt(now)
+                    .reason("SESSION_ENDED")
+                    .note("Hết giờ sử dụng phòng -> Đánh dấu COMPLETED thành công")
+                    .build();
+            auditLogRepository.save(audit);
+            log.info("[Scheduler] Booking #{} chuyển sang COMPLETED", b.getId());
+        }
+    }
+
+    /**
      * API kiểm tra khả dụng của một phòng cụ thể (02_Yeu_cau_logic §3.1).
      */
     @Transactional

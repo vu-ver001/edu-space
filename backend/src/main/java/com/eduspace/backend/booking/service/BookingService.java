@@ -564,7 +564,7 @@ public class BookingService {
         AvailabilityService.SpaceCatalogItem space = availabilityService.getSpaceCatalogItem(booking.getSpaceId());
         String spaceName = space != null ? space.getName() : "Phòng #" + booking.getSpaceId();
         String spaceTypeName = space != null ? space.getSpaceTypeName() : "Phòng học";
-        boolean requiresApproval = space != null && space.isRequiresApproval();
+        boolean requiresApproval = space != null ? space.isRequiresApproval() : (booking.getStatus() == BookingStatus.PENDING_APPROVAL);
         String building = space != null ? space.getBuilding() : "Khu vực chính";
         String floor = space != null ? space.getFloor() : "Tầng 1";
 
