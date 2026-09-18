@@ -11,6 +11,7 @@ const NAV: Array<{ to: string; label: string; owner: string }> = [
   { to: '/spaces', label: 'Tim khong gian (Van)', owner: 'TODO(Van)' },
   { to: '/my-bookings', label: 'Lich booking cua toi (Van)', owner: 'TODO(Van)' },
   { to: '/staff', label: 'Van hanh Staff (Tuyen)', owner: 'TODO(Tuyen)' },
+  { to: '/checkin-demo', label: 'Demo check-in MVP (Vu)', owner: 'MOCK(Vu)' },
   { to: '/qr', label: 'Check-in QR (Vu)', owner: 'TODO(Vu)' },
   { to: '/equipment', label: 'Thiet bi (Vu)', owner: 'TODO(Vu)' },
   { to: '/admin/policy', label: 'Chinh sach (Anh)', owner: 'TODO(Anh)' },

@@ -2,9 +2,12 @@ package com.eduspace.backend.booking.scheduler;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -15,6 +18,7 @@ import com.eduspace.backend.booking.entity.BookingStatus;
 import com.eduspace.backend.booking.repository.BookingAuditLogRepository;
 import com.eduspace.backend.booking.repository.BookingRepository;
 import com.eduspace.backend.booking.service.AvailabilityService;
+import com.eduspace.backend.checkin.service.BookingTimeoutService;
 
 
 
@@ -26,57 +30,36 @@ import com.eduspace.backend.booking.service.AvailabilityService;
  * - CHECKED_IN quá endTime -> COMPLETED (02_Yeu_cau_logic §8.4)
  */
 @Component
+@EnableScheduling
 @RequiredArgsConstructor
 @Slf4j
+@ConditionalOnProperty(name = "booking.scheduler.enabled", havingValue = "true", matchIfMissing = true)
 public class BookingStateScheduler {
 
     private final BookingRepository bookingRepository;
     private final BookingAuditLogRepository auditLogRepository;
     private final AvailabilityService availabilityService;
+    private final BookingTimeoutService bookingTimeoutService;
+    private final Clock checkInClock;
 
-    @Scheduled(fixedRate = 30000) // Chạy mỗi 30 giây
+    @Scheduled(fixedDelayString = "${booking.scheduler.delay-ms:30000}")
     @Transactional
     public void runPeriodicStateTransitions() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(checkInClock);
 
-        // 1. Quét PENDING_APPROVAL quá giờ bắt đầu -> Chuyển sang EXPIRED
-        List<Booking> overduePending = bookingRepository.findPendingOverdueBookings(BookingStatus.PENDING_APPROVAL, now);
-        for (Booking b : overduePending) {
-            b.setStatus(BookingStatus.EXPIRED);
-            b.setExpiredAt(now);
-            b.setExpireReason("PENDING_APPROVAL_TIMEOUT");
-            bookingRepository.save(b);
+        // 1. Dùng chung logic của Booking lõi để chuyển PENDING_APPROVAL quá hạn -> EXPIRED.
+        availabilityService.expirePendingApproval(now);
 
-            BookingAuditLog audit = BookingAuditLog.builder()
-                    .bookingId(b.getId())
-                    .action(AuditAction.EXPIRE_TIMEOUT)
-                    .performedBy(null) // SYSTEM
-                    .performedAt(now)
-                    .reason("PENDING_APPROVAL_TIMEOUT")
-                    .note("Quá giờ bắt đầu chưa được Staff xử lý -> Chuyển sang EXPIRED và giải phóng phòng")
-                    .build();
-            auditLogRepository.save(audit);
-            log.info("[Scheduler] Booking #{} chuyển sang EXPIRED", b.getId());
-        }
-
-        // 2. Quét CONFIRMED quá hạn check-in -> Chuyển sang NO_SHOW
+        // 2. Khóa từng booking rồi chuyển CONFIRMED quá hạn check-in -> NO_SHOW.
         long graceMinutes = availabilityService.getPolicyLong("CHECKIN_GRACE_MINUTES", 15L);
-        LocalDateTime threshold = now.minusMinutes(graceMinutes);
-        List<Booking> noShowCandidates = bookingRepository.findConfirmedNoShowBookings(BookingStatus.CONFIRMED, threshold);
-        for (Booking b : noShowCandidates) {
-            b.setStatus(BookingStatus.NO_SHOW);
-            bookingRepository.save(b);
-
-            BookingAuditLog audit = BookingAuditLog.builder()
-                    .bookingId(b.getId())
-                    .action(AuditAction.NO_SHOW_TIMEOUT)
-                    .performedBy(null) // SYSTEM
-                    .performedAt(now)
-                    .reason("CHECKIN_DEADLINE_EXCEEDED")
-                    .note("Quá thời hạn check-in (" + graceMinutes + " phút sau giờ bắt đầu) -> Đánh dấu NO_SHOW")
-                    .build();
-            auditLogRepository.save(audit);
-            log.info("[Scheduler] Booking #{} chuyển sang NO_SHOW do quá hạn check-in", b.getId());
+        for (Long id : bookingRepository.findNoShowCandidateIds(now.minusMinutes(graceMinutes))) {
+            try {
+                if (bookingTimeoutService.markNoShow(id)) {
+                    log.info("[Scheduler] Booking #{} chuyển sang NO_SHOW do quá hạn check-in", id);
+                }
+            } catch (RuntimeException ex) {
+                log.error("Không thể xử lý timeout booking #{}; sẽ thử lại ở lượt sau", id, ex);
+            }
         }
 
         // 3. Quét CHECKED_IN qua endTime -> Chuyển sang COMPLETED
