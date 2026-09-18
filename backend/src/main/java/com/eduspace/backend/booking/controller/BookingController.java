@@ -57,9 +57,9 @@ public class BookingController {
 
     /**
      * Xem lịch sử thao tác của booking:
-     * GET /api/bookings/{id}/history
+     * GET /api/bookings/{id}/audit-logs hoặc /history
      */
-    @GetMapping("/{id}/history")
+    @GetMapping({"/{id}/audit-logs", "/{id}/history"})
     public ResponseEntity<List<BookingAuditLogResponse>> getBookingAuditLogs(@PathVariable Long id) {
         return ResponseEntity.ok(bookingService.getBookingAuditLogs(id));
     }
