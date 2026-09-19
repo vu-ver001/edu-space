@@ -8,6 +8,8 @@ import { SearchSpacesPage } from './pages/SearchSpacesPage.tsx';
 import { SpaceDetailPage } from './pages/SpaceDetailPage.tsx';
 import { MyBookingsPage } from './pages/MyBookingsPage.tsx';
 import { CoreApprovalDemo } from './pages/CoreApprovalDemo.tsx';
+import { SpaceTypeListPageKT, SpaceTypeDetailPageKT } from './features/space';
+import { StaffOperationsPageKT } from './features/staff';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -19,7 +21,13 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/spaces/:id" element={<SpaceDetailPage />} />
         <Route path="/my-bookings" element={<MyBookingsPage />} />
         <Route path="/core-approval" element={<CoreApprovalDemo />} />
-        <Route path="/staff" element={<Placeholder title="Van hanh Staff" owner="Tuyen" />} />
+        {/* ================= BEGIN KT ================= */}
+        <Route path="/staff" element={<StaffOperationsPageKT />} />
+        <Route path="/admin/space-types" element={<SpaceTypeListPageKT />} />
+        <Route path="/admin/space-types/:id" element={<SpaceTypeDetailPageKT />} />
+        <Route path="/space-types" element={<SpaceTypeListPageKT />} />
+        <Route path="/space-types/:id" element={<SpaceTypeDetailPageKT />} />
+        {/* ================= END KT ================= */}
         <Route path="/checkin-demo" element={<CheckInDemoPage />} />
         <Route path="/qr" element={<Placeholder title="Check-in QR" owner="Vu" />} />
         <Route path="/equipment" element={<Placeholder title="Thiet bi" owner="Vu" />} />

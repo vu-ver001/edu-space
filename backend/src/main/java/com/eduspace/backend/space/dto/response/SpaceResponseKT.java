@@ -27,6 +27,11 @@ public class SpaceResponseKT {
     @Builder.Default
     private List<FacilityResponseKT> facilities = new ArrayList<>();
 
+    private String primaryImageUrl;
+
+    @Builder.Default
+    private List<SpaceImageResponseKT> images = new ArrayList<>();
+
     private long activeSeatCount;
     private long activeTableCount;
     private int activeTableCapacity;
@@ -34,10 +39,21 @@ public class SpaceResponseKT {
     private LocalDateTime updatedAt;
 
     public static SpaceResponseKT fromEntity(Space space, long activeSeatCount) {
-        return fromEntity(space, activeSeatCount, 0, 0);
+        return fromEntity(space, activeSeatCount, 0, 0, null, new ArrayList<>());
     }
 
     public static SpaceResponseKT fromEntity(Space space, long activeSeatCount, long activeTableCount, int activeTableCapacity) {
+        return fromEntity(space, activeSeatCount, activeTableCount, activeTableCapacity, null, new ArrayList<>());
+    }
+
+    public static SpaceResponseKT fromEntity(
+            Space space,
+            long activeSeatCount,
+            long activeTableCount,
+            int activeTableCapacity,
+            String primaryImageUrl,
+            List<SpaceImageResponseKT> images
+    ) {
         List<FacilityResponseKT> activeFacilities = new ArrayList<>();
         if (space.getFacilities() != null) {
             activeFacilities = space.getFacilities().stream()
@@ -64,6 +80,8 @@ public class SpaceResponseKT {
                 .activeSeatCount(activeSeatCount)
                 .activeTableCount(activeTableCount)
                 .activeTableCapacity(activeTableCapacity)
+                .primaryImageUrl(primaryImageUrl)
+                .images(images != null ? images : new ArrayList<>())
                 .createdAt(space.getCreatedAt())
                 .updatedAt(space.getUpdatedAt())
                 .build();

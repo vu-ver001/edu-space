@@ -62,6 +62,7 @@ class BookingCoreLogicTest {
     private SpaceTableRepository spaceTableRepository;
     private UserRepository userRepository;
     private PolicyService policyService;
+    private com.eduspace.backend.staff.repository.MaintenanceBlockRepository maintenanceBlockRepository;
 
     private AvailabilityService availabilityService;
     private BookingService bookingService;
@@ -80,6 +81,7 @@ class BookingCoreLogicTest {
         spaceTableRepository = mock(SpaceTableRepository.class);
         userRepository = mock(UserRepository.class);
         policyService = mock(PolicyService.class);
+        maintenanceBlockRepository = mock(com.eduspace.backend.staff.repository.MaintenanceBlockRepository.class);
 
         baseTime = LocalDateTime.of(2026, 9, 20, 8, 0, 0);
         Clock fixedClock = Clock.fixed(baseTime.minusHours(1).toInstant(ZoneOffset.UTC), ZoneOffset.UTC);
@@ -89,7 +91,8 @@ class BookingCoreLogicTest {
                 bookingRepository,
                 auditLogRepository,
                 spaceRepository,
-                policyService
+                policyService,
+                maintenanceBlockRepository
         );
 
         // Khởi tạo BookingService
@@ -100,7 +103,8 @@ class BookingCoreLogicTest {
                 availabilityService,
                 spaceTableRepository,
                 userRepository,
-                fixedClock
+                fixedClock,
+                maintenanceBlockRepository
         );
 
         student = User.builder()
