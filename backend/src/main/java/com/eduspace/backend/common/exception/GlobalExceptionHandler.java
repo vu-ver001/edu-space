@@ -55,6 +55,13 @@ public class GlobalExceptionHandler {
 				.body(new ApiError("INVALID_PARAMETER_FORMAT", message, List.of()));
 	}
 
+	@ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+	public ResponseEntity<ApiError> handleMessageNotReadable(org.springframework.http.converter.HttpMessageNotReadableException ex) {
+		String msg = "Dữ liệu gửi lên không đúng định dạng chuẩn (ví dụ thời gian phải là YYYY-MM-DDTHH:mm:ss).";
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+				.body(new ApiError("INVALID_FORMAT", msg));
+	}
+
 	// ================= BEGIN KT =================
 
 	@ExceptionHandler(AppException.class)
@@ -84,7 +91,8 @@ public class GlobalExceptionHandler {
 
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<ApiError> handleUnknown(Exception ex) {
+		ex.printStackTrace();
 		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-				.body(new ApiError("INTERNAL_ERROR", "Loi he thong chua xu ly."));
+				.body(new ApiError("INTERNAL_ERROR", "Loi he thong chua xu ly: " + ex.getMessage()));
 	}
 }

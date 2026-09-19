@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS `bookings` (
     `participant_count` INT NOT NULL COMMENT 'Số lượng người tham gia',
     `purpose` VARCHAR(255) COMMENT 'Mục đích sử dụng phòng',
     `selected_seats` VARCHAR(255) NULL COMMENT 'Danh sách mã ghế ngồi đã chọn (ví dụ: A1,A2,B1)',
+    `table_id` BIGINT NULL COMMENT 'Liên kết space_tables(id) cho phòng dạng PER_TABLE',
     `status` ENUM(
         'PENDING_APPROVAL',
         'CONFIRMED',
@@ -81,10 +82,13 @@ CREATE TABLE IF NOT EXISTS `bookings` (
     `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT `fk_booking_student` FOREIGN KEY (`student_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
     CONSTRAINT `fk_booking_space` FOREIGN KEY (`space_id`) REFERENCES `spaces` (`id`) ON DELETE RESTRICT,
+    CONSTRAINT `fk_booking_table` FOREIGN KEY (`table_id`) REFERENCES `space_tables` (`id`) ON DELETE SET NULL,
     CONSTRAINT `fk_booking_rejector` FOREIGN KEY (`rejected_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
     CONSTRAINT `fk_booking_checkin_by` FOREIGN KEY (`checked_in_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
     INDEX `idx_space_status_time` (`space_id`, `status`, `start_time`, `end_time`),
-    INDEX `idx_student_status_time` (`student_id`, `status`, `start_time`, `end_time`)
+    INDEX `idx_student_status_time` (`student_id`, `status`, `start_time`, `end_time`),
+    INDEX `idx_booking_table_time` (`table_id`, `status`, `start_time`, `end_time`),
+    INDEX `idx_booking_status_start_time` (`status`, `start_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ========================================================
@@ -97,6 +101,7 @@ CREATE TABLE IF NOT EXISTS `booking_audit_logs` (
     `booking_id` BIGINT NOT NULL COMMENT 'Liên kết bookings(id)',
     `action` VARCHAR(50) NOT NULL COMMENT 'Hành động: CREATE, APPROVE, REJECT, CANCEL, CHECK_IN, EXPIRE...',
     `performed_by` BIGINT NULL COMMENT 'Liên kết users(id) - Người thực hiện thao tác',
+    `performed_by_email` VARCHAR(100) NULL COMMENT 'Email người thao tác',
     `performed_at` DATETIME NOT NULL COMMENT 'Thời điểm thực hiện',
     `reason` VARCHAR(255) NULL COMMENT 'Lý do thao tác',
     `note` TEXT NULL COMMENT 'Ghi chú bổ sung',

@@ -36,9 +36,9 @@ public class BookingController {
 
     /**
      * Xem danh sách booking của tôi:
-     * GET /api/bookings/my-bookings
+     * GET /api/bookings/my-bookings hoặc GET /api/bookings/my
      */
-    @GetMapping("/my-bookings")
+    @GetMapping({"/my-bookings", "/my"})
     public ResponseEntity<List<BookingResponse>> getMyBookings(
             @RequestParam(required = false) BookingStatus status) {
         String currentUserEmail = resolveCurrentUserEmail();

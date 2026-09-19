@@ -41,12 +41,16 @@ import com.eduspace.backend.policy.service.PolicyService;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@Transactional(readOnly = true)
 public class AvailabilityService {
 
     private final BookingRepository bookingRepository;
     private final BookingAuditLogRepository auditLogRepository;
     private final SpaceRepository spaceRepository;
     private final PolicyService policyService;
+    // ================= BEGIN KT =================
+    private final com.eduspace.backend.staff.repository.MaintenanceBlockRepository maintenanceBlockRepository;
+    // ================= END KT =================
 
     public static final List<BookingStatus> OCCUPYING_STATUSES = List.of(
             BookingStatus.PENDING_APPROVAL,
@@ -81,17 +85,17 @@ public class AvailabilityService {
         SPACE_CATALOG.put(1L, SpaceCatalogItem.builder()
                 .id(1L).name("Phòng G-101").spaceTypeId(1L).spaceTypeName("Phòng học nhóm tiêu chuẩn")
                 .bookingMode("WHOLE_SPACE")
-                .requiresApproval(false).building("Tòa A").floor("1").capacity(6).status("AVAILABLE")
+                .requiresApproval(true).building("Tòa A").floor("1").capacity(6).status("AVAILABLE")
                 .imageUrl("https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&auto=format&fit=crop")
-                .description("Phòng học nhóm tầng 1, gần sảnh chờ (WHOLE_SPACE)")
+                .description("Phòng học nhóm tầng 1, gần sảnh chờ (WHOLE_SPACE, cần duyệt)")
                 .facilities(List.of("Bảng trắng & Bút dạ", "Ổ cắm điện đa năng", "Điều hòa không khí 2 chiều")).build());
 
         SPACE_CATALOG.put(2L, SpaceCatalogItem.builder()
                 .id(2L).name("Phòng G-102").spaceTypeId(1L).spaceTypeName("Phòng học nhóm tiêu chuẩn")
                 .bookingMode("WHOLE_SPACE")
-                .requiresApproval(false).building("Tòa A").floor("1").capacity(8).status("AVAILABLE")
+                .requiresApproval(true).building("Tòa A").floor("1").capacity(8).status("AVAILABLE")
                 .imageUrl("https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&auto=format&fit=crop")
-                .description("Phòng học nhóm cỡ vừa, trang bị bảng và màn hình lớn (WHOLE_SPACE)")
+                .description("Phòng học nhóm cỡ vừa, trang bị bảng và màn hình lớn (WHOLE_SPACE, cần duyệt)")
                 .facilities(List.of("Bảng trắng & Bút dạ", "Màn hình TV thông minh 65 inch", "Ổ cắm điện đa năng", "Điều hòa không khí 2 chiều")).build());
 
         SPACE_CATALOG.put(3L, SpaceCatalogItem.builder()
@@ -107,21 +111,21 @@ public class AvailabilityService {
                 .bookingMode("PER_SEAT")
                 .requiresApproval(false).building("Tòa B").floor("2").capacity(10).status("AVAILABLE")
                 .imageUrl("https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=800&auto=format&fit=crop")
-                .description("Khu tự học chung tầng 2, sức chứa 10 chỗ ngồi độc lập. Hỗ trợ chọn theo từng ghế (PER_SEAT)")
+                .description("Khu tự học chung tầng 2, sức chứa 10 chỗ ngồi độc lập. Hỗ trợ chọn theo từng ghế (PER_SEAT, duyệt tức thì)")
                 .facilities(List.of("Ổ cắm điện đa năng", "Điều hòa không khí 2 chiều")).build());
 
         SPACE_CATALOG.put(5L, SpaceCatalogItem.builder()
                 .id(5L).name("Study Booth B-01").spaceTypeId(4L).spaceTypeName("Study Booth cá nhân")
                 .bookingMode("WHOLE_SPACE")
-                .requiresApproval(false).building("Tòa B").floor("3").capacity(2).status("AVAILABLE")
+                .requiresApproval(true).building("Tòa B").floor("3").capacity(2).status("AVAILABLE")
                 .imageUrl("https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=800&auto=format&fit=crop")
-                .description("Khoang tự học yên tĩnh, bàn đôi, đặt phòng như bình thường (WHOLE_SPACE)")
+                .description("Khoang tự học yên tĩnh, bàn đôi, đặt trọn phòng (WHOLE_SPACE, cần duyệt)")
                 .facilities(List.of("Ổ cắm điện đa năng", "Điều hòa không khí 2 chiều")).build());
 
         SPACE_CATALOG.put(6L, SpaceCatalogItem.builder()
                 .id(6L).name("Phòng G-103 (Bảo trì)").spaceTypeId(1L).spaceTypeName("Phòng học nhóm tiêu chuẩn")
                 .bookingMode("WHOLE_SPACE")
-                .requiresApproval(false).building("Tòa A").floor("1").capacity(6).status("MAINTENANCE")
+                .requiresApproval(true).building("Tòa A").floor("1").capacity(6).status("MAINTENANCE")
                 .imageUrl("https://images.unsplash.com/photo-1517502884422-41eaead166d4?w=800&auto=format&fit=crop")
                 .description("Phòng đang cải tạo hệ thống điện, tạm ngừng phục vụ")
                 .facilities(List.of("Bảng trắng & Bút dạ")).build());
@@ -129,9 +133,9 @@ public class AvailabilityService {
         SPACE_CATALOG.put(7L, SpaceCatalogItem.builder()
                 .id(7L).name("Phòng D-201").spaceTypeId(5L).spaceTypeName("Phòng thảo luận theo bàn")
                 .bookingMode("PER_TABLE")
-                .requiresApproval(false).building("Tòa D").floor("2").capacity(24).status("AVAILABLE")
+                .requiresApproval(true).building("Tòa D").floor("2").capacity(24).status("AVAILABLE")
                 .imageUrl("https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&auto=format&fit=crop")
-                .description("Phòng thảo luận nhóm tầng 2, sức chứa 24 chỗ chia thành 4 bàn. Hỗ trợ chọn theo bàn (PER_TABLE)")
+                .description("Phòng thảo luận nhóm tầng 2, sức chứa 24 chỗ chia thành 4 bàn. Hỗ trợ chọn theo bàn (PER_TABLE, cần duyệt)")
                 .facilities(List.of("Bảng trắng & Bút dạ", "Ổ cắm điện đa năng", "Điều hòa không khí 2 chiều")).build());
     }
 
@@ -147,7 +151,8 @@ public class AvailabilityService {
         String bookingMode = (space.getSpaceType() != null && space.getSpaceType().getBookingMode() != null)
                 ? space.getSpaceType().getBookingMode().name()
                 : "WHOLE_SPACE";
-        boolean requiresApproval = space.getSpaceType() != null && space.getSpaceType().isRequiresApproval();
+        // LOGIC MỚI: PER_SEAT không cần duyệt (false), PER_TABLE & WHOLE_SPACE bắt buộc phải chờ staff duyệt (true)
+        boolean requiresApproval = !"PER_SEAT".equalsIgnoreCase(bookingMode);
         String typeName = space.getSpaceType() != null ? space.getSpaceType().getName() : "Phòng học tiêu chuẩn";
         Long typeId = space.getSpaceType() != null ? space.getSpaceType().getId() : 1L;
         String statusStr = space.getStatus() != null ? space.getStatus().name() : "AVAILABLE";
@@ -242,6 +247,30 @@ public class AvailabilityService {
     }
 
     /**
+     * Quét chuyển các booking CHECKED_IN đã quá endTime sang COMPLETED.
+     */
+    @Transactional
+    public void completeOverdueCheckedIn(LocalDateTime now) {
+        List<Booking> completedCandidates = bookingRepository.findCompletedCandidateBookings(BookingStatus.CHECKED_IN, now);
+        for (Booking b : completedCandidates) {
+            b.setStatus(BookingStatus.COMPLETED);
+            bookingRepository.save(b);
+
+            BookingAuditLog audit = BookingAuditLog.builder()
+                    .bookingId(b.getId())
+                    .action(AuditAction.COMPLETE_TIMEOUT)
+                    .performedBy(null)
+                    .performedByEmail("system@eduspace.vn")
+                    .performedAt(now)
+                    .reason("SESSION_ENDED")
+                    .note("Hết giờ sử dụng phòng -> Đánh dấu COMPLETED thành công")
+                    .build();
+            auditLogRepository.save(audit);
+            log.info("[Scheduler] Booking #{} chuyển sang COMPLETED", b.getId());
+        }
+    }
+
+    /**
      * API kiểm tra khả dụng của một phòng cụ thể (02_Yeu_cau_logic §3.1).
      */
     @Transactional
@@ -267,6 +296,22 @@ public class AvailabilityService {
                     .description("Phòng hiện đang bảo trì bảo dưỡng")
                     .build());
         }
+
+        // ================= BEGIN KT =================
+        if (maintenanceBlockRepository != null) {
+            List<com.eduspace.backend.space.entity.MaintenanceBlock> activeBlocks =
+                    maintenanceBlockRepository.findOverlappingBlocks(spaceId, startTime, endTime);
+            for (com.eduspace.backend.space.entity.MaintenanceBlock mb : activeBlocks) {
+                conflicts.add(ConflictDetail.builder()
+                        .type("MAINTENANCE")
+                        .referenceId(mb.getId())
+                        .startTime(mb.getStartTime())
+                        .endTime(mb.getEndTime())
+                        .description("Không gian đang trong khoảng thời gian bảo trì: " + mb.getReason())
+                        .build());
+            }
+        }
+        // ================= END KT =================
 
         List<Booking> overlappingBookings = bookingRepository.findOverlappingSpaceBookings(
                 spaceId, startTime, endTime, OCCUPYING_STATUSES
@@ -325,7 +370,13 @@ public class AvailabilityService {
                         boolean hasBooking = !bookingRepository.findOverlappingSpaceBookings(
                                 space.getId(), effectiveStart, effectiveEnd, OCCUPYING_STATUSES
                         ).isEmpty();
-                        isAvailable = !hasBooking;
+                        // ================= BEGIN KT =================
+                        boolean hasMaintenance = (maintenanceBlockRepository != null)
+                                && !maintenanceBlockRepository.findOverlappingBlocks(
+                                        space.getId(), effectiveStart, effectiveEnd
+                                ).isEmpty();
+                        isAvailable = !hasBooking && !hasMaintenance;
+                        // ================= END KT =================
                     }
                     boolean isPerSeat = "PER_SEAT".equalsIgnoreCase(space.getBookingMode());
                     boolean isPerTable = "PER_TABLE".equalsIgnoreCase(space.getBookingMode());
@@ -406,11 +457,11 @@ public class AvailabilityService {
 
     public List<java.util.Map<String, Object>> getSpaceTypes() {
         return List.of(
-                java.util.Map.of("id", 1L, "name", "Phòng học nhóm tiêu chuẩn", "bookingMode", "WHOLE_SPACE", "requiresApproval", false, "description", "Đặt nguyên phòng 4-6 chỗ"),
+                java.util.Map.of("id", 1L, "name", "Phòng học nhóm tiêu chuẩn", "bookingMode", "WHOLE_SPACE", "requiresApproval", true, "description", "Đặt nguyên phòng 4-6 chỗ, cần Staff duyệt"),
                 java.util.Map.of("id", 2L, "name", "Phòng thuyết trình & Hội thảo", "bookingMode", "WHOLE_SPACE", "requiresApproval", true, "description", "Đặt nguyên phòng, cần Staff duyệt"),
-                java.util.Map.of("id", 3L, "name", "Khu tự học chung (Mở)", "bookingMode", "PER_SEAT", "requiresApproval", false, "description", "Không gian tự học chung, đặt theo từng ghế (S01-S10)"),
-                java.util.Map.of("id", 4L, "name", "Study Booth cá nhân", "bookingMode", "WHOLE_SPACE", "requiresApproval", false, "description", "Khoang tự học cách âm, đặt phòng bình thường"),
-                java.util.Map.of("id", 5L, "name", "Phòng thảo luận theo bàn", "bookingMode", "PER_TABLE", "requiresApproval", false, "description", "Phòng thảo luận nhóm, đặt theo từng bàn (T01-T04)")
+                java.util.Map.of("id", 3L, "name", "Khu tự học chung (Mở)", "bookingMode", "PER_SEAT", "requiresApproval", false, "description", "Không gian tự học chung, đặt theo từng ghế (S01-S10), duyệt tức thì"),
+                java.util.Map.of("id", 4L, "name", "Study Booth cá nhân", "bookingMode", "WHOLE_SPACE", "requiresApproval", true, "description", "Khoang tự học cách âm, đặt phòng, cần Staff duyệt"),
+                java.util.Map.of("id", 5L, "name", "Phòng thảo luận theo bàn", "bookingMode", "PER_TABLE", "requiresApproval", true, "description", "Phòng thảo luận nhóm, đặt theo từng bàn (T01-T04), cần Staff duyệt")
         );
     }
 
@@ -446,7 +497,12 @@ public class AvailabilityService {
         }
 
         long durationMinutes = ChronoUnit.MINUTES.between(startTime, endTime);
-        long maxMinutes = policyService.getCurrentPolicy().getMaxDurationMinutes();
+        long maxMinutes;
+        try {
+            maxMinutes = policyService.getCurrentPolicy().getMaxDurationMinutes();
+        } catch (Exception e) {
+            maxMinutes = getPolicyLong("MAX_BOOKING_HOURS_PER_SLOT", 3L) * 60;
+        }
         if (durationMinutes > maxMinutes) {
             throw BusinessException.badRequest("DURATION_EXCEEDED",
                     "Thời lượng đặt phòng tối đa là " + (maxMinutes / 60) + " giờ (" + maxMinutes + " phút)");
