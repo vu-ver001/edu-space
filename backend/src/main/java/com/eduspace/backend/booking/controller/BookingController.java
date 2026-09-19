@@ -16,9 +16,6 @@ import com.eduspace.backend.booking.service.BookingService;
 import com.eduspace.backend.auth.security.SecurityUtils;
 import com.eduspace.backend.common.exception.BusinessException;
 
-
-
-
 @RestController
 @RequestMapping("/api/bookings")
 @RequiredArgsConstructor
@@ -39,9 +36,9 @@ public class BookingController {
 
     /**
      * Xem danh sách booking của tôi:
-     * GET /api/bookings/my-bookings
+     * GET /api/bookings/my-bookings hoặc GET /api/bookings/my
      */
-    @GetMapping("/my-bookings")
+    @GetMapping({"/my-bookings", "/my"})
     public ResponseEntity<List<BookingResponse>> getMyBookings(
             @RequestParam(required = false) BookingStatus status) {
         String currentUserEmail = resolveCurrentUserEmail();
@@ -60,9 +57,9 @@ public class BookingController {
 
     /**
      * Xem lịch sử thao tác của booking:
-     * GET /api/bookings/{id}/audit-logs
+     * GET /api/bookings/{id}/history
      */
-    @GetMapping("/{id}/audit-logs")
+    @GetMapping({"/{id}/history"})
     public ResponseEntity<List<BookingAuditLogResponse>> getBookingAuditLogs(@PathVariable Long id) {
         return ResponseEntity.ok(bookingService.getBookingAuditLogs(id));
     }

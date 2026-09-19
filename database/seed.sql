@@ -27,8 +27,8 @@ INSERT INTO `booking_policies` (`policy_key`, `policy_value`, `description`) VAL
 ('RATE_LIMIT_HOURLY', '10', 'Giới hạn số lần gửi yêu cầu đặt chỗ của 1 sinh viên trong 1 giờ'),
 ('CHECKIN_OPEN_MINUTES', '15', 'Thời điểm mở cửa sổ check-in trước giờ bắt đầu (phút)'),
 ('CHECKIN_GRACE_MINUTES', '15', 'Thời gian ân hạn sau giờ bắt đầu trước khi bị tính là No-show (phút)'),
-('OPENING_HOUR', '07:00', 'Giờ mở cửa phục vụ không gian học tập hàng ngày'),
-('CLOSING_HOUR', '22:00', 'Giờ đóng cửa không gian học tập hàng ngày'),
+('OPENING_HOUR', '7', 'Giờ mở cửa phục vụ không gian học tập hàng ngày (7h)'),
+('CLOSING_HOUR', '22', 'Giờ đóng cửa không gian học tập hàng ngày (22h)'),
 ('MAX_ADVANCE_DAYS', '7', 'Số ngày tối đa sinh viên được phép đặt trước');
 
 -- ========================================================
@@ -46,15 +46,15 @@ INSERT INTO `student_schedules` (`student_id`, `course_name`, `schedule_date`, `
 -- Phụ trách: Nguyễn Thị Khánh Vân
 -- ========================================================
 INSERT INTO `bookings` (`id`, `student_id`, `space_id`, `start_time`, `end_time`, `participant_count`, `purpose`, `selected_seats`, `status`) VALUES
-(1, 3, 2, '2026-09-14 14:00:00', '2026-09-14 16:00:00', 2, 'Thảo luận đề tài bài tập lớn EduSpace', 'A1,A2', 'CONFIRMED'),
-(2, 3, 4, '2026-09-16 14:00:00', '2026-09-16 16:30:00', 4, 'Thuyết trình thử nghiệm đồ án môn học', 'C1,C2,C3,C4', 'PENDING_APPROVAL');
+(1, 3, 4, '2026-09-14 14:00:00', '2026-09-14 16:00:00', 1, 'Tự học ôn thi cuối kỳ', 'S01', 'CONFIRMED'),
+(2, 3, 2, '2026-09-16 14:00:00', '2026-09-16 16:30:00', 4, 'Thảo luận đề tài bài tập lớn EduSpace', '', 'PENDING_APPROVAL');
 
 -- ========================================================
 -- 4. Dữ liệu mẫu: Nhật ký thao tác đặt chỗ (Audit Logs)
 -- Phụ trách: Nguyễn Thị Khánh Vân
 -- ========================================================
 INSERT INTO `booking_audit_logs` (`booking_id`, `action`, `performed_by`, `performed_at`, `reason`, `note`) VALUES
-(1, 'CREATE_BOOKING', 3, '2026-09-14 07:00:00', 'Sinh viên tạo yêu cầu', 'Phòng không yêu cầu duyệt -> Xác nhận ngay CONFIRMED'),
-(2, 'CREATE_BOOKING', 3, '2026-09-14 07:30:00', 'Sinh viên tạo yêu cầu', 'Phòng thuyết trình -> Chuyển sang PENDING_APPROVAL chờ Staff duyệt');
+(1, 'CREATE_BOOKING', 3, '2026-09-14 07:00:00', 'Sinh viên tạo yêu cầu', 'Phòng PER_SEAT không yêu cầu duyệt -> Xác nhận ngay CONFIRMED'),
+(2, 'CREATE_BOOKING', 3, '2026-09-14 07:30:00', 'Sinh viên tạo yêu cầu', 'Phòng WHOLE_SPACE -> Chuyển sang PENDING_APPROVAL chờ Staff duyệt');
 
 SET FOREIGN_KEY_CHECKS = 1;

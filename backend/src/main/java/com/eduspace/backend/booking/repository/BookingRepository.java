@@ -26,6 +26,11 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
         return findById(id);
     }
 
+    long countByCreatedAtBetween(LocalDateTime from, LocalDateTime to);
+
+    long countByStatusAndCreatedAtBetween(BookingStatus status, LocalDateTime from, LocalDateTime to);
+
+
     /**
      * Tìm các booking đang chiếm chỗ của một phòng giao nhau với khoảng thời gian [startTime, endTime].
      * Nhóm chiếm chỗ: PENDING_APPROVAL, CONFIRMED, CHECKED_IN
@@ -101,7 +106,6 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     /**
      * Lấy các booking PENDING_APPROVAL đã quá giờ bắt đầu mà chưa xử lý (để chuyển EXPIRED).
      */
-    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT b FROM Booking b WHERE b.status = :status AND b.startTime <= :now ORDER BY b.id")
     List<Booking> findPendingOverdueBookings(
             @Param("status") BookingStatus status,

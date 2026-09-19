@@ -8,6 +8,7 @@ import com.eduspace.backend.checkin.service.CheckInService;
 import com.eduspace.backend.auth.entity.Role;
 import com.eduspace.backend.auth.entity.User;
 import com.eduspace.backend.auth.repository.UserRepository;
+import com.eduspace.backend.space.repository.SpaceTableRepository;
 import java.time.*;
 import java.util.Optional;
 import org.junit.jupiter.api.*;
