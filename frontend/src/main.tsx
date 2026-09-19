@@ -6,6 +6,9 @@ import App from './App.tsx';
 import Placeholder from './pages/Placeholder.tsx';
 import CheckInDemoPage from './features/bookings/checkin/pages/CheckInDemoPage';
 
+import PolicyManagementPage from './features/admin/policy/pages/PolicyManagementPage';
+import PolicyHistoryPage from './features/admin/policy/pages/PolicyHistoryPage';
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
@@ -18,7 +21,8 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/checkin-demo" element={<CheckInDemoPage />} />
         <Route path="/qr" element={<Placeholder title="Check-in QR" owner="Vu" />} />
         <Route path="/equipment" element={<Placeholder title="Thiet bi" owner="Vu" />} />
-        <Route path="/admin/policy" element={<Placeholder title="Chinh sach" owner="Anh" />} />
+        <Route path="/admin/policy" element={<PolicyManagementPage />} />
+        <Route path="/admin/policy/history" element={<PolicyHistoryPage />} />
         <Route path="/admin/stats" element={<Placeholder title="Thong ke" owner="Anh" />} />
       </Routes>
     </BrowserRouter>

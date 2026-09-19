@@ -3,6 +3,7 @@ package com.eduspace.backend.checkin.policy.dto.request;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -39,4 +40,24 @@ public class PolicyUpdateRequest {
 
     // Tùy chọn: Nếu Admin truyền mốc đóng cửa sổ check-in, mốc này bắt buộc phải bằng checkInGraceMinutes (Quy tắc R-19)
     private Integer checkInCloseOffsetMinutes;
+
+    // Khung giờ mở cửa & đóng cửa toàn hệ thống (định dạng HH:mm)
+    @Pattern(regexp = "^([01]?[0-9]|2[0-3]):[0-5][0-9]$", message = "Giờ mở cửa phải theo định dạng HH:mm (ví dụ 07:00)")
+    private String openingHour;
+
+    @Pattern(regexp = "^([01]?[0-9]|2[0-3]):[0-5][0-9]$", message = "Giờ đóng cửa phải theo định dạng HH:mm (ví dụ 22:00)")
+    private String closingHour;
+
+    public PolicyUpdateRequest(Integer maxBookingsPerDay, Integer maxDurationMinutes,
+                               Integer checkInGraceMinutes, Integer maxRequestRatePerHour,
+                               Integer checkInEarlyOpenMinutes, Integer checkInCloseOffsetMinutes) {
+        this.maxBookingsPerDay = maxBookingsPerDay;
+        this.maxDurationMinutes = maxDurationMinutes;
+        this.checkInGraceMinutes = checkInGraceMinutes;
+        this.maxRequestRatePerHour = maxRequestRatePerHour;
+        this.checkInEarlyOpenMinutes = checkInEarlyOpenMinutes;
+        this.checkInCloseOffsetMinutes = checkInCloseOffsetMinutes;
+        this.openingHour = "07:00";
+        this.closingHour = "22:00";
+    }
 }

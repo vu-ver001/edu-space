@@ -14,7 +14,8 @@ const NAV: Array<{ to: string; label: string; owner: string }> = [
   { to: '/checkin-demo', label: 'Demo check-in MVP (Vu)', owner: 'MOCK(Vu)' },
   { to: '/qr', label: 'Check-in QR (Vu)', owner: 'TODO(Vu)' },
   { to: '/equipment', label: 'Thiet bi (Vu)', owner: 'TODO(Vu)' },
-  { to: '/admin/policy', label: 'Chinh sach (Anh)', owner: 'TODO(Anh)' },
+  { to: '/admin/policy', label: 'Quy định đặt chỗ (Ngọc Anh)', owner: 'DONE(Anh)' },
+  { to: '/admin/policy/history', label: 'Lịch sử thay đổi chính sách (Ngọc Anh)', owner: 'DONE(Anh)' },
   { to: '/admin/stats', label: 'Thong ke (Anh)', owner: 'TODO(Anh)' },
 ];
 

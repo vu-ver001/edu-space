@@ -437,8 +437,9 @@ public class AvailabilityService {
             throw BusinessException.badRequest("PAST_TIME_NOT_ALLOWED", "Không được đặt phòng vào thời điểm trong quá khứ");
         }
 
-        LocalTime openTime = LocalTime.of(7, 0);
-        LocalTime closeTime = LocalTime.of(22, 0);
+        var policy = policyService.getCurrentPolicy();
+        LocalTime openTime = policy.getOpeningHour() != null ? LocalTime.parse(policy.getOpeningHour()) : LocalTime.of(7, 0);
+        LocalTime closeTime = policy.getClosingHour() != null ? LocalTime.parse(policy.getClosingHour()) : LocalTime.of(22, 0);
         if (startTime.toLocalTime().isBefore(openTime) || endTime.toLocalTime().isAfter(closeTime) ||
             (endTime.toLocalTime().equals(LocalTime.MIDNIGHT) && !startTime.toLocalDate().equals(endTime.toLocalDate()))) {
             throw BusinessException.badRequest("OUTSIDE_OPERATING_HOURS",

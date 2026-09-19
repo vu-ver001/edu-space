@@ -33,11 +33,10 @@ public class PolicyService {
         }
         try {
             long parsed = Long.parseLong(value.trim());
-            if (parsed < 0) throw new NumberFormatException();
+            if (parsed < 0) return 0L;
             return parsed;
         } catch (NumberFormatException ex) {
-            throw new BusinessException("INVALID_POLICY_CONFIGURATION", "Giá trị policy không hợp lệ.",
-                    org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR);
+            return 0L;
         }
     }
 
@@ -47,10 +46,12 @@ public class PolicyService {
     @Transactional(readOnly = true)
     public PolicyResponse getCurrentPolicy() {
         Map<String, Long> values = new HashMap<>();
+        Map<String, String> stringValues = new HashMap<>();
         var rows = policies.findAll();
         rows.forEach(p -> {
             if (p.getPolicyKey() != null && !p.getPolicyKey().isBlank()) {
                 values.put(p.getPolicyKey(), parse(p.getPolicyValue()));
+                stringValues.put(p.getPolicyKey(), p.getPolicyValue());
             }
         });
         int grace = Math.toIntExact(values.getOrDefault("CHECKIN_GRACE_MINUTES", 15L));
@@ -63,6 +64,8 @@ public class PolicyService {
                 .maxRequestRatePerHour(Math.toIntExact(values.getOrDefault("RATE_LIMIT_HOURLY", 10L)))
                 .checkInEarlyOpenMinutes(Math.toIntExact(values.getOrDefault("CHECKIN_OPEN_MINUTES", 15L)))
                 .checkInGraceMinutes(grace).checkInCloseOffsetMinutes(grace)
+                .openingHour(stringValues.getOrDefault("OPENING_HOUR", "07:00"))
+                .closingHour(stringValues.getOrDefault("CLOSING_HOUR", "22:00"))
                 .updatedAt(latest.map(BookingPolicy::getUpdatedAt).orElse(null))
                 .updatedBy(latest.map(BookingPolicy::getUpdatedBy).orElse(null)).build();
     }
@@ -74,27 +77,52 @@ public class PolicyService {
                     && !request.getCheckInCloseOffsetMinutes().equals(request.getCheckInGraceMinutes()))) {
             throw BusinessException.badRequest("INVALID_POLICY_CONFIGURATION", "Cấu hình policy không hợp lệ; mốc đóng phải bằng thời gian ân hạn.");
         }
+        if (request.getOpeningHour() != null && request.getClosingHour() != null) {
+            if (request.getOpeningHour().compareTo(request.getClosingHour()) >= 0) {
+                throw BusinessException.badRequest("INVALID_POLICY_CONFIGURATION", "Giờ mở cửa phải trước giờ đóng cửa.");
+            }
+        }
         // Existing rows are locked in a consistent order for concurrent administrator edits.
         policies.lockAll();
-        String before = getCurrentPolicy().toString();
-        Map<String, Integer> updates = new TreeMap<>();
-        updates.put("DAILY_BOOKING_QUOTA", request.getMaxBookingsPerDay());
-        updates.put("MAX_DURATION_MINUTES", request.getMaxDurationMinutes());
-        updates.put("RATE_LIMIT_HOURLY", request.getMaxRequestRatePerHour());
-        updates.put("CHECKIN_OPEN_MINUTES", request.getCheckInEarlyOpenMinutes());
-        updates.put("CHECKIN_GRACE_MINUTES", request.getCheckInGraceMinutes());
+        String before = formatPolicySummary(getCurrentPolicy());
+        Map<String, String> updates = new TreeMap<>();
+        updates.put("DAILY_BOOKING_QUOTA", String.valueOf(request.getMaxBookingsPerDay()));
+        updates.put("MAX_DURATION_MINUTES", String.valueOf(request.getMaxDurationMinutes()));
+        updates.put("RATE_LIMIT_HOURLY", String.valueOf(request.getMaxRequestRatePerHour()));
+        updates.put("CHECKIN_OPEN_MINUTES", String.valueOf(request.getCheckInEarlyOpenMinutes()));
+        updates.put("CHECKIN_GRACE_MINUTES", String.valueOf(request.getCheckInGraceMinutes()));
+        if (request.getOpeningHour() != null && !request.getOpeningHour().isBlank()) {
+            updates.put("OPENING_HOUR", request.getOpeningHour().trim());
+        }
+        if (request.getClosingHour() != null && !request.getClosingHour().isBlank()) {
+            updates.put("CLOSING_HOUR", request.getClosingHour().trim());
+        }
         LocalDateTime now = LocalDateTime.now();
         updates.forEach((key, value) -> {
             BookingPolicy row = policies.findByPolicyKey(key)
                     .orElseGet(() -> BookingPolicy.builder().policyKey(key).build());
-            row.setPolicyValue(value.toString());
+            row.setPolicyValue(value);
             row.setUpdatedAt(now);
             row.setUpdatedBy(actor);
             policies.save(row);
         });
         PolicyResponse result = getCurrentPolicy();
-        audits.save(new AuditLog("UPDATE_POLICY", "POLICY", "1", before, result.toString(), actor));
+        String after = formatPolicySummary(result);
+        audits.save(new AuditLog("UPDATE_POLICY", "POLICY", "1", before, after, actor));
         return result;
+    }
+
+    private String formatPolicySummary(PolicyResponse p) {
+        if (p == null) return "";
+        return String.format(
+            "Khung giờ: %s - %s | Thời lượng tối đa: %d giờ | Hạn mức: %d lượt/ngày | Check-in: trước %dp, ân hạn %dp",
+            p.getOpeningHour() != null ? p.getOpeningHour() : "07:00",
+            p.getClosingHour() != null ? p.getClosingHour() : "22:00",
+            (p.getMaxDurationMinutes() != null ? p.getMaxDurationMinutes() : 180) / 60,
+            p.getMaxBookingsPerDay() != null ? p.getMaxBookingsPerDay() : 2,
+            p.getCheckInEarlyOpenMinutes() != null ? p.getCheckInEarlyOpenMinutes() : 15,
+            p.getCheckInGraceMinutes() != null ? p.getCheckInGraceMinutes() : 15
+        );
     }
 
     @Transactional(readOnly = true)
