@@ -13,10 +13,8 @@ import com.eduspace.backend.booking.dto.response.BookingAuditLogResponse;
 import com.eduspace.backend.booking.dto.response.BookingResponse;
 import com.eduspace.backend.booking.entity.BookingStatus;
 import com.eduspace.backend.booking.service.BookingService;
-import com.eduspace.backend.security.SecurityUtils;
-
-
-
+import com.eduspace.backend.auth.security.SecurityUtils;
+import com.eduspace.backend.common.exception.BusinessException;
 
 @RestController
 @RequestMapping("/api/bookings")
@@ -31,19 +29,19 @@ public class BookingController {
      */
     @PostMapping
     public ResponseEntity<BookingResponse> createBooking(@Valid @RequestBody CreateBookingRequest request) {
-        String currentUserEmail = resolveCurrentUserEmail("student@eduspace.vn");
+        String currentUserEmail = resolveCurrentUserEmail();
         BookingResponse response = bookingService.createBooking(request, currentUserEmail);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     /**
      * Xem danh sách booking của tôi:
-     * GET /api/bookings/my-bookings
+     * GET /api/bookings/my-bookings hoặc GET /api/bookings/my
      */
-    @GetMapping("/my-bookings")
+    @GetMapping({"/my-bookings", "/my"})
     public ResponseEntity<List<BookingResponse>> getMyBookings(
             @RequestParam(required = false) BookingStatus status) {
-        String currentUserEmail = resolveCurrentUserEmail("student@eduspace.vn");
+        String currentUserEmail = resolveCurrentUserEmail();
         return ResponseEntity.ok(bookingService.getMyBookings(currentUserEmail, status));
     }
 
@@ -53,15 +51,15 @@ public class BookingController {
      */
     @GetMapping("/{id}")
     public ResponseEntity<BookingResponse> getBookingById(@PathVariable Long id) {
-        String currentUserEmail = resolveCurrentUserEmail("student@eduspace.vn");
+        String currentUserEmail = resolveCurrentUserEmail();
         return ResponseEntity.ok(bookingService.getBookingById(id, currentUserEmail));
     }
 
     /**
      * Xem lịch sử thao tác của booking:
-     * GET /api/bookings/{id}/audit-logs
+     * GET /api/bookings/{id}/history
      */
-    @GetMapping("/{id}/audit-logs")
+    @GetMapping({"/{id}/history"})
     public ResponseEntity<List<BookingAuditLogResponse>> getBookingAuditLogs(@PathVariable Long id) {
         return ResponseEntity.ok(bookingService.getBookingAuditLogs(id));
     }
@@ -74,7 +72,7 @@ public class BookingController {
     public ResponseEntity<BookingResponse> cancelBooking(
             @PathVariable Long id,
             @RequestParam(required = false) String reason) {
-        String currentUserEmail = resolveCurrentUserEmail("student@eduspace.vn");
+        String currentUserEmail = resolveCurrentUserEmail();
         return ResponseEntity.ok(bookingService.cancelBooking(id, currentUserEmail, reason));
     }
 
@@ -83,8 +81,9 @@ public class BookingController {
      * POST /api/bookings/{id}/approve
      */
     @PostMapping("/{id}/approve")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")
     public ResponseEntity<BookingResponse> approveBooking(@PathVariable Long id) {
-        String currentUserEmail = resolveCurrentUserEmail("staff@eduspace.vn");
+        String currentUserEmail = resolveCurrentUserEmail();
         return ResponseEntity.ok(bookingService.approveBooking(id, currentUserEmail));
     }
 
@@ -93,21 +92,12 @@ public class BookingController {
      * POST /api/bookings/{id}/reject
      */
     @PostMapping("/{id}/reject")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")
     public ResponseEntity<BookingResponse> rejectBooking(
             @PathVariable Long id,
             @Valid @RequestBody RejectBookingRequest request) {
-        String currentUserEmail = resolveCurrentUserEmail("staff@eduspace.vn");
+        String currentUserEmail = resolveCurrentUserEmail();
         return ResponseEntity.ok(bookingService.rejectBooking(id, currentUserEmail, request.getRejectReason()));
-    }
-
-    /**
-     * Check-in booking (Sinh viên hoặc Staff hỗ trợ):
-     * POST /api/bookings/{id}/check-in
-     */
-    @PostMapping("/{id}/check-in")
-    public ResponseEntity<BookingResponse> checkIn(@PathVariable Long id) {
-        String currentUserEmail = resolveCurrentUserEmail("student@eduspace.vn");
-        return ResponseEntity.ok(bookingService.checkIn(id, currentUserEmail));
     }
 
     /**
@@ -115,15 +105,16 @@ public class BookingController {
      * GET /api/bookings/pending
      */
     @GetMapping("/pending")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")
     public ResponseEntity<List<BookingResponse>> getPendingBookings() {
         return ResponseEntity.ok(bookingService.getPendingBookingsForStaff());
     }
 
-    private String resolveCurrentUserEmail(String fallbackEmail) {
+    private String resolveCurrentUserEmail() {
         String authEmail = SecurityUtils.getCurrentUserEmail();
         if (authEmail != null && !authEmail.isBlank() && !"anonymousUser".equalsIgnoreCase(authEmail)) {
             return authEmail;
         }
-        return fallbackEmail;
+        throw new BusinessException("UNAUTHENTICATED", "Bạn cần đăng nhập.", HttpStatus.UNAUTHORIZED);
     }
 }
