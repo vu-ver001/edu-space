@@ -1,0 +1,626 @@
+/* ========================================================
+   EduSpace — Space Type Detail Page Styles (KT Module)
+   Author: Nguyen Thi Kim Tuyen
+   Matches exact layout from user reference
+   ======================================================== */
+
+.space-type-detail-page {
+  min-height: 100vh;
+  background-color: #f8fafc;
+  color: #0f172a;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-main-content {
+  flex: 1;
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 28px 32px 48px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+/* Page Header Row */
+.detail-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.detail-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-header-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.detail-header-subtitle {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0;
+}
+
+.detail-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-header-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #ffffff;
+  color: #2563eb;
+  border: 1px solid #dbeafe;
+  border-radius: 8px;
+  padding: 9px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.btn-header-back:hover {
+  background-color: #eff6ff;
+  border-color: #93c5fd;
+  transform: translateY(-1px);
+}
+
+.btn-header-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background-color: #2563eb;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+}
+
+.btn-header-edit:hover {
+  background-color: #1d4ed8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+}
+
+/* 2-Column Main Layout */
+.detail-2col-layout {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .detail-2col-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.detail-col-left,
+.detail-col-right {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+/* Generic Detail Card */
+.detail-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 22px 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 4px 12px rgba(0, 0, 0, 0.02);
+}
+
+.card-header-with-icon {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 18px 0;
+  letter-spacing: -0.01em;
+}
+
+.card-header-with-icon svg {
+  color: #334155;
+  flex-shrink: 0;
+}
+
+/* 1. Left Card: Summary Banner */
+.banner-top-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.banner-icon-box {
+  width: 62px;
+  height: 62px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.banner-icon-purple {
+  background-color: #f3e8ff;
+  color: #9333ea;
+  border: 1px solid #e9d5ff;
+}
+
+.banner-icon-sky {
+  background-color: #e0f2fe;
+  color: #0284c7;
+  border: 1px solid #bae6fd;
+}
+
+.banner-icon-green {
+  background-color: #dcfce7;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+}
+
+.banner-meta-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.banner-label-sub {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 500;
+  margin: 0;
+}
+
+.banner-title-main {
+  font-size: 22px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 6px 0;
+  letter-spacing: -0.01em;
+}
+
+.banner-badges-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pill-badge-mode {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  background-color: #f3e8ff;
+  color: #7e22ce;
+  border: 1px solid #e9d5ff;
+}
+
+.pill-badge-active {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  background-color: #ecfdf5;
+  color: #15803d;
+  border: 1px solid #d1fae5;
+}
+
+.banner-desc-text {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #f1f5f9;
+  font-size: 14px;
+  color: #334155;
+  line-height: 1.55;
+}
+
+/* 2. Left Card: Thông tin chung */
+.info-specs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.info-spec-item {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  align-items: center;
+  gap: 16px;
+}
+
+@media (max-width: 600px) {
+  .info-spec-item {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}
+
+.spec-label-text {
+  font-size: 14px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.spec-value-box {
+  font-size: 14px;
+  color: #0f172a;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.badge-mode-full {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  background-color: #f3e8ff;
+  color: #7e22ce;
+  border: 1px solid #e9d5ff;
+}
+
+.badge-approval-full-yes {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 12px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  background-color: #fef2f2;
+  color: #ef4444;
+  border: 1px solid #fee2e2;
+}
+
+.badge-approval-full-no {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 12px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  background-color: #ecfdf5;
+  color: #10b981;
+  border: 1px solid #d1fae5;
+}
+
+/* 3. Left Card: Quy tắc đặt chỗ */
+.booking-rules-box {
+  background-color: #f0f7ff;
+  border: 1px solid #dbeafe;
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.rules-icon-circle {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background-color: #2563eb;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.rules-text-column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13.5px;
+  color: #1e40af;
+  line-height: 1.55;
+}
+
+/* 4. Right Card: Thống kê 2x2 Grid */
+.stats-2x2-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 500px) {
+  .stats-2x2-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.stat-tile-box {
+  padding: 16px 18px;
+  border-radius: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.stat-tile-box:hover {
+  transform: translateY(-2px);
+}
+
+.stat-tile-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-tile-label {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.stat-tile-number {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.stat-tile-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* 4 Tile Color Themes */
+/* 1. Tổng số không gian (Sky Blue) */
+.tile-sky {
+  background-color: #f0f9ff;
+  border: 1px solid #e0f2fe;
+}
+.tile-sky .stat-tile-label { color: #0369a1; }
+.tile-sky .stat-tile-number { color: #0284c7; }
+.tile-sky .stat-tile-icon {
+  background-color: #e0f2fe;
+  color: #0284c7;
+}
+
+/* 2. Đang hoạt động (Green) */
+.tile-green {
+  background-color: #f0fdf4;
+  border: 1px solid #dcfce7;
+}
+.tile-green .stat-tile-label { color: #15803d; }
+.tile-green .stat-tile-number { color: #16a34a; }
+.tile-green .stat-tile-icon {
+  background-color: #dcfce7;
+  color: #16a34a;
+}
+
+/* 3. Đang bảo trì (Amber / Orange) */
+.tile-amber {
+  background-color: #fffbeb;
+  border: 1px solid #fef3c7;
+}
+.tile-amber .stat-tile-label { color: #b45309; }
+.tile-amber .stat-tile-number { color: #d97706; }
+.tile-amber .stat-tile-icon {
+  background-color: #fef3c7;
+  color: #d97706;
+}
+
+/* 4. Không hoạt động (Slate / Gray) */
+.tile-slate {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+.tile-slate .stat-tile-label { color: #64748b; }
+.tile-slate .stat-tile-number { color: #475569; }
+.tile-slate .stat-tile-icon {
+  background-color: #f1f5f9;
+  color: #64748b;
+}
+
+/* 5. Right Card: Các không gian thuộc loại này */
+.associated-spaces-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.associated-spaces-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.btn-view-all-spaces {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #2563eb;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.15s;
+}
+
+.btn-view-all-spaces:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+.spaces-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.space-card-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.space-card-item:hover {
+  border-color: #cbd5e1;
+  background-color: #f8fafc;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.space-card-item-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.space-card-thumb {
+  width: 72px;
+  height: 50px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background-color: #f1f5f9;
+}
+
+.space-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.space-card-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #2563eb;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.space-card-location {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.space-card-arrow {
+  color: #94a3b8;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  transition: transform 0.15s ease;
+}
+
+.space-card-item:hover .space-card-arrow {
+  color: #2563eb;
+  transform: translateX(2px);
+}
+
+/* More spaces summary card */
+.space-card-more {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  background: #fafafa;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.space-card-more:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.space-more-icon-box {
+  width: 72px;
+  height: 50px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  flex-shrink: 0;
+}
+
+.space-more-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #475569;
+}
+
+/* Empty or Loading states */
+.detail-empty-state {
+  text-align: center;
+  padding: 32px 16px;
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.detail-loading-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  color: #64748b;
+  gap: 16px;
+}
