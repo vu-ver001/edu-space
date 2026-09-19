@@ -1,9 +1,9 @@
-package com.eduspace.backend.controller;
+package com.eduspace.backend.auth.controller;
 
-import com.eduspace.backend.dto.UserCreateRequest;
-import com.eduspace.backend.dto.UserResponse;
-import com.eduspace.backend.entity.Role;
-import com.eduspace.backend.service.UserService;
+import com.eduspace.backend.auth.dto.UserCreateRequest;
+import com.eduspace.backend.auth.dto.UserResponse;
+import com.eduspace.backend.auth.entity.Role;
+import com.eduspace.backend.auth.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

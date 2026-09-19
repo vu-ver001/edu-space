@@ -32,6 +32,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import com.eduspace.backend.staff.repository.MaintenanceBlockRepository;
+import static org.mockito.Mockito.mock;
 
 import java.time.Clock;
 import java.time.LocalDate;
@@ -85,14 +87,16 @@ class BookingCoreLogicTest {
         Clock fixedClock = Clock.fixed(baseTime.minusHours(1).toInstant(ZoneOffset.UTC), ZoneOffset.UTC);
 
         // Khởi tạo AvailabilityService
+        MaintenanceBlockRepository maintenanceBlockRepo = mock(MaintenanceBlockRepository.class);
+
         availabilityService = new AvailabilityService(
                 bookingRepository,
                 auditLogRepository,
                 spaceRepository,
-                policyService
+                policyService,
+                maintenanceBlockRepo
         );
 
-        // Khởi tạo BookingService
         bookingService = new BookingService(
                 bookingRepository,
                 auditLogRepository,
@@ -100,7 +104,8 @@ class BookingCoreLogicTest {
                 availabilityService,
                 spaceTableRepository,
                 userRepository,
-                fixedClock
+                fixedClock,
+                maintenanceBlockRepo
         );
 
         student = User.builder()

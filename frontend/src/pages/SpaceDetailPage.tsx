@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { PortalLayout } from '../components/PortalLayout';
 import { SeatSelectionModal } from '../components/SeatSelectionModal';
 import type { Space } from '../services/spaceService';
 import { spaceService } from '../services/spaceService';
@@ -117,18 +116,18 @@ export const SpaceDetailPage: React.FC = () => {
 
   if (loading) {
     return (
-      <PortalLayout pageTitle="Chi tiết phòng">
+      <>
         <div className="portal-loading-card">
           <div className="portal-spinner" />
           <p>Đang tải thông tin chi tiết không gian...</p>
         </div>
-      </PortalLayout>
+      </>
     );
   }
 
   if (error || !space) {
     return (
-      <PortalLayout pageTitle="Không tìm thấy phòng">
+      <>
         <div className="portal-error-card">
           <span>⚠️</span>
           <h4>Lỗi tải dữ liệu</h4>
@@ -137,14 +136,14 @@ export const SpaceDetailPage: React.FC = () => {
             Quay lại tìm không gian
           </button>
         </div>
-      </PortalLayout>
+      </>
     );
   }
 
   const imageUrl = space.imageUrl || ROOM_IMAGES[space.id] || DEFAULT_IMAGE;
 
   return (
-    <PortalLayout pageTitle={`Chi tiết ${space.name}`}>
+    <>
       {toastMessage && (
         <div className="portal-toast">
           <span>{toastMessage}</span>
@@ -428,6 +427,6 @@ export const SpaceDetailPage: React.FC = () => {
           onSuccess={handleBookingSuccess}
         />
       )}
-    </PortalLayout>
+    </>
   );
 };

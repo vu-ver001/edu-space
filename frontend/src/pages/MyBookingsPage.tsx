@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { PortalLayout } from '../components/PortalLayout';
 import { StatusBadge } from '../components/StatusBadge';
 import { AuditLogModal } from '../components/AuditLogModal';
 import type { Booking } from '../services/bookingService';
@@ -78,12 +77,12 @@ export const MyBookingsPage: React.FC = () => {
   });
 
   return (
-    <PortalLayout pageTitle="Lịch đặt của tôi">
+      <>
       {toastMessage && (
-        <div className="portal-toast">
-          <span>{toastMessage}</span>
-          <button className="toast-close-btn" onClick={() => setToastMessage(null)}>✕</button>
-        </div>
+          <div className="portal-toast">
+            <span>{toastMessage}</span>
+            <button className="toast-close-btn" onClick={() => setToastMessage(null)}>✕</button>
+          </div>
       )}
 
       {/* Tabs Filter Bar */}
@@ -282,6 +281,6 @@ export const MyBookingsPage: React.FC = () => {
           onClose={() => setSelectedBookingForAudit(null)}
         />
       )}
-    </PortalLayout>
+      </>
   );
 };
