@@ -26,3 +26,4 @@ Thumbs.db
 data/
 docs/
 test/
+docker-compose.yml
