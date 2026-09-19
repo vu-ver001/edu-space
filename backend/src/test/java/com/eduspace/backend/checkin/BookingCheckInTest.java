@@ -52,7 +52,9 @@ class BookingCheckInTest {
 
     void at(LocalDateTime now) {
         var bookingService = new BookingService(bookings, audits, mock(StudentScheduleRepository.class),
-                availability, mock(SpaceTableRepository.class), users, Clock.fixed(now.toInstant(ZoneOffset.UTC), ZoneOffset.UTC));
+                availability, mock(com.eduspace.backend.space.repository.SpaceTableRepository.class), users,
+                Clock.fixed(now.toInstant(ZoneOffset.UTC), ZoneOffset.UTC),
+                mock(com.eduspace.backend.staff.repository.MaintenanceBlockRepository.class));
         service = new CheckInService(bookings, audits, availability, users,
                 Clock.fixed(now.toInstant(ZoneOffset.UTC), ZoneOffset.UTC), bookingService);
     }

@@ -9,7 +9,7 @@ services:
       MYSQL_USER: eduspace
       MYSQL_PASSWORD: eduspace
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - eduspace-mysql-data:/var/lib/mysql
     healthcheck:
