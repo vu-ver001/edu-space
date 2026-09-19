@@ -2710,5 +2710,23 @@ body {
   gap: 4px;
 }
 
+/* Global Floating Toast Notifications */
+.astp-toast-float {
+  position: fixed !important;
+  bottom: 24px !important;
+  right: 24px !important;
+  z-index: 99999 !important;
+  box-shadow: 0 12px 30px -4px rgba(0, 0, 0, 0.25) !important;
+  animation: astpToastSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
 
-
+@keyframes astpToastSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

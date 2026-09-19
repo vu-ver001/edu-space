@@ -5,8 +5,10 @@ import com.eduspace.backend.space.dto.request.SpaceUpdateRequestKT;
 import com.eduspace.backend.space.dto.response.SpaceResponseKT;
 import com.eduspace.backend.space.entity.*;
 import com.eduspace.backend.common.exception.AppException;
+import com.eduspace.backend.space.dto.response.SpaceImageResponseKT;
 import com.eduspace.backend.space.repository.FacilityRepository;
 import com.eduspace.backend.space.repository.SeatRepository;
+import com.eduspace.backend.space.repository.SpaceImageRepository;
 import com.eduspace.backend.space.repository.SpaceRepository;
 import com.eduspace.backend.space.repository.SpaceTableRepository;
 import com.eduspace.backend.space.repository.SpaceTypeRepository;
@@ -30,6 +32,7 @@ public class SpaceService {
     private final FacilityRepository facilityRepository;
     private final SeatRepository seatRepository;
     private final SpaceTableRepository spaceTableRepository;
+    private final SpaceImageRepository spaceImageRepository;
 
     @Transactional(readOnly = true)
     public List<SpaceResponseKT> getSpacesFiltered(
@@ -257,6 +260,23 @@ public class SpaceService {
                 activeTableCapacity = spaceTableRepository.sumActiveCapacityBySpaceId(space.getId());
             }
         }
-        return SpaceResponseKT.fromEntity(space, activeSeatCount, activeTableCount, activeTableCapacity);
+        List<SpaceImage> spaceImages = spaceImageRepository.findBySpaceIdOrderBySortOrderAscIdAsc(space.getId());
+        List<SpaceImageResponseKT> imageDtos = spaceImages.stream()
+                .map(SpaceImageResponseKT::fromEntity)
+                .collect(Collectors.toList());
+        String primaryImageUrl = spaceImages.stream()
+                .filter(SpaceImage::isPrimary)
+                .findFirst()
+                .map(SpaceImage::getImageUrl)
+                .orElse(null);
+
+        return SpaceResponseKT.fromEntity(
+                space,
+                activeSeatCount,
+                activeTableCount,
+                activeTableCapacity,
+                primaryImageUrl,
+                imageDtos
+        );
     }
 }

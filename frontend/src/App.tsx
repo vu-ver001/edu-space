@@ -48,23 +48,32 @@ export default function App() {
                 {/* Nhóm Private: Bắt buộc đăng nhập và bọc bởi khung giao diện PortalLayout */}
                 <Route element={<PortalLayout />}>
 
+                    {/* Nhóm quyền riêng cho ADMIN */}
                     <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
                         <Route path="/admin/policy" element={<Placeholder title="Chính sách" owner="Anh" />} />
                         <Route path="/admin/stats" element={<Placeholder title="Thống kê" owner="Anh" />} />
+                        <Route path="/admin/space-types" element={<SpaceTypeListPageKT />} />
+                        <Route path="/admin/space-types/:id" element={<SpaceTypeDetailPageKT />} />
                     </Route>
 
+                    {/* Nhóm quyền chung cho STAFF & ADMIN */}
                     <Route element={<ProtectedRoute allowedRoles={['STAFF', 'ADMIN']} />}>
-                        <Route path="/staff" element={<Placeholder title="Vận hành Staff" owner="Tuyến" />} />
+                        <Route path="/staff" element={<StaffOperationsPageKT />} />
                         <Route path="/checkin-demo" element={<CheckInDemoPage />} />
                         <Route path="/qr" element={<Placeholder title="Check-in QR" owner="Vũ" />} />
                         <Route path="/equipment" element={<Placeholder title="Thiết bị" owner="Vũ" />} />
                     </Route>
 
+                    {/* Nhóm quyền chung cho mọi user đã đăng nhập (Student, Staff, Admin) */}
                     <Route element={<ProtectedRoute />}>
                         <Route path="/spaces" element={<SearchSpacesPage />} />
                         <Route path="/spaces/:id" element={<SpaceDetailPage />} />
                         <Route path="/my-bookings" element={<MyBookingsPage />} />
                         <Route path="/core-approval" element={<CoreApprovalDemo />} />
+                        
+                        {/* Thêm alias cho space-types nếu sinh viên cần xem */}
+                        <Route path="/space-types" element={<SpaceTypeListPageKT />} />
+                        <Route path="/space-types/:id" element={<SpaceTypeDetailPageKT />} />
 
                         <Route path="/" element={<DevDashboard />} />
                     </Route>
