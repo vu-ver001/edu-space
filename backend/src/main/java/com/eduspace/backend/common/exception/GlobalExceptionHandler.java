@@ -1,9 +1,10 @@
-package com.eduspace.backend.exception;
+package com.eduspace.backend.common.exception;
 
+import com.eduspace.backend.exception.ApiError;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.LockedException;
 import org.springframework.security.core.AuthenticationException;
@@ -51,6 +52,16 @@ public class GlobalExceptionHandler {
 		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
 				.body(new ApiError("VALIDATION_ERROR", errorMessage));
 	}
+
+	// ================= BEGIN KT =================
+
+	@ExceptionHandler(AppException.class)
+	public ResponseEntity<ApiError> handleAppException(AppException ex) {
+		return ResponseEntity.status(ex.getStatus())
+				.body(new ApiError(ex.getCode(), ex.getMessage()));
+	}
+
+	// ================= END KT =================
 
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<ApiError> handleUnknown(Exception ex) {
