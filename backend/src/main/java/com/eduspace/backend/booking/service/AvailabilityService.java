@@ -47,6 +47,9 @@ public class AvailabilityService {
     private final BookingAuditLogRepository auditLogRepository;
     private final SpaceRepository spaceRepository;
     private final PolicyService policyService;
+    // ================= BEGIN KT =================
+    private final com.eduspace.backend.staff.repository.MaintenanceBlockRepository maintenanceBlockRepository;
+    // ================= END KT =================
 
     public static final List<BookingStatus> OCCUPYING_STATUSES = List.of(
             BookingStatus.PENDING_APPROVAL,
@@ -268,6 +271,22 @@ public class AvailabilityService {
                     .build());
         }
 
+        // ================= BEGIN KT =================
+        if (maintenanceBlockRepository != null) {
+            List<com.eduspace.backend.space.entity.MaintenanceBlock> activeBlocks =
+                    maintenanceBlockRepository.findOverlappingBlocks(spaceId, startTime, endTime);
+            for (com.eduspace.backend.space.entity.MaintenanceBlock mb : activeBlocks) {
+                conflicts.add(ConflictDetail.builder()
+                        .type("MAINTENANCE")
+                        .referenceId(mb.getId())
+                        .startTime(mb.getStartTime())
+                        .endTime(mb.getEndTime())
+                        .description("Không gian đang trong khoảng thời gian bảo trì: " + mb.getReason())
+                        .build());
+            }
+        }
+        // ================= END KT =================
+
         List<Booking> overlappingBookings = bookingRepository.findOverlappingSpaceBookings(
                 spaceId, startTime, endTime, OCCUPYING_STATUSES
         );
@@ -325,7 +344,13 @@ public class AvailabilityService {
                         boolean hasBooking = !bookingRepository.findOverlappingSpaceBookings(
                                 space.getId(), effectiveStart, effectiveEnd, OCCUPYING_STATUSES
                         ).isEmpty();
-                        isAvailable = !hasBooking;
+                        // ================= BEGIN KT =================
+                        boolean hasMaintenance = (maintenanceBlockRepository != null)
+                                && !maintenanceBlockRepository.findOverlappingBlocks(
+                                        space.getId(), effectiveStart, effectiveEnd
+                                ).isEmpty();
+                        isAvailable = !hasBooking && !hasMaintenance;
+                        // ================= END KT =================
                     }
                     boolean isPerSeat = "PER_SEAT".equalsIgnoreCase(space.getBookingMode());
                     boolean isPerTable = "PER_TABLE".equalsIgnoreCase(space.getBookingMode());
