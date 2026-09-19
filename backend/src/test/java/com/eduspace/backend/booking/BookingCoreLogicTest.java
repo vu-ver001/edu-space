@@ -24,7 +24,8 @@ import com.eduspace.backend.space.entity.Space;
 import com.eduspace.backend.space.entity.SpaceTable;
 import com.eduspace.backend.space.repository.SpaceRepository;
 import com.eduspace.backend.space.repository.SpaceTableRepository;
-import com.eduspace.backend.checkin.policy.service.PolicyService;
+import com.eduspace.backend.policy.service.PolicyService;
+import com.eduspace.backend.staff.repository.MaintenanceBlockRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -62,7 +63,11 @@ class BookingCoreLogicTest {
     private SpaceTableRepository spaceTableRepository;
     private UserRepository userRepository;
     private PolicyService policyService;
+<<<<<<< HEAD
     private com.eduspace.backend.staff.repository.MaintenanceBlockRepository maintenanceBlockRepository;
+=======
+    private MaintenanceBlockRepository maintenanceBlockRepository;
+>>>>>>> 8d14e94cc83408984bf60cf5e73f3cd871f32a77
 
     private AvailabilityService availabilityService;
     private BookingService bookingService;
@@ -81,7 +86,11 @@ class BookingCoreLogicTest {
         spaceTableRepository = mock(SpaceTableRepository.class);
         userRepository = mock(UserRepository.class);
         policyService = mock(PolicyService.class);
+<<<<<<< HEAD
         maintenanceBlockRepository = mock(com.eduspace.backend.staff.repository.MaintenanceBlockRepository.class);
+=======
+        maintenanceBlockRepository = mock(MaintenanceBlockRepository.class);
+>>>>>>> 8d14e94cc83408984bf60cf5e73f3cd871f32a77
 
         baseTime = LocalDateTime.of(2026, 9, 20, 8, 0, 0);
         Clock fixedClock = Clock.fixed(baseTime.minusHours(1).toInstant(ZoneOffset.UTC), ZoneOffset.UTC);

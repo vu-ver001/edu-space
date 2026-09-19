@@ -2,14 +2,14 @@ package com.eduspace.backend.checkin;
 
 import com.eduspace.backend.booking.entity.*;
 import com.eduspace.backend.booking.repository.*;
-import com.eduspace.backend.checkin.policy.repository.BookingPolicyRepository;
+import com.eduspace.backend.policy.repository.BookingPolicyRepository;
 import com.eduspace.backend.booking.service.*;
 import com.eduspace.backend.checkin.service.CheckInService;
 import com.eduspace.backend.checkin.service.BookingTimeoutService;
 import com.eduspace.backend.auth.entity.*;
 import com.eduspace.backend.auth.repository.UserRepository;
-import com.eduspace.backend.checkin.policy.service.PolicyService;
-import com.eduspace.backend.checkin.policy.dto.request.PolicyUpdateRequest;
+import com.eduspace.backend.policy.service.PolicyService;
+import com.eduspace.backend.policy.dto.request.PolicyUpdateRequest;
 import com.eduspace.backend.auth.security.JwtTokenProvider;
 import java.time.*;
 import java.util.List;

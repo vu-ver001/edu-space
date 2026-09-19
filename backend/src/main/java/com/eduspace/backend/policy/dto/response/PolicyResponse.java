@@ -1,4 +1,4 @@
-package com.eduspace.backend.checkin.policy.dto.response;
+package com.eduspace.backend.policy.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

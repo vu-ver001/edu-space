@@ -1,4 +1,4 @@
-package com.eduspace.backend.checkin.policy.dto.request;
+package com.eduspace.backend.policy.dto.request;
 
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
