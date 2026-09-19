@@ -63,11 +63,7 @@ class BookingCoreLogicTest {
     private SpaceTableRepository spaceTableRepository;
     private UserRepository userRepository;
     private PolicyService policyService;
-<<<<<<< HEAD
-    private com.eduspace.backend.staff.repository.MaintenanceBlockRepository maintenanceBlockRepository;
-=======
     private MaintenanceBlockRepository maintenanceBlockRepository;
->>>>>>> 8d14e94cc83408984bf60cf5e73f3cd871f32a77
 
     private AvailabilityService availabilityService;
     private BookingService bookingService;
@@ -86,11 +82,7 @@ class BookingCoreLogicTest {
         spaceTableRepository = mock(SpaceTableRepository.class);
         userRepository = mock(UserRepository.class);
         policyService = mock(PolicyService.class);
-<<<<<<< HEAD
-        maintenanceBlockRepository = mock(com.eduspace.backend.staff.repository.MaintenanceBlockRepository.class);
-=======
         maintenanceBlockRepository = mock(MaintenanceBlockRepository.class);
->>>>>>> 8d14e94cc83408984bf60cf5e73f3cd871f32a77
 
         baseTime = LocalDateTime.of(2026, 9, 20, 8, 0, 0);
         Clock fixedClock = Clock.fixed(baseTime.minusHours(1).toInstant(ZoneOffset.UTC), ZoneOffset.UTC);

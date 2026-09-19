@@ -25,14 +25,22 @@ export default function CheckInButton({
   if (actor.role === 'STAFF' || actor.role === 'ADMIN') {
     return (
       <button className="checkin-button checkin-button--secondary" type="button" onClick={onStaffCheckIn} disabled={busy}>
-        Xác nhận check-in hộ
+        <span>Xác nhận check-in hộ</span>
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
       </button>
     );
   }
 
   return (
     <button className="checkin-button" type="button" onClick={onStudentCheckIn} disabled={busy}>
-      {busy ? 'Đang check-in…' : 'Check-in ngay'}
+      <span>{busy ? 'Đang check-in…' : 'Check-in ngay'}</span>
+      {!busy && (
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      )}
     </button>
   );
 }
