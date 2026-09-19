@@ -1,4 +1,4 @@
-package com.eduspace.backend.checkin.policy.entity;
+package com.eduspace.backend.policy.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;

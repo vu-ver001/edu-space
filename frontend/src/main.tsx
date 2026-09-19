@@ -4,6 +4,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import './index.css';
 import Placeholder from './pages/Placeholder.tsx';
 import CheckInDemoPage from './features/bookings/checkin/pages/CheckInDemoPage';
+import StudentCheckInPage from './features/bookings/checkin/pages/StudentCheckInPage';
 import { SearchSpacesPage } from './pages/SearchSpacesPage.tsx';
 import { SpaceDetailPage } from './pages/SpaceDetailPage.tsx';
 import { MyBookingsPage } from './pages/MyBookingsPage.tsx';
@@ -21,6 +22,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/core-approval" element={<CoreApprovalDemo />} />
         <Route path="/staff" element={<Placeholder title="Van hanh Staff" owner="Tuyen" />} />
         <Route path="/checkin-demo" element={<CheckInDemoPage />} />
+        <Route path="/checkin" element={<StudentCheckInPage />} />
         <Route path="/qr" element={<Placeholder title="Check-in QR" owner="Vu" />} />
         <Route path="/equipment" element={<Placeholder title="Thiet bi" owner="Vu" />} />
         <Route path="/admin/policy" element={<Placeholder title="Chinh sach" owner="Anh" />} />

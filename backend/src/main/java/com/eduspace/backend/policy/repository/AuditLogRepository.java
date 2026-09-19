@@ -1,6 +1,6 @@
-package com.eduspace.backend.checkin.policy.repository;
+package com.eduspace.backend.policy.repository;
 
-import com.eduspace.backend.checkin.policy.entity.AuditLog;
+import com.eduspace.backend.policy.entity.AuditLog;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

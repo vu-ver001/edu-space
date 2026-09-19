@@ -24,7 +24,8 @@ import com.eduspace.backend.space.entity.Space;
 import com.eduspace.backend.space.entity.SpaceTable;
 import com.eduspace.backend.space.repository.SpaceRepository;
 import com.eduspace.backend.space.repository.SpaceTableRepository;
-import com.eduspace.backend.checkin.policy.service.PolicyService;
+import com.eduspace.backend.policy.service.PolicyService;
+import com.eduspace.backend.staff.repository.MaintenanceBlockRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -62,6 +63,7 @@ class BookingCoreLogicTest {
     private SpaceTableRepository spaceTableRepository;
     private UserRepository userRepository;
     private PolicyService policyService;
+    private MaintenanceBlockRepository maintenanceBlockRepository;
 
     private AvailabilityService availabilityService;
     private BookingService bookingService;
@@ -80,6 +82,7 @@ class BookingCoreLogicTest {
         spaceTableRepository = mock(SpaceTableRepository.class);
         userRepository = mock(UserRepository.class);
         policyService = mock(PolicyService.class);
+        maintenanceBlockRepository = mock(MaintenanceBlockRepository.class);
 
         baseTime = LocalDateTime.of(2026, 9, 20, 8, 0, 0);
         Clock fixedClock = Clock.fixed(baseTime.minusHours(1).toInstant(ZoneOffset.UTC), ZoneOffset.UTC);
@@ -89,7 +92,8 @@ class BookingCoreLogicTest {
                 bookingRepository,
                 auditLogRepository,
                 spaceRepository,
-                policyService
+                policyService,
+                maintenanceBlockRepository
         );
 
         // Khởi tạo BookingService
@@ -100,7 +104,8 @@ class BookingCoreLogicTest {
                 availabilityService,
                 spaceTableRepository,
                 userRepository,
-                fixedClock
+                fixedClock,
+                maintenanceBlockRepository
         );
 
         student = User.builder()

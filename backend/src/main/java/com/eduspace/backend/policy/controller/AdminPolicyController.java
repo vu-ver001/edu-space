@@ -1,9 +1,9 @@
-package com.eduspace.backend.checkin.policy.controller;
+package com.eduspace.backend.policy.controller;
 
-import com.eduspace.backend.checkin.policy.dto.request.PolicyUpdateRequest;
-import com.eduspace.backend.checkin.policy.dto.response.AuditLogResponse;
-import com.eduspace.backend.checkin.policy.dto.response.PolicyResponse;
-import com.eduspace.backend.checkin.policy.service.PolicyService;
+import com.eduspace.backend.policy.dto.request.PolicyUpdateRequest;
+import com.eduspace.backend.policy.dto.response.AuditLogResponse;
+import com.eduspace.backend.policy.dto.response.PolicyResponse;
+import com.eduspace.backend.policy.service.PolicyService;
 import com.eduspace.backend.auth.security.SecurityUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

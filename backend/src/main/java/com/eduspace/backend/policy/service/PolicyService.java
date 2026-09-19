@@ -1,12 +1,12 @@
-package com.eduspace.backend.checkin.policy.service;
+package com.eduspace.backend.policy.service;
 
-import com.eduspace.backend.checkin.policy.entity.BookingPolicy;
-import com.eduspace.backend.checkin.policy.repository.BookingPolicyRepository;
+import com.eduspace.backend.policy.entity.BookingPolicy;
+import com.eduspace.backend.policy.repository.BookingPolicyRepository;
 import com.eduspace.backend.common.exception.BusinessException;
-import com.eduspace.backend.checkin.policy.dto.request.PolicyUpdateRequest;
-import com.eduspace.backend.checkin.policy.dto.response.*;
-import com.eduspace.backend.checkin.policy.entity.AuditLog;
-import com.eduspace.backend.checkin.policy.repository.AuditLogRepository;
+import com.eduspace.backend.policy.dto.request.PolicyUpdateRequest;
+import com.eduspace.backend.policy.dto.response.*;
+import com.eduspace.backend.policy.entity.AuditLog;
+import com.eduspace.backend.policy.repository.AuditLogRepository;
 import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

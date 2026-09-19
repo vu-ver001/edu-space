@@ -30,7 +30,7 @@ import com.eduspace.backend.common.exception.BusinessException;
 import com.eduspace.backend.space.entity.Facility;
 import com.eduspace.backend.space.entity.Space;
 import com.eduspace.backend.space.repository.SpaceRepository;
-import com.eduspace.backend.checkin.policy.service.PolicyService;
+import com.eduspace.backend.policy.service.PolicyService;
 
 /**
  * Phân hệ Kiểm tra Khả dụng Tổng hợp & Tìm kiếm Phòng (Module M03).
