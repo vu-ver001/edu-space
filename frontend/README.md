@@ -30,10 +30,3 @@ If you are developing a production application, we recommend enabling type-aware
 ```
 
 See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
-
-## Check-in MVP mock
-
-Mở `http://localhost:5173/checkin-demo` để xem giao diện check-in thủ công của Vũ.
-Trang hiện dùng mock data và có hai vai trò Student/Staff, các trạng thái trước giờ,
-đang mở, quá hạn, đã check-in và lỗi mạng. Chi tiết cách thay mock bằng Booking API
-nằm trong `src/features/bookings/checkin/README.md`.
