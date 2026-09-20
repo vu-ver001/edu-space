@@ -5,13 +5,15 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { PortalLayout } from './components/PortalLayout';
 
 // Import các trang chính thức của dự án
-import Login from './pages/Login';
+import LoginPage from './features/auth/pages/LoginPage';
 import Placeholder from './pages/Placeholder';
 import CheckInDemoPage from './features/bookings/checkin/pages/CheckInDemoPage';
 import { SearchSpacesPage } from './pages/SearchSpacesPage';
 import { SpaceDetailPage } from './pages/SpaceDetailPage';
 import { MyBookingsPage } from './pages/MyBookingsPage';
 import { CoreApprovalDemo } from './pages/CoreApprovalDemo';
+import {SpaceTypeDetailPageKT, SpaceTypeListPageKT} from "./features/space";
+import {StaffOperationsPageKT} from "./features/staff";
 
 // Giữ lại trang check Health của team làm màn hình chào mừng tạm thời
 const DevDashboard = () => {
@@ -43,7 +45,7 @@ export default function App() {
         <BrowserRouter>
             <Routes>
                 {/* Nhóm Public: Không cần đăng nhập */}
-                <Route path="/login" element={<Login />} />
+                <Route path="/login" element={<LoginPage />} />
 
                 {/* Nhóm Private: Bắt buộc đăng nhập và bọc bởi khung giao diện PortalLayout */}
                 <Route element={<PortalLayout />}>
