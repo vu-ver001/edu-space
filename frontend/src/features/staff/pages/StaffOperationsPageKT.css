@@ -573,3 +573,21 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.staff-token-verification {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  background: #f8fbff;
+}
+
+.staff-token-verification__heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.staff-token-verification__heading > div { display: grid; gap: 3px; }
+.staff-token-verification__heading strong { color: #0f172a; font-size: 14px; }
+.staff-token-verification__heading span { color: #64748b; font-size: 12px; }

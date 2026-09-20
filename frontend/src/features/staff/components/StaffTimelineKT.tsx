@@ -6,6 +6,7 @@ interface StaffTimelineKTProps {
   events: StaffTimelineEvent[];
   isLoading?: boolean;
   onCheckIn?: (eventId: number) => void;
+  onVerifyToken?: (eventId: number) => void;
   checkInLoadingId?: number | null;
 }
 
@@ -13,6 +14,7 @@ export const StaffTimelineKT: React.FC<StaffTimelineKTProps> = ({
   events,
   isLoading = false,
   onCheckIn,
+  onVerifyToken,
   checkInLoadingId,
 }) => {
   if (isLoading) {
@@ -120,6 +122,16 @@ export const StaffTimelineKT: React.FC<StaffTimelineKTProps> = ({
                   >
                     {checkInLoadingId === evt.eventId ? 'Đang check-in...' : '🛎️ Staff hỗ trợ Check-in'}
                   </button>
+                  {onVerifyToken && (
+                    <button
+                      type="button"
+                      className="staff-btn staff-btn-secondary"
+                      style={{ fontSize: '12px', padding: '5px 12px' }}
+                      onClick={() => onVerifyToken(evt.eventId)}
+                    >
+                      🔐 Nhập mã QR
+                    </button>
+                  )}
                 </div>
               )}
             </div>
