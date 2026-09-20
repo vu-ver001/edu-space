@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation, Outlet } from 'react-router-dom'; // Thêm Outlet
-import api from '../services/api';
+import { Link, useLocation, Outlet } from 'react-router-dom';
 
 // Đã bỏ interface Props vì React Router xử lý component con qua Outlet
 export const PortalLayout = () => {
@@ -13,62 +12,45 @@ export const PortalLayout = () => {
   const [showRoleDropdown, setShowRoleDropdown] = useState<boolean>(false);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('eduspace_demo_user');
-    if (savedUser) {
-      setCurrentUser(savedUser);
-      updateUserMeta(savedUser);
+    // Đọc thẳng thông tin user đã được lưu từ trang LoginPage
+    const savedUserStr = localStorage.getItem('eduspace_user') || localStorage.getItem('user');
+    if (savedUserStr) {
+      try {
+        const parsedUser = JSON.parse(savedUserStr);
+        if (parsedUser?.email) {
+          setCurrentUser(parsedUser.email);
+          setCurrentName(parsedUser.fullName || 'Thành viên EduSpace');
+          setShortName(parsedUser.fullName ? parsedUser.fullName.split(' ').pop() : 'User');
+          setCurrentInitials(parsedUser.fullName ? parsedUser.fullName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) : 'US');
+          setUserRoleLabel(parsedUser.role === 'ADMIN' ? 'Quản trị' : parsedUser.role === 'STAFF' ? 'Nhân viên Staff' : 'Sinh viên');
+        }
+      } catch (e) {
+        console.error("Lỗi đọc user từ localStorage", e);
+      }
     } else {
-      switchUser('student@eduspace.vn');
+      // Nếu chưa đăng nhập mà lọt vào đây, đá về trang login ngay
+      window.location.href = '/login';
     }
   }, []);
 
-  const updateUserMeta = (email: string) => {
-    if (email.includes('khanhvan')) {
-      setCurrentName('Nguyễn Thị Khánh Vân');
-      setShortName('Vân');
-      setCurrentInitials('KV');
-      setUserRoleLabel('Sinh viên');
-    } else if (email.includes('student') || email.includes('tan') || email.includes('an')) {
-      setCurrentName('Nguyễn Văn An');
-      setShortName('An');
-      setCurrentInitials('AN');
-      setUserRoleLabel('Sinh viên');
-    } else if (email.includes('staff')) {
-      setCurrentName('Nguyễn Thị Kim Tuyến');
-      setShortName('Tuyến');
-      setCurrentInitials('KT');
-      setUserRoleLabel('Nhân viên Staff');
-    } else {
-      setCurrentName('Quản trị viên');
-      setShortName('Admin');
-      setCurrentInitials('AD');
-      setUserRoleLabel('Quản trị');
-    }
-  };
+  const switchUser = (email: string, role: string, fullName: string) => {
+    const fakeToken = "dummy_demo_token_for_" + email;
+    localStorage.setItem('eduspace_token', fakeToken);
+    localStorage.setItem('token', fakeToken);
 
-  const switchUser = async (email: string) => {
-    try {
-      const res = await api.post<{ token: string }>('/api/auth/login', {
-        email,
-        password: 'password'
-      }).catch(async () => {
-        return await api.post<{ token: string }>('/api/auth/login', {
-          email,
-          password: '123456'
-        });
-      });
-      if (res?.data?.token) {
-        localStorage.setItem('eduspace_token', res.data.token);
-      }
-    } catch {
-      // Fallback
-    } finally {
-      localStorage.setItem('eduspace_demo_user', email);
-      setCurrentUser(email);
-      updateUserMeta(email);
-      setShowRoleDropdown(false);
-      window.dispatchEvent(new Event('user-switched'));
-    }
+    const demoUser = { id: 99, email, fullName, role };
+    localStorage.setItem('eduspace_user', JSON.stringify(demoUser));
+    localStorage.setItem('user', JSON.stringify(demoUser));
+
+    setCurrentUser(email);
+    setCurrentName(fullName);
+    setShortName(fullName.split(' ').pop() || '');
+    setCurrentInitials(fullName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2));
+    setUserRoleLabel(role === 'ADMIN' ? 'Quản trị' : role === 'STAFF' ? 'Nhân viên Staff' : 'Sinh viên');
+    setShowRoleDropdown(false);
+
+    // Reload lại trang để làm sạch state
+    window.location.reload();
   };
 
   // Tự động tạo Tiêu đề trang dựa trên URL hiện tại
@@ -192,21 +174,21 @@ export const PortalLayout = () => {
                   <p className="dropdown-title">Chuyển đổi vai trò Demo</p>
                   <button
                       className={`role-option-btn ${currentUser === 'student@eduspace.vn' ? 'selected' : ''}`}
-                      onClick={() => switchUser('student@eduspace.vn')}
+                      onClick={() => switchUser('student@eduspace.vn', 'STUDENT', 'Nguyễn Văn An')}
                   >
                     <span>👨‍🎓 <strong>Nguyễn Văn An</strong> (Sinh viên)</span>
                     {currentUser === 'student@eduspace.vn' && <span>✓</span>}
                   </button>
                   <button
                       className={`role-option-btn ${currentUser === 'khanhvan@eduspace.vn' ? 'selected' : ''}`}
-                      onClick={() => switchUser('khanhvan@eduspace.vn')}
+                      onClick={() => switchUser('khanhvan@eduspace.vn', 'STUDENT', 'Khánh Vân')}
                   >
                     <span>👩‍🎓 <strong>Khánh Vân</strong> (Sinh viên)</span>
                     {currentUser === 'khanhvan@eduspace.vn' && <span>✓</span>}
                   </button>
                   <button
                       className={`role-option-btn ${currentUser === 'staff@eduspace.vn' ? 'selected' : ''}`}
-                      onClick={() => switchUser('staff@eduspace.vn')}
+                      onClick={() => switchUser('staff@eduspace.vn', 'STAFF', 'Nguyễn Thị Kim Tuyến')}
                   >
                     <span>🛡️ <strong>Kim Tuyến</strong> (Staff duyệt)</span>
                     {currentUser === 'staff@eduspace.vn' && <span>✓</span>}
