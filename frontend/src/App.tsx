@@ -7,11 +7,15 @@ import { PortalLayout } from './components/PortalLayout';
 // Import các trang chính thức của dự án
 import Login from './pages/Login';
 import Placeholder from './pages/Placeholder';
-import CheckInDemoPage from './features/bookings/checkin/pages/CheckInDemoPage';
 import { SearchSpacesPage } from './pages/SearchSpacesPage';
 import { SpaceDetailPage } from './pages/SpaceDetailPage';
 import { MyBookingsPage } from './pages/MyBookingsPage';
 import { CoreApprovalDemo } from './pages/CoreApprovalDemo';
+import { SpaceTypeListPageKT } from './features/space/pages/SpaceTypeListPageKT';
+import { SpaceTypeDetailPageKT } from './features/space/pages/SpaceTypeDetailPageKT';
+import { StaffOperationsPageKT } from './features/staff/pages/StaffOperationsPageKT';
+import { TimelinePage } from './features/operations/pages/TimelinePage';
+import { AuditLogPage } from './features/operations/pages/AuditLogPage';
 
 // Giữ lại trang check Health của team làm màn hình chào mừng tạm thời
 const DevDashboard = () => {
@@ -59,7 +63,8 @@ export default function App() {
                     {/* Nhóm quyền chung cho STAFF & ADMIN */}
                     <Route element={<ProtectedRoute allowedRoles={['STAFF', 'ADMIN']} />}>
                         <Route path="/staff" element={<StaffOperationsPageKT />} />
-                        <Route path="/checkin-demo" element={<CheckInDemoPage />} />
+                        <Route path="/staff/timeline" element={<TimelinePage />} />
+                        <Route path="/staff/audit-logs" element={<AuditLogPage />} />
                         <Route path="/qr" element={<Placeholder title="Check-in QR" owner="Vũ" />} />
                         <Route path="/equipment" element={<Placeholder title="Thiết bị" owner="Vũ" />} />
                     </Route>

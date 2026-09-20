@@ -1,19 +1,45 @@
 import { useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom'; // Thêm Outlet
 import api from '../services/api';
+import {
+  Building2,
+  CalendarDays,
+  ClipboardCheck,
+  FileClock,
+  LayoutDashboard,
+  ScanLine,
+  Settings,
+} from 'lucide-react';
 
-// Đã bỏ interface Props vì React Router xử lý component con qua Outlet
-export const PortalLayout = () => {
+interface PortalLayoutProps {
+  /** Used by standalone pages that render the layout directly. */
+  children?: ReactNode;
+  /** Optional title override for standalone pages. */
+  pageTitle?: string;
+}
+
+export const PortalLayout = ({ children, pageTitle }: PortalLayoutProps) => {
   const location = useLocation();
   const [currentUser, setCurrentUser] = useState<string>('student@eduspace.vn');
   const [currentName, setCurrentName] = useState<string>('Nguyễn Văn An');
   const [shortName, setShortName] = useState<string>('An');
   const [currentInitials, setCurrentInitials] = useState<string>('AN');
   const [userRoleLabel, setUserRoleLabel] = useState<string>('Sinh viên');
+  const [currentRole, setCurrentRole] = useState<'STUDENT' | 'STAFF' | 'ADMIN'>('STUDENT');
   const [showRoleDropdown, setShowRoleDropdown] = useState<boolean>(false);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('eduspace_demo_user');
+    const savedDemoUser = localStorage.getItem('eduspace_demo_user');
+    const savedProfile = localStorage.getItem('eduspace_user');
+    let savedUser = savedDemoUser;
+    if (!savedUser && savedProfile) {
+      try {
+        savedUser = JSON.parse(savedProfile).email ?? '';
+      } catch {
+        savedUser = '';
+      }
+    }
     if (savedUser) {
       setCurrentUser(savedUser);
       updateUserMeta(savedUser);
@@ -28,21 +54,25 @@ export const PortalLayout = () => {
       setShortName('Vân');
       setCurrentInitials('KV');
       setUserRoleLabel('Sinh viên');
+      setCurrentRole('STUDENT');
     } else if (email.includes('student') || email.includes('tan') || email.includes('an')) {
       setCurrentName('Nguyễn Văn An');
       setShortName('An');
       setCurrentInitials('AN');
       setUserRoleLabel('Sinh viên');
+      setCurrentRole('STUDENT');
     } else if (email.includes('staff')) {
       setCurrentName('Nguyễn Thị Kim Tuyến');
       setShortName('Tuyến');
       setCurrentInitials('KT');
       setUserRoleLabel('Nhân viên Staff');
+      setCurrentRole('STAFF');
     } else {
       setCurrentName('Quản trị viên');
       setShortName('Admin');
       setCurrentInitials('AD');
       setUserRoleLabel('Quản trị');
+      setCurrentRole('ADMIN');
     }
   };
 
@@ -64,6 +94,13 @@ export const PortalLayout = () => {
       // Fallback
     } finally {
       localStorage.setItem('eduspace_demo_user', email);
+      const role = email.includes('staff') ? 'STAFF' : email.includes('student') || email.includes('khanhvan') ? 'STUDENT' : 'ADMIN';
+      localStorage.setItem('eduspace_user', JSON.stringify({
+        id: role === 'ADMIN' ? 1 : role === 'STAFF' ? 11 : 101,
+        email,
+        fullName: role === 'ADMIN' ? 'Admin' : role === 'STAFF' ? 'Nguyễn Thị Kim Tuyến' : 'Nguyễn Văn An',
+        role,
+      }));
       setCurrentUser(email);
       updateUserMeta(email);
       setShowRoleDropdown(false);
@@ -75,14 +112,16 @@ export const PortalLayout = () => {
   const getPageTitle = (path: string) => {
     if (path.includes('/spaces')) return 'Tìm không gian';
     if (path.includes('/my-bookings')) return 'Lịch đặt của tôi';
-    if (path.includes('/core-approval') || path.includes('/staff')) return 'Duyệt đặt chỗ (Staff)';
+    if (path.includes('/staff/timeline')) return 'Vận hành / Timeline hoạt động';
+    if (path.includes('/staff/audit-logs')) return 'Vận hành / Nhật ký kiểm toán';
+    if (path.includes('/core-approval') || path === '/staff') return 'Duyệt đặt chỗ (Staff)';
     if (path.includes('/admin')) return 'Quản trị hệ thống';
     return 'EduSpace Dashboard';
   };
 
-  const dynamicPageTitle = getPageTitle(location.pathname);
+  const dynamicPageTitle = pageTitle ?? getPageTitle(location.pathname);
 
-  const navItems = [
+  const studentNavItems = [
     {
       to: '/spaces',
       label: 'Tìm không gian',
@@ -106,16 +145,6 @@ export const PortalLayout = () => {
       )
     },
     {
-      to: '/checkin',
-      label: 'Check-in',
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="9"></circle>
-          <polyline points="8 12 11 15 16 9"></polyline>
-        </svg>
-      )
-    },
-    {
       to: '/core-approval',
       label: 'Duyệt đặt chỗ (Staff)',
       icon: (
@@ -126,6 +155,17 @@ export const PortalLayout = () => {
       )
     }
   ];
+
+  const operationsNavItems = [
+    { to: '/', label: 'Tổng quan', icon: <LayoutDashboard size={20} /> },
+    { to: '/staff/timeline', label: 'Timeline hoạt động', icon: <CalendarDays size={20} /> },
+    { to: '/staff/audit-logs', label: 'Nhật ký kiểm toán', icon: <FileClock size={20} /> },
+    { to: '/staff', label: 'Duyệt đặt chỗ', icon: <ClipboardCheck size={20} /> },
+    { to: '/qr', label: 'Check-in', icon: <ScanLine size={20} /> },
+    { to: '/spaces', label: 'Không gian học tập', icon: <Building2 size={20} /> },
+    ...(currentRole === 'ADMIN' ? [{ to: '/admin/policy', label: 'Cài đặt', icon: <Settings size={20} /> }] : []),
+  ];
+  const navItems = currentRole === 'STUDENT' ? studentNavItems : operationsNavItems;
 
   return (
       <div className="portal-container">
@@ -153,7 +193,10 @@ export const PortalLayout = () => {
           {/* Navigation Items (Icon + Text) */}
           <nav className="sidebar-wide-nav">
             {navItems.map((item) => {
-              const isActive = location.pathname === item.to || (item.to === '/spaces' && location.pathname.startsWith('/spaces/'));
+              const isActive = location.pathname === item.to
+                || (item.to === '/spaces' && location.pathname.startsWith('/spaces/'))
+                || (item.to === '/staff/timeline' && location.pathname.startsWith('/staff/timeline'))
+                || (item.to === '/staff/audit-logs' && location.pathname.startsWith('/staff/audit-logs'));
               return (
                   <Link
                       key={item.to}
@@ -211,6 +254,13 @@ export const PortalLayout = () => {
                     <span>🛡️ <strong>Kim Tuyến</strong> (Staff duyệt)</span>
                     {currentUser === 'staff@eduspace.vn' && <span>✓</span>}
                   </button>
+                  <button
+                      className={`role-option-btn ${currentUser === 'admin@eduspace.vn' ? 'selected' : ''}`}
+                      onClick={() => switchUser('admin@eduspace.vn')}
+                  >
+                    <span>⚙️ <strong>Admin</strong> (Quản trị hệ thống)</span>
+                    {currentUser === 'admin@eduspace.vn' && <span>✓</span>}
+                  </button>
                 </div>
             )}
           </div>
@@ -245,8 +295,8 @@ export const PortalLayout = () => {
 
           {/* Content Canvas */}
           <div className="portal-content-canvas">
-            {/* React Router sẽ tự động chèn màn hình con vào vị trí của Outlet này */}
-            <Outlet />
+            {/* Nested routes render through Outlet; standalone pages can provide children. */}
+            {children ?? <Outlet />}
           </div>
         </div>
       </div>

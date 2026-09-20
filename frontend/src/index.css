@@ -83,6 +83,14 @@ body {
   box-sizing: border-box;
 }
 
+/* Operations screens use the same quiet, light-blue active state as the supplied
+   audit/timeline references. */
+.portal-sidebar-wide .sidebar-wide-item.active {
+  background: #e8f2ff;
+  color: #1269db;
+  box-shadow: none;
+}
+
 /* Brand / Logo Top (Ảnh 2) */
 .sidebar-brand-box {
   display: flex;
@@ -416,7 +424,7 @@ body {
 /* 1.3. Content Canvas */
 .portal-content-canvas {
   padding: 24px 32px 60px;
-  max-width: 1280px;
+  max-width: none;
   width: 100%;
   margin: 0 auto;
 }
