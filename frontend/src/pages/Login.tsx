@@ -17,12 +17,9 @@ export default function Login() {
         try {
             const res = await api.post('/api/auth/login', { email, password });
 
-            // LOG DỮ LIỆU ĐỂ KIỂM TRA BE TRẢ VỀ CÁI GÌ
-            console.log("Dữ liệu Backend trả về:", res.data);
-
-            // Thích ứng với 2 kiểu trả về phổ biến của Spring Boot
+            // Login hiện tại chỉ trả token. Lấy profile bằng token vừa cấp để
+            // ProtectedRoute có đủ id/email/fullName/role (đặc biệt với STAFF).
             const token = res.data.token || res.data.accessToken || res.data.data?.token || res.data.data?.accessToken;
-            const userInfo = res.data.user || res.data.data || res.data;
 
             if (!token) {
                 setError('Đăng nhập thành công nhưng không tìm thấy Token trong phản hồi!');
@@ -30,17 +27,27 @@ export default function Login() {
                 return;
             }
 
-            // LƯU ĐÚNG TÊN KEY MÀ PROTECTED ROUTE YÊU CẦU
             localStorage.setItem('eduspace_token', token);
-            localStorage.setItem('eduspace_user', JSON.stringify({
-                id: userInfo.id,
-                email: userInfo.email,
-                fullName: userInfo.fullName,
-                role: userInfo.role
-            }));
 
-            // Chuyển hướng
-            navigate('/');
+            const profileResponse = await api.get('/api/users/me');
+            const profile = profileResponse.data;
+            if (!profile?.id || !profile?.email || !profile?.role) {
+                localStorage.removeItem('eduspace_token');
+                setError('Đăng nhập thành công nhưng không lấy được thông tin vai trò.');
+                return;
+            }
+
+            localStorage.setItem('eduspace_user', JSON.stringify({
+                id: profile.id,
+                email: profile.email,
+                fullName: profile.fullName,
+                role: profile.role,
+            }));
+            // PortalLayout dùng key này cho tài khoản demo; đồng bộ để không
+            // giữ lại role cũ sau khi đổi từ Student sang Staff/Admin.
+            localStorage.setItem('eduspace_demo_user', profile.email);
+
+            navigate(profile.role === 'STAFF' || profile.role === 'ADMIN' ? '/staff' : '/');
         } catch (err: any) {
             const errorMessage = err.response?.data?.message || 'Đăng nhập thất bại!';
             setError(errorMessage);
