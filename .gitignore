@@ -27,3 +27,4 @@ data/
 docs/
 test/
 docker-compose.yml
+.env
