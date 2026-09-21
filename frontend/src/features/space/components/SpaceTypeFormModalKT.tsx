@@ -47,12 +47,8 @@ export const SpaceTypeFormModalKT: React.FC<SpaceTypeFormModalKTProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) {
-      setValidationError('Vui lòng nhập tên loại không gian.');
-      return;
-    }
-
     setValidationError(null);
+
     try {
       await onSubmit({
         name: name.trim(),
@@ -61,7 +57,8 @@ export const SpaceTypeFormModalKT: React.FC<SpaceTypeFormModalKTProps> = ({
         requiresApproval,
       });
     } catch (err: any) {
-      setValidationError(err?.response?.data?.message || err?.message || 'Không thể lưu thông tin. Vui lòng thử lại.');
+      const msg = err?.response?.data?.message || err?.message || 'Không thể lưu thông tin. Vui lòng thử lại.';
+      setValidationError(msg);
     }
   };
 
@@ -91,20 +88,25 @@ export const SpaceTypeFormModalKT: React.FC<SpaceTypeFormModalKTProps> = ({
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="astp-modal-form">
+        <form onSubmit={handleSubmit} className="astp-modal-form" noValidate>
           <div className="astp-form-group">
             <label className="astp-form-label">
               Tên loại không gian <span className="astp-required">*</span>
             </label>
             <input
               type="text"
-              className="astp-input"
+              className={`astp-input ${validationError ? 'input-error' : ''}`}
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (validationError) setValidationError(null);
+              }}
               placeholder="VD: Phòng học nhóm tiêu chuẩn, Hội trường lớn, Phòng Lab..."
-              required
               disabled={isLoading}
             />
+            {validationError && (
+              <span className="astp-field-error-msg">{validationError}</span>
+            )}
           </div>
 
           <div className="astp-form-group">

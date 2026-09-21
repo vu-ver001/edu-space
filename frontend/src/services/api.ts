@@ -4,7 +4,7 @@ import axios from 'axios';
 // Moi domain (auth, spaces, bookings, ...) viet 1 service rieng
 // import instance nay, khong tu tao axios moi.
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:8081',
+  baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:8080',
   timeout: 15000,
   headers: { 'Content-Type': 'application/json' },
 });

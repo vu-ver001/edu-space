@@ -59,7 +59,7 @@ public class SpaceService {
 
     @Transactional(readOnly = true)
     public List<SpaceResponseKT> getAllSpaces() {
-        return spaceRepository.findAllByDeletedAtIsNull().stream()
+        return spaceRepository.findAllByDeletedAtIsNullOrderByIdDesc().stream()
                 .map(this::toResponseDto)
                 .collect(Collectors.toList());
     }
@@ -97,8 +97,26 @@ public class SpaceService {
             }
         }
 
+        String spaceCode = request.getSpaceCode() != null ? request.getSpaceCode().trim() : "";
+        if (spaceCode.isEmpty()) {
+            throw new AppException(
+                    HttpStatus.BAD_REQUEST,
+                    "SPACE_CODE_REQUIRED",
+                    "Mã không gian không được để trống."
+            );
+        }
+
+        if (spaceRepository.existsBySpaceCodeIgnoreCaseAndDeletedAtIsNull(spaceCode)) {
+            throw new AppException(
+                    HttpStatus.CONFLICT,
+                    "SPACE_CODE_EXISTS",
+                    "Mã không gian '" + spaceCode + "' đã tồn tại trong hệ thống."
+            );
+        }
+
         Space space = Space.builder()
                 .name(request.getName().trim())
+                .spaceCode(spaceCode)
                 .spaceType(spaceType)
                 .building(request.getBuilding().trim())
                 .floor(request.getFloor().trim())
@@ -120,6 +138,26 @@ public class SpaceService {
                         "SPACE_NOT_FOUND",
                         "Không tìm thấy không gian với id: " + id
                 ));
+
+        String newCode = request.getSpaceCode() != null ? request.getSpaceCode().trim() : "";
+        if (newCode.isEmpty()) {
+            throw new AppException(
+                    HttpStatus.BAD_REQUEST,
+                    "SPACE_CODE_REQUIRED",
+                    "Mã không gian không được để trống."
+            );
+        }
+
+        if (!newCode.equalsIgnoreCase(space.getSpaceCode())) {
+            if (spaceRepository.existsBySpaceCodeIgnoreCaseAndIdNotAndDeletedAtIsNull(newCode, id)) {
+                throw new AppException(
+                        HttpStatus.CONFLICT,
+                        "SPACE_CODE_EXISTS",
+                        "Mã không gian '" + newCode + "' đã tồn tại trong hệ thống."
+                );
+            }
+            space.setSpaceCode(newCode);
+        }
 
         // Quy tắc 1: Nếu là PER_SEAT và giảm capacity dưới số active seats -> 409 CAPACITY_LOWER_THAN_ACTIVE_SEATS
         long activeSeatCount = seatRepository.countBySpaceIdAndDeletedAtIsNull(id);

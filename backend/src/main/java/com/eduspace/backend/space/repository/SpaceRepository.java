@@ -18,7 +18,15 @@ public interface SpaceRepository extends JpaRepository<Space, Long> {
 
     List<Space> findAllByDeletedAtIsNull();
 
+    List<Space> findAllByDeletedAtIsNullOrderByIdDesc();
+
     boolean existsBySpaceTypeIdAndDeletedAtIsNull(Long spaceTypeId);
+
+    boolean existsBySpaceCodeIgnoreCaseAndDeletedAtIsNull(String spaceCode);
+
+    boolean existsBySpaceCodeIgnoreCaseAndIdNotAndDeletedAtIsNull(String spaceCode, Long id);
+
+    Optional<Space> findBySpaceCodeIgnoreCaseAndDeletedAtIsNull(String spaceCode);
 
     List<Space> findAllBySpaceTypeIdAndDeletedAtIsNull(Long spaceTypeId);
 
@@ -36,7 +44,8 @@ public interface SpaceRepository extends JpaRepository<Space, Long> {
            "AND (:building IS NULL OR LOWER(s.building) = LOWER(:building)) " +
            "AND (:minCapacity IS NULL OR s.capacity >= :minCapacity) " +
            "AND (:facilityId IS NULL OR (f.id = :facilityId AND f.deletedAt IS NULL)) " +
-           "AND (:bookingMode IS NULL OR s.spaceType.bookingMode = :bookingMode)")
+           "AND (:bookingMode IS NULL OR s.spaceType.bookingMode = :bookingMode) " +
+           "ORDER BY s.id DESC")
     List<Space> filterSpaces(
             @Param("spaceTypeId") Long spaceTypeId,
             @Param("status") SpaceStatus status,

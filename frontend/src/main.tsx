@@ -9,7 +9,7 @@ import { SearchSpacesPage } from './pages/SearchSpacesPage.tsx';
 import { SpaceDetailPage } from './pages/SpaceDetailPage.tsx';
 import { MyBookingsPage } from './pages/MyBookingsPage.tsx';
 import { CoreApprovalDemo } from './pages/CoreApprovalDemo.tsx';
-import { SpaceTypeListPageKT, SpaceTypeDetailPageKT } from './features/space';
+import { SpaceTypeListPageKT, SpaceTypeDetailPageKT, SpaceListPageKT, SpaceDetailPageKT, FacilityListPageKT } from './features/space';
 import { StaffOperationsPageKT } from './features/staff';
 
 createRoot(document.getElementById('root')!).render(
@@ -28,6 +28,12 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/admin/space-types/:id" element={<SpaceTypeDetailPageKT />} />
         <Route path="/space-types" element={<SpaceTypeListPageKT />} />
         <Route path="/space-types/:id" element={<SpaceTypeDetailPageKT />} />
+        <Route path="/admin/spaces" element={<SpaceListPageKT />} />
+        <Route path="/admin/spaces/:id" element={<SpaceDetailPageKT />} />
+        <Route path="/spaces-management" element={<SpaceListPageKT />} />
+        <Route path="/spaces-management/:id" element={<SpaceDetailPageKT />} />
+        <Route path="/admin/facilities" element={<FacilityListPageKT />} />
+        <Route path="/facilities" element={<FacilityListPageKT />} />
         {/* ================= END KT ================= */}
         <Route path="/checkin-demo" element={<CheckInDemoPage />} />
         <Route path="/checkin" element={<StudentCheckInPage />} />
