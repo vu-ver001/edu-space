@@ -25,6 +25,9 @@ public class Space {
     @Column(nullable = false, length = 100)
     private String name;
 
+    @Column(name = "space_code", nullable = false, unique = true, length = 50)
+    private String spaceCode;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "space_type_id", nullable = false)
     private SpaceType spaceType;

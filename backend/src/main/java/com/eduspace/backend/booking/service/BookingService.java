@@ -115,13 +115,11 @@ public class BookingService {
         boolean isPerTable = "PER_TABLE".equalsIgnoreCase(space.getBookingMode());
         boolean isWholeSpace = !isPerSeat && !isPerTable;
 
-        // LOGIC MỚI:
-        // - per-seat: Không bắt buộc nhập lý do sử dụng
-        // - per-table & whole-space: Bắt buộc phải nhập lý do sử dụng
-        if (!isPerSeat) {
+        // LOGIC LIÊN KẾT CSDL: Bắt buộc nhập lý do nếu phòng yêu cầu phê duyệt hoặc đặt whole-space / per-table
+        if (space.isRequiresApproval() || !isPerSeat) {
             if (request.getPurpose() == null || request.getPurpose().trim().isBlank()) {
                 throw BusinessException.badRequest("PURPOSE_REQUIRED", 
-                        "Mục đích sử dụng là bắt buộc đối với hình thức đặt toàn bộ không gian (whole-space) hoặc đặt bàn thảo luận nhóm (per-table).");
+                        "Mục đích sử dụng là bắt buộc đối với không gian cần xét duyệt trước.");
             }
         }
 
@@ -310,11 +308,8 @@ public class BookingService {
                     "Bạn đã gửi quá nhiều yêu cầu tạo đặt chỗ (" + recentRequests + " lần/giờ). Vui lòng thử lại sau.");
         }
 
-        // BƯỚC 9: Xác định trạng thái ban đầu
-        // LOGIC MỚI:
-        // - per-seat: duyệt tự động (CONFIRMED), không cần chờ staff duyệt
-        // - per-table & whole-space: bắt buộc chờ staff duyệt (PENDING_APPROVAL)
-        boolean requiresApproval = !isPerSeat;
+        // BƯỚC 9: Xác định trạng thái ban đầu dựa vào cấu hình CSDL của Kim Tuyến (space_types.requires_approval)
+        boolean requiresApproval = space.isRequiresApproval();
         BookingStatus initialStatus = requiresApproval ? BookingStatus.PENDING_APPROVAL : BookingStatus.CONFIRMED;
 
         // BƯỚC 10: Lưu booking và nhật ký thao tác

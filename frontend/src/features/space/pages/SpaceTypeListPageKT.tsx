@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { Layers, Building2, Sparkles, ClipboardList } from 'lucide-react';
 import type { SpaceType, SpaceTypeCreateRequest, SpaceTypeUpdateRequest } from '../types/spaceType';
 import type { Space } from '../types/space';
 import { spaceTypeApi } from '../api/spaceTypeApi';
@@ -14,6 +15,7 @@ import './SpaceTypeListPageKT.css';
 
 export const SpaceTypeListPageKT: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [spaceTypes, setSpaceTypes] = useState<SpaceType[]>([]);
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -160,8 +162,7 @@ export const SpaceTypeListPageKT: React.FC = () => {
       setFormModalOpen(false);
       fetchData();
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || 'Không thể lưu thông tin. Vui lòng thử lại.';
-      showToast(msg, 'error');
+      // Lỗi được modal (SpaceTypeFormModalKT) hiển thị trực tiếp trên form, không cần hiện thêm toast ở góc
       throw err;
     } finally {
       setFormSubmitting(false);
@@ -180,13 +181,7 @@ export const SpaceTypeListPageKT: React.FC = () => {
       setDeleteError(null);
       fetchData();
     } catch (err: any) {
-      const rawMsg = err?.response?.data?.message || err?.message || '';
-      let msg = 'Không thể xóa loại không gian.';
-      if (rawMsg.includes('Vẫn còn phòng') || rawMsg.includes('SPACE_TYPE_IN_USE')) {
-        msg = 'Không thể xóa do vẫn còn phòng đang hoạt động.';
-      } else if (rawMsg) {
-        msg = rawMsg;
-      }
+      const msg = err?.response?.data?.message || err?.message || 'Không thể xóa loại không gian.';
       setDeleteError(msg);
       showToast(msg, 'error');
     } finally {
@@ -199,6 +194,38 @@ export const SpaceTypeListPageKT: React.FC = () => {
     <div className="kt-page-wrapper">
       {/* Main Page Content */}
       <main className="kt-main-content">
+        {/* Sub Navigation Bar */}
+        <div className="kt-subnav-bar">
+          <Link
+            to="/admin/space-types"
+            className={`kt-subnav-item ${location.pathname.includes('space-types') ? 'active' : ''}`}
+          >
+            <Layers size={16} />
+            <span>Loại không gian</span>
+          </Link>
+          <Link
+            to="/admin/spaces"
+            className={`kt-subnav-item ${location.pathname.includes('spaces') ? 'active' : ''}`}
+          >
+            <Building2 size={16} />
+            <span>Không gian</span>
+          </Link>
+          <Link
+            to="/admin/facilities"
+            className={`kt-subnav-item ${location.pathname.includes('facilities') ? 'active' : ''}`}
+          >
+            <Sparkles size={16} />
+            <span>Tiện ích</span>
+          </Link>
+          <Link
+            to="/staff"
+            className={`kt-subnav-item ${location.pathname.startsWith('/staff') ? 'active' : ''}`}
+          >
+            <ClipboardList size={16} />
+            <span>Vận hành Staff</span>
+          </Link>
+        </div>
+
         {/* Header Section */}
         <div className="page-header-row">
           <div className="page-header-left">
@@ -259,7 +286,14 @@ export const SpaceTypeListPageKT: React.FC = () => {
               setFilterApproval(val);
               setCurrentPage(1);
             }}
-            onReset={fetchData}
+            onReset={() => {
+              setSearchQuery('');
+              setFilterMode('ALL');
+              setFilterApproval('ALL');
+              setCurrentPage(1);
+              fetchData();
+              showToast('Đã làm mới danh sách và xóa toàn bộ bộ lọc');
+            }}
           />
 
           <SpaceTypeTableKT

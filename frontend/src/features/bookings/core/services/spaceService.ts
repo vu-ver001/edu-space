@@ -1,80 +1,20 @@
-import api from './api';
+import api from '../../../../services/api';
+import type { 
+  Facility, 
+  SpaceType, 
+  SpaceSeat, 
+  SpaceTable, 
+  Space, 
+  ConflictDetail, 
+  SearchFilter 
+} from '../types/space.types';
 
-export interface Facility {
-  id: number;
-  name: string;
-  icon?: string;
-}
-
-export interface SpaceType {
-  id: number;
-  name: string;
-  bookingMode?: 'WHOLE_SPACE' | 'PER_SEAT' | 'PER_TABLE';
-  requiresApproval: boolean;
-  description?: string;
-}
-
-export interface SpaceSeat {
-  id: number;
-  spaceId: number;
-  seatCode: string;
-  status: 'AVAILABLE' | 'INACTIVE';
-  description?: string;
-}
-
-export interface SpaceTable {
-  id: number;
-  spaceId: number;
-  tableCode: string;
-  capacity: number;
-  status: 'AVAILABLE' | 'INACTIVE';
-  description?: string;
-}
-
-export interface Space {
-  id: number;
-  name: string;
-  spaceTypeId: number;
-  spaceTypeName: string;
-  bookingMode?: 'WHOLE_SPACE' | 'PER_SEAT' | 'PER_TABLE';
-  requiresApproval: boolean;
-  building: string;
-  floor: string;
-  capacity: number;
-  status: 'AVAILABLE' | 'MAINTENANCE' | 'INACTIVE';
-  imageUrl?: string;
-  description?: string;
-  facilities: Facility[];
-  isAvailable?: boolean;
-  allowSeatSelection?: boolean;
-  allowTableSelection?: boolean;
-  spaceType?: SpaceType;
-}
-
-export interface ConflictDetail {
-  type: string;
-  referenceId: number;
-  startTime: string;
-  endTime: string;
-  description?: string;
-}
+export * from '../types/space.types';
 
 export interface AvailabilityResponse {
   spaceId: number;
   available: boolean;
   conflicts: ConflictDetail[];
-}
-
-export interface SearchFilter {
-  date?: string;
-  startTime?: string;
-  endTime?: string;
-  startDateTime?: string;
-  endDateTime?: string;
-  participantCount?: number;
-  spaceTypeId?: number;
-  facilityIds?: number[];
-  building?: string;
 }
 
 export const spaceService = {
@@ -90,14 +30,12 @@ export const spaceService = {
     return res.data;
   },
 
-  // Tìm kiếm phòng trống theo bộ lọc
+  // Tìm kiếm phòng trống theo bộ lọc (Module M03)
   searchAvailableSpaces: async (filter: SearchFilter): Promise<Space[]> => {
     const params: Record<string, any> = {};
     if (filter.date) params.date = filter.date;
     if (filter.startTime) params.startTime = filter.startTime;
     if (filter.endTime) params.endTime = filter.endTime;
-    if (filter.startDateTime) params.startDateTime = filter.startDateTime;
-    if (filter.endDateTime) params.endDateTime = filter.endDateTime;
     if (filter.participantCount) params.participantCount = filter.participantCount;
     if (filter.spaceTypeId) params.spaceTypeId = filter.spaceTypeId;
     if (filter.facilityIds && filter.facilityIds.length > 0) {
@@ -117,15 +55,15 @@ export const spaceService = {
     return res.data;
   },
 
-  // Danh mục loại không gian
+  // Danh mục loại không gian (Đồng bộ chuẩn API của Kim Tuyến)
   getSpaceTypes: async (): Promise<SpaceType[]> => {
-    const res = await api.get<SpaceType[]>('/api/spaces/types');
+    const res = await api.get<SpaceType[]>('/api/space-types');
     return res.data;
   },
 
-  // Danh mục tiện ích
+  // Danh mục tiện ích (Đồng bộ chuẩn API của Kim Tuyến)
   getFacilities: async (): Promise<Facility[]> => {
-    const res = await api.get<Facility[]>('/api/spaces/facilities');
+    const res = await api.get<Facility[]>('/api/facilities');
     return res.data;
   },
 

@@ -64,29 +64,16 @@ export const MaintenanceFormModalKT: React.FC<MaintenanceFormModalKTProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!reason.trim()) {
-      setError('Vui lòng nhập lý do bảo trì.');
-      return;
-    }
-    if (!startTime || !endTime) {
-      setError('Vui lòng chọn thời gian bắt đầu và kết thúc.');
-      return;
-    }
-    if (new Date(startTime) >= new Date(endTime)) {
-      setError('Thời gian kết thúc phải sau thời gian bắt đầu.');
-      return;
-    }
-
     setError(null);
     try {
       await onSubmit(spaceId, {
         reason: reason.trim(),
-        startTime: new Date(startTime).toISOString(),
-        endTime: new Date(endTime).toISOString(),
+        startTime: startTime ? new Date(startTime).toISOString() : ('' as any),
+        endTime: endTime ? new Date(endTime).toISOString() : ('' as any),
         description: description.trim() ? description.trim() : undefined,
       });
     } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || 'Có lỗi xảy ra.');
+      setError(err?.response?.data?.message || err?.message || 'Có lỗi xảy ra khi lưu thông tin bảo trì.');
     }
   };
 
@@ -116,7 +103,7 @@ export const MaintenanceFormModalKT: React.FC<MaintenanceFormModalKTProps> = ({
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="staff-modal-form">
+        <form onSubmit={handleSubmit} className="staff-modal-form" noValidate>
           {mode === 'create' && (
             <div className="staff-form-group">
               <label className="staff-form-label">
@@ -145,9 +132,11 @@ export const MaintenanceFormModalKT: React.FC<MaintenanceFormModalKTProps> = ({
               type="text"
               className="staff-input"
               value={reason}
-              onChange={(e) => setReason(e.target.value)}
+              onChange={(e) => {
+                setReason(e.target.value);
+                if (error) setError(null);
+              }}
               placeholder="VD: Kiểm tra hệ thống điều hòa, Nâng cấp máy chiếu..."
-              required
               disabled={isLoading}
             />
           </div>
@@ -161,8 +150,10 @@ export const MaintenanceFormModalKT: React.FC<MaintenanceFormModalKTProps> = ({
                 type="datetime-local"
                 className="staff-input"
                 value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                required
+                onChange={(e) => {
+                  setStartTime(e.target.value);
+                  if (error) setError(null);
+                }}
                 disabled={isLoading}
               />
             </div>
@@ -175,8 +166,10 @@ export const MaintenanceFormModalKT: React.FC<MaintenanceFormModalKTProps> = ({
                 type="datetime-local"
                 className="staff-input"
                 value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                required
+                onChange={(e) => {
+                  setEndTime(e.target.value);
+                  if (error) setError(null);
+                }}
                 disabled={isLoading}
               />
             </div>

@@ -73,6 +73,7 @@ export interface MaintenanceBlock {
   status: string;
   createdAt: string;
   createdBy?: number;
+  creatorEmail?: string;
 }
 
 export interface MaintenanceCreateRequest {

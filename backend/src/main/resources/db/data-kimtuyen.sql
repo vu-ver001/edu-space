@@ -27,16 +27,17 @@ INSERT INTO facilities (id, name, description, created_at, updated_at) VALUES
 ON DUPLICATE KEY UPDATE name=VALUES(name), description=VALUES(description), updated_at=NOW();
 
 -- 3. Seed: Không gian cụ thể (spaces)
-INSERT INTO spaces (id, name, space_type_id, building, floor, capacity, status, description, created_at, updated_at) VALUES
-(1, 'Phòng G-101', 1, 'Tòa A', 1, 6, 'AVAILABLE', 'Phòng học nhóm tầng 1, gần sảnh chờ (WHOLE_SPACE)', NOW(), NOW()),
-(2, 'Phòng G-102', 1, 'Tòa A', 1, 8, 'AVAILABLE', 'Phòng học nhóm cỡ vừa, trang bị bảng và màn hình lớn (WHOLE_SPACE)', NOW(), NOW()),
-(3, 'Phòng P-201', 2, 'Tòa A', 2, 20, 'AVAILABLE', 'Phòng thuyết trình chuyên dụng, cách âm (WHOLE_SPACE)', NOW(), NOW()),
-(4, 'Khu tự học S-201', 3, 'Tòa B', 2, 10, 'AVAILABLE', 'Khu tự học chung tầng 2, sức chứa 10 chỗ ngồi độc lập (PER_SEAT)', NOW(), NOW()),
-(5, 'Study Booth B-01', 4, 'Tòa B', 3, 2, 'AVAILABLE', 'Khoang tự học yên tĩnh, bàn đôi (WHOLE_SPACE)', NOW(), NOW()),
-(6, 'Phòng G-103 (Bảo trì)', 1, 'Tòa A', 1, 6, 'MAINTENANCE', 'Phòng đang cải tạo hệ thống điện, tạm ngừng phục vụ', NOW(), NOW()),
-(7, 'Phòng D-201', 5, 'Tòa D', 2, 24, 'AVAILABLE', 'Phòng thảo luận nhóm tầng 2, sức chứa 24 chỗ chia thành 4 bàn (PER_TABLE)', NOW(), NOW())
+INSERT INTO spaces (id, name, space_code, space_type_id, building, floor, capacity, status, description, created_at, updated_at) VALUES
+(1, 'Phòng G-101', 'G-101', 1, 'Tòa A', 1, 6, 'AVAILABLE', 'Phòng học nhóm tầng 1, gần sảnh chờ (WHOLE_SPACE)', NOW(), NOW()),
+(2, 'Phòng G-102', 'G-102', 1, 'Tòa A', 1, 8, 'AVAILABLE', 'Phòng học nhóm cỡ vừa, trang bị bảng và màn hình lớn (WHOLE_SPACE)', NOW(), NOW()),
+(3, 'Phòng P-201', 'P-201', 2, 'Tòa A', 2, 20, 'AVAILABLE', 'Phòng thuyết trình chuyên dụng, cách âm (WHOLE_SPACE)', NOW(), NOW()),
+(4, 'Khu tự học S-201', 'S-201', 3, 'Tòa B', 2, 10, 'AVAILABLE', 'Khu tự học chung tầng 2, sức chứa 10 chỗ ngồi độc lập (PER_SEAT)', NOW(), NOW()),
+(5, 'Study Booth B-01', 'B-01', 4, 'Tòa B', 3, 2, 'AVAILABLE', 'Khoang tự học yên tĩnh, bàn đôi (WHOLE_SPACE)', NOW(), NOW()),
+(6, 'Phòng G-103 (Bảo trì)', 'G-103', 1, 'Tòa A', 1, 6, 'MAINTENANCE', 'Phòng đang cải tạo hệ thống điện, tạm ngừng phục vụ', NOW(), NOW()),
+(7, 'Phòng D-201', 'D-201', 5, 'Tòa D', 2, 24, 'AVAILABLE', 'Phòng thảo luận nhóm tầng 2, sức chứa 24 chỗ chia thành 4 bàn (PER_TABLE)', NOW(), NOW())
 ON DUPLICATE KEY UPDATE 
     name=VALUES(name), 
+    space_code=VALUES(space_code),
     space_type_id=VALUES(space_type_id), 
     building=VALUES(building), 
     floor=VALUES(floor), 
@@ -93,3 +94,25 @@ INSERT INTO space_facilities (space_id, facility_id) VALUES
 -- Phòng D-201 (PER_TABLE): Bảng trắng, Ổ cắm, Điều hòa
 (7, 1), (7, 4), (7, 5)
 ON DUPLICATE KEY UPDATE space_id=VALUES(space_id), facility_id=VALUES(facility_id);
+
+-- 7. Seed: Danh mục hình ảnh không gian (space_images) - Phân hệ Kim Tuyến
+INSERT INTO space_images (id, space_id, image_url, is_primary, sort_order, created_at, updated_at) VALUES
+(1, 1, 'https://images.unsplash.com/photo-1517502884422-41eaead166d4?w=600&auto=format&fit=crop&q=80', TRUE, 0, NOW(), NOW()),
+(2, 2, 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=600&auto=format&fit=crop&q=80', TRUE, 0, NOW(), NOW()),
+(3, 3, 'https://images.unsplash.com/photo-1577495508048-b635879837f1?w=600&auto=format&fit=crop&q=80', TRUE, 0, NOW(), NOW()),
+(4, 4, 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=600&auto=format&fit=crop&q=80', TRUE, 0, NOW(), NOW()),
+(11, 4, 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1000&auto=format&fit=crop&q=80', FALSE, 1, NOW(), NOW()),
+(12, 4, 'https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=1000&auto=format&fit=crop&q=80', FALSE, 2, NOW(), NOW()),
+(13, 4, 'https://images.unsplash.com/photo-1517502884422-41eaead166d4?w=1000&auto=format&fit=crop&q=80', FALSE, 3, NOW(), NOW()),
+(14, 4, 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=1000&auto=format&fit=crop&q=80', FALSE, 4, NOW(), NOW()),
+(15, 4, 'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=1000&auto=format&fit=crop&q=80', FALSE, 5, NOW(), NOW()),
+(5, 5, 'https://images.unsplash.com/photo-1531482615713-2afd69097998?w=600&auto=format&fit=crop&q=80', TRUE, 0, NOW(), NOW()),
+(6, 6, 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=600&auto=format&fit=crop&q=80', TRUE, 0, NOW(), NOW()),
+(7, 7, 'https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=600&auto=format&fit=crop&q=80', TRUE, 0, NOW(), NOW())
+ON DUPLICATE KEY UPDATE 
+    space_id=VALUES(space_id),
+    image_url=VALUES(image_url),
+    is_primary=VALUES(is_primary),
+    sort_order=VALUES(sort_order),
+    updated_at=NOW();
+

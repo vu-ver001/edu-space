@@ -1,5 +1,5 @@
 import React from 'react';
-import type { BookingStatus } from '../../services/bookingService';
+import type { BookingStatus } from '../../features/bookings/core/types/booking.types';
 
 interface Props {
   status: BookingStatus;

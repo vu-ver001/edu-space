@@ -34,11 +34,38 @@
   --portal-radius-lg: 16px;
   --portal-radius-xl: 20px;
 
-  --font-sans: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-sans: 'Inter', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --transition: 0.16s ease;
 }
 
-* {
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #9ca3af;
+    --text-h: #f3f4f6;
+    --bg: #16171d;
+    --border: #2e303a;
+    --code-bg: #1f2028;
+    --accent: #c084fc;
+    --accent-bg: rgba(192, 132, 252, 0.15);
+    --accent-border: rgba(192, 132, 252, 0.5);
+    --social-bg: rgba(47, 48, 58, 0.5);
+    --shadow:
+      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+  }
+
+  #social .button-icon {
+    filter: invert(1) brightness(2);
+  }
+}
+
+#root {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  text-align: left;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -51,6 +78,13 @@ body {
   line-height: 1.5;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button, input, select, textarea {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 #root {
@@ -415,8 +449,8 @@ body {
 
 /* 1.3. Content Canvas */
 .portal-content-canvas {
-  padding: 24px 32px 60px;
-  max-width: 1280px;
+  padding: 12px 28px 18px;
+  max-width: 1340px;
   width: 100%;
   margin: 0 auto;
 }
@@ -507,6 +541,84 @@ body {
   pointer-events: none;
   font-size: 13px;
   opacity: 0.5;
+}
+
+.internal-input.input-error,
+.internal-select.input-error {
+  border-color: #EF4444 !important;
+  background-color: #FEF2F2 !important;
+  color: #B91C1C !important;
+}
+
+.internal-input.input-error:focus,
+.internal-select.input-error:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2) !important;
+}
+
+.internal-field-error-banner {
+  margin-bottom: 16px;
+  padding: 10px 16px;
+  background: #FEF2F2;
+  border: 1.5px solid #FCA5A5;
+  border-radius: var(--portal-radius-sm);
+  color: #DC2626;
+  font-size: 0.875rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ========================================================
+   TÙY CHỈNH Ô NHẬP NGÀY & GIỜ (Chuẩn theo Ảnh 1, Ảnh 2, Ảnh 3)
+   ======================================================== */
+
+/* 1. Ngày sử dụng: Icon lịch dịch hẳn sát mép khung bên phải (Ảnh 2) */
+.internal-date-input,
+.form-control-input[type="date"],
+.form-input[type="date"],
+input[type="date"] {
+  padding-right: 8px !important;
+  cursor: text !important;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer !important;
+  padding: 4px;
+  margin-right: 2px;
+  opacity: 0.75;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  font-size: 16px;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+  transform: scale(1.08);
+}
+
+/* 2. Giờ bắt đầu & Giờ kết thúc: Icon đồng hồ tròn sắc nét, không có mũi tên dropdown v (Ảnh 1 & 3) */
+.internal-time-input,
+.form-control-input[type="time"],
+.form-input[type="time"],
+input[type="time"] {
+  padding-right: 8px !important;
+  cursor: text !important;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+input[type="time"]::-webkit-calendar-picker-indicator {
+  cursor: pointer !important;
+  padding: 4px;
+  margin-right: 2px;
+  opacity: 0.8;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  font-size: 16px;
+}
+
+input[type="time"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+  transform: scale(1.08);
 }
 
 /* Tiện ích (Pill tags) */
@@ -1769,46 +1881,54 @@ body {
 
 .room-card-location-meta {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  gap: 6px;
   font-size: 0.825rem;
-  color: #64748B;
-  margin-bottom: 14px;
+  color: #334155;
+  margin-bottom: 12px;
 }
 
 .meta-item {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 7px;
+  font-size: 0.825rem;
+  color: #334155;
+  font-weight: 500;
 }
 
 .meta-icon {
-  color: #94A3B8;
+  color: #64748B;
+  flex-shrink: 0;
 }
 
 .room-card-amenities {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
-  margin-bottom: 18px;
+  margin-bottom: 16px;
   min-height: 28px;
 }
 
 .amenity-chip {
-  background: #F8FAFD;
-  border: 1px solid #E2E8F0;
-  color: #475569;
+  background: #F0F4F9;
+  border: none;
+  color: #334155;
   font-size: 0.75rem;
-  padding: 3px 9px;
-  border-radius: 6px;
+  padding: 3px 10px;
+  border-radius: 9999px;
   font-weight: 500;
+  display: inline-flex;
+  align-items: center;
 }
 
 .amenity-chip.more {
-  background: #EFF6FF;
-  border-color: #BFDBFE;
-  color: #2563EB;
-  font-weight: 700;
+  background: #F1F5F9;
+  border: none;
+  color: #64748B;
+  font-weight: 600;
+  padding: 3px 8px;
 }
 
 .room-card-action {
@@ -1825,7 +1945,6 @@ body {
   font-size: 0.9rem;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.15s ease, box-shadow 0.15s ease;
   box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
   text-align: center;
 }
@@ -1835,24 +1954,21 @@ body {
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
 }
 
-/* ========================================================
-   8. GIAO DIỆN THEO ẢNH 2: TRANG CHI TIẾT PHÒNG (/spaces/:id)
-   ======================================================== */
 .back-navigation-bar {
-  margin-bottom: 20px;
+  margin-bottom: 10px;
 }
 
 .btn-back-link {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   background: transparent;
   border: none;
   color: #2563EB;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   font-weight: 700;
   cursor: pointer;
-  padding: 4px 0;
+  padding: 2px 0;
   transition: transform 0.15s ease, color 0.15s ease;
 }
 
@@ -1861,11 +1977,11 @@ body {
   transform: translateX(-3px);
 }
 
-/* 2-Column layout */
+/* 2-Column layout: Cột trái ảnh rộng hơn (58%), Cột phải form đặt chỗ hẹp gọn (42%) theo yêu cầu */
 .space-detail-layout {
   display: grid;
-  grid-template-columns: 1fr 380px;
-  gap: 28px;
+  grid-template-columns: 58% 42%;
+  gap: 20px;
   align-items: start;
 }
 
@@ -1878,21 +1994,22 @@ body {
 .space-detail-left {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 12px;
 }
 
+/* Card Ảnh & Thông tin tổng hợp thu gọn trong 1 trang */
 .space-hero-card {
   background: #FFFFFF;
   border: 1px solid #E2E8F0;
-  border-radius: 16px;
+  border-radius: 14px;
   overflow: hidden;
-  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.05);
 }
 
 .space-hero-image-box {
   position: relative;
   width: 100%;
-  height: 340px;
+  height: 205px; /* Cân chỉnh vừa vặn hoàn hảo, triệt tiêu thanh cuộn dọc */
   background: #F1F5F9;
 }
 
@@ -1904,193 +2021,232 @@ body {
 
 .hero-badge-pinned {
   position: absolute;
-  top: 18px;
-  left: 18px;
+  top: 12px;
+  left: 12px;
 }
 
 .space-hero-content {
-  padding: 24px 28px;
+  padding: 14px 18px 16px;
 }
 
 .space-detail-title {
-  font-size: 1.75rem;
+  font-size: 1.45rem;
   font-weight: 800;
   color: #0F172A;
-  margin-bottom: 6px;
-  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
 }
 
 .space-detail-subtitle {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 0.9rem;
+  font-size: 0.825rem;
   color: #64748B;
-  margin-bottom: 16px;
+  margin-bottom: 6px;
 }
 
 .type-badge-solid {
   background: #EFF6FF;
   color: #2563EB;
   font-weight: 700;
-  padding: 4px 10px;
+  padding: 3px 10px;
   border-radius: 6px;
   border: 1px solid #BFDBFE;
-}
-
-.meta-separator {
-  color: #CBD5E1;
-}
-
-.location-highlight {
-  font-weight: 600;
-  color: #334155;
+  font-size: 0.8rem;
 }
 
 .space-description-paragraph {
-  font-size: 0.925rem;
+  font-size: 0.85rem;
   color: #475569;
-  line-height: 1.65;
+  line-height: 1.4;
+  margin-bottom: 12px;
 }
 
-.detail-section-card {
-  background: #FFFFFF;
-  border: 1px solid #E2E8F0;
-  border-radius: 14px;
-  padding: 24px 28px;
-  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.04);
-}
-
-.section-card-title {
-  font-size: 1.1rem;
-  font-weight: 800;
-  color: #0F172A;
-  margin-bottom: 18px;
-}
-
-.specs-grid {
+/* Thông số kỹ thuật dạng Metric Cards cao cấp, to rõ, đẹp mắt */
+.specs-compact-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
 }
 
-@media (max-width: 600px) {
-  .specs-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.spec-item {
+.spec-compact-item {
   display: flex;
   align-items: center;
-  gap: 14px;
-  background: #F8FAFD;
+  gap: 12px;
+  background: #F8FAFC;
   border: 1px solid #E2E8F0;
   border-radius: 10px;
-  padding: 14px 16px;
+  padding: 10px 14px;
+  transition: all 0.2s ease;
 }
 
-.spec-icon {
-  font-size: 24px;
+.spec-compact-item:hover {
+  background: #FFFFFF;
+  border-color: #CBD5E1;
+  box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.06);
+  transform: translateY(-1px);
 }
 
-.spec-data {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.spec-label {
-  font-size: 0.775rem;
-  color: #64748B;
-}
-
-.spec-value {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: #0F172A;
-}
-
-.facilities-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 12px;
-}
-
-.facility-badge-item {
+.spec-compact-icon {
+  font-size: 18px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  flex-shrink: 0;
+}
+
+/* Tint nhẹ nhàng theo từng thông số: 1. Địa điểm (Đỏ hồng), 2. Sức chứa (Xanh dương), 3. Phê duyệt (Vàng ấm), 4. Mô hình (Tím pastel) */
+.spec-compact-item:nth-child(1) .spec-compact-icon {
+  background: #FEE2E2;
+  border-color: #FECACA;
+}
+
+.spec-compact-item:nth-child(2) .spec-compact-icon {
+  background: #EFF6FF;
+  border-color: #DBEAFE;
+}
+
+.spec-compact-item:nth-child(3) .spec-compact-icon {
+  background: #FEF3C7;
+  border-color: #FDE68A;
+}
+
+.spec-compact-item:nth-child(4) .spec-compact-icon {
+  background: #F5F3FF;
+  border-color: #DDD6FE;
+}
+
+.spec-compact-label {
+  display: block;
+  font-size: 0.725rem;
+  color: #64748B;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  margin-bottom: 2px;
+}
+
+.spec-compact-val {
+  display: block;
+  font-size: 0.95rem;
+  color: #0F172A;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+/* Tiện ích có sẵn thu gọn dạng tag to bản, thanh lịch - luôn tự động xuống dòng */
+.facilities-compact-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding-top: 2px;
+}
+
+.facilities-compact-label {
+  font-size: 0.825rem;
+  font-weight: 700;
+  color: #475569;
+}
+
+.facilities-pills-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.facility-pill-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   background: #F0FDF4;
   border: 1px solid #BBF7D0;
   color: #166534;
-  padding: 10px 14px;
-  border-radius: 8px;
-  font-size: 0.85rem;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
   font-weight: 600;
+  transition: all 0.15s ease;
 }
 
-.check-icon {
-  color: #16A34A;
-  font-weight: 800;
+.facility-pill-tag:hover {
+  background: #DCFCE7;
+  border-color: #86EFAC;
 }
 
-/* Cột phải: Card Đặt chỗ sticky (Ảnh 2) */
+/* ========================================================
+   CỘT PHẢI: CARD FORM ĐẶT CHỖ (Mở rộng chiều ngang, vừa vặn chiều cao)
+   ======================================================== */
 .booking-form-sticky-card {
-  position: sticky;
-  top: 86px;
   background: #FFFFFF;
   border: 1px solid #E2E8F0;
-  border-radius: 16px;
-  padding: 26px 24px;
-  box-shadow: 0 10px 30px -4px rgba(15, 23, 42, 0.08);
+  border-radius: 14px;
+  padding: 16px 20px;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.06);
 }
 
 .card-form-header {
-  margin-bottom: 20px;
-  padding-bottom: 14px;
+  margin-bottom: 12px;
+  padding-bottom: 6px;
   border-bottom: 1px solid #F1F5F9;
 }
 
 .form-card-title {
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   font-weight: 800;
   color: #0F172A;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .form-card-subtitle {
-  font-size: 0.825rem;
+  font-size: 0.775rem;
   color: #64748B;
 }
 
 .detail-booking-form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .form-field-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
+}
+
+.form-field-group .form-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #334155;
 }
 
 .form-time-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 10px;
 }
 
 .form-control-input,
 .form-control-select {
   width: 100%;
-  height: 42px;
+  height: 36px;
   background: #F8FAFD;
   border: 1.5px solid #E2E8F0;
   border-radius: 8px;
-  padding: 0 12px;
-  font-size: 0.9rem;
+  padding: 0 10px;
+  font-size: 0.85rem;
   color: #0F172A;
   outline: none;
   font-family: inherit;
@@ -2102,12 +2258,14 @@ body {
   background: #F8FAFD;
   border: 1.5px solid #E2E8F0;
   border-radius: 8px;
-  padding: 10px 12px;
-  font-size: 0.875rem;
+  padding: 8px 12px;
+  font-size: 0.85rem;
   color: #0F172A;
   outline: none;
   font-family: inherit;
-  resize: vertical;
+  resize: none;
+  min-height: 64px;
+  max-height: 72px;
 }
 
 .form-control-input:focus,
@@ -2116,36 +2274,6 @@ body {
   background: #FFFFFF;
   border-color: #2563EB;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-}
-
-.availability-highlight-box {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: #F0FDF4;
-  border: 1px solid #BBF7D0;
-  padding: 12px 14px;
-  border-radius: 8px;
-}
-
-.avail-icon {
-  font-size: 18px;
-}
-
-.avail-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.avail-text strong {
-  font-size: 0.85rem;
-  color: #166534;
-}
-
-.avail-text span {
-  font-size: 0.775rem;
-  color: #15803D;
 }
 
 .btn-detail-book-now {
@@ -2157,14 +2285,16 @@ body {
   background: #2563EB;
   color: #FFFFFF;
   border: none;
-  border-radius: 10px;
-  padding: 13px 18px;
-  font-size: 1rem;
-  font-weight: 800;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-family: var(--font-sans);
+  font-size: 0.925rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.28);
   transition: background 0.15s ease, transform 0.15s ease;
-  margin-top: 6px;
+  margin-top: 3px;
 }
 
 .btn-detail-book-now:hover {
@@ -2173,10 +2303,10 @@ body {
 }
 
 .form-step-hint {
-  font-size: 0.775rem;
+  font-size: 0.725rem;
   color: #64748B;
-  line-height: 1.45;
-  text-align: center;
+  line-height: 1.35;
+  margin-top: 3px;
 }
 
 /* ========================================================

@@ -41,9 +41,10 @@ export const FilterBar: React.FC<Props> = ({ onSearch, isLoading, availableCount
   const [date, setDate] = useState<string>(defaultSlot.date);
   const [startTime, setStartTime] = useState<string>(defaultSlot.startTime);
   const [endTime, setEndTime] = useState<string>(defaultSlot.endTime);
-  const [participantCount, setParticipantCount] = useState<number>(4);
+  const [participantCount, setParticipantCount] = useState<number | string>(4);
   const [selectedSpaceTypeId, setSelectedSpaceTypeId] = useState<number | undefined>(undefined);
   const [selectedFacilityIds, setSelectedFacilityIds] = useState<number[]>([]);
+  const [timeError, setTimeError] = useState<string | null>(null);
 
   const [spaceTypes, setSpaceTypes] = useState<SpaceType[]>([]);
   const [facilities, setFacilities] = useState<Facility[]>([]);
@@ -59,12 +60,26 @@ export const FilterBar: React.FC<Props> = ({ onSearch, isLoading, availableCount
     );
   };
 
+  const normalizeTime = (t: string) => {
+    if (!t) return t;
+    const parts = t.split(':');
+    if (parts.length >= 2) {
+      return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}:00`;
+    }
+    return t;
+  };
+
   const handleApplyFilter = () => {
+    if (startTime >= endTime) {
+      setTimeError(`Giờ bắt đầu (${startTime}) phải trước giờ kết thúc (${endTime}). Vui lòng chọn lại khung giờ.`);
+      return;
+    }
+    setTimeError(null);
     onSearch({
       date,
-      startTime: startTime + ':00',
-      endTime: endTime + ':00',
-      participantCount,
+      startTime: normalizeTime(startTime),
+      endTime: normalizeTime(endTime),
+      participantCount: Number(participantCount) || 1,
       spaceTypeId: selectedSpaceTypeId,
       facilityIds: selectedFacilityIds.length > 0 ? selectedFacilityIds : undefined
     });
@@ -78,47 +93,51 @@ export const FilterBar: React.FC<Props> = ({ onSearch, isLoading, availableCount
       <div className="internal-form-row four-cols">
         <div className="internal-field">
           <label className="internal-label">Ngày sử dụng</label>
-          <div className="input-with-icon">
-            <input
-              type="date"
-              className="internal-input"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              min={today}
-            />
-          </div>
+          <input
+            type="date"
+            className="internal-input internal-date-input"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            min={today}
+          />
         </div>
 
         <div className="internal-field">
           <label className="internal-label">Giờ bắt đầu</label>
-          <div className="input-with-icon">
-            <select
-              className="internal-select"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-            >
-              {['07:00', '08:00', '09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'].map((t) => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
-            <span className="field-icon">🕒</span>
-          </div>
+          <input
+            type="time"
+            step="60"
+            className={`internal-input internal-time-input ${timeError ? 'input-error' : ''}`}
+            value={startTime}
+            onChange={(e) => {
+              const val = e.target.value;
+              setStartTime(val);
+              if (val >= endTime) {
+                setTimeError(`Giờ bắt đầu (${val}) phải trước giờ kết thúc (${endTime}). Vui lòng chọn lại khung giờ.`);
+              } else {
+                setTimeError(null);
+              }
+            }}
+          />
         </div>
 
         <div className="internal-field">
           <label className="internal-label">Giờ kết thúc</label>
-          <div className="input-with-icon">
-            <select
-              className="internal-select"
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-            >
-              {['08:00', '09:00', '10:00', '11:00', '12:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00'].map((t) => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
-            <span className="field-icon">🕒</span>
-          </div>
+          <input
+            type="time"
+            step="60"
+            className={`internal-input internal-time-input ${timeError ? 'input-error' : ''}`}
+            value={endTime}
+            onChange={(e) => {
+              const val = e.target.value;
+              setEndTime(val);
+              if (startTime >= val) {
+                setTimeError(`Giờ bắt đầu (${startTime}) phải trước giờ kết thúc (${val}). Vui lòng chọn lại khung giờ.`);
+              } else {
+                setTimeError(null);
+              }
+            }}
+          />
         </div>
 
         <div className="internal-field">
@@ -127,12 +146,29 @@ export const FilterBar: React.FC<Props> = ({ onSearch, isLoading, availableCount
             type="number"
             className="internal-input"
             value={participantCount}
-            onChange={(e) => setParticipantCount(Math.max(1, parseInt(e.target.value) || 1))}
+            onChange={(e) => {
+              const val = e.target.value;
+              setParticipantCount(val === '' ? '' : Math.max(1, parseInt(val) || 1));
+            }}
+            onBlur={() => {
+              if (!participantCount || Number(participantCount) < 1) {
+                setParticipantCount(1);
+              }
+            }}
             min={1}
-            max={50}
+            max={500}
+            placeholder="VD: 4"
           />
         </div>
       </div>
+
+      {/* Hiển thị cảnh báo lỗi thời gian */}
+      {timeError && (
+        <div className="internal-field-error-banner" role="alert">
+          <span className="error-icon">⚠️</span>
+          <span>{timeError}</span>
+        </div>
+      )}
 
       {/* Row 2: Loại không gian & Tiện ích */}
       <div className="internal-form-row two-cols">

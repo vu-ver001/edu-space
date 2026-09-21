@@ -26,15 +26,29 @@ export const SpaceDetailPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
+  const normalizeTime = (t: string | null, fallback: string) => {
+    if (!t) return fallback;
+    const parts = t.trim().split(':');
+    return `${(parts[0] || '08').padStart(2, '0')}:${(parts[1] || '00').padStart(2, '0')}`;
+  };
+
+  const toIsoDateTime = (dateStr: string, timeStr: string) => {
+    const parts = (timeStr || '').trim().split(':');
+    const h = (parts[0] || '08').padStart(2, '0');
+    const m = (parts[1] || '00').padStart(2, '0');
+    const s = (parts[2] || '00').padStart(2, '0');
+    return `${dateStr}T${h}:${m}:${s}`;
+  };
+
   // Form booking state initialized from URL params
   const today = new Date().toISOString().split('T')[0];
   const [date, setDate] = useState<string>(searchParams.get('date') || today);
-  const [startTime, setStartTime] = useState<string>(searchParams.get('startTime') || '08:00');
-  const [endTime, setEndTime] = useState<string>(searchParams.get('endTime') || '10:00');
-  const [participantCount, setParticipantCount] = useState<number>(
+  const [startTime, setStartTime] = useState<string>(normalizeTime(searchParams.get('startTime'), '08:00'));
+  const [endTime, setEndTime] = useState<string>(normalizeTime(searchParams.get('endTime'), '10:00'));
+  const [participantCount, setParticipantCount] = useState<number | string>(
     Number(searchParams.get('participantCount')) || 4
   );
-  const [purpose, setPurpose] = useState<string>('Học nhóm môn Phát triển phần mềm dịch vụ');
+  const [purpose, setPurpose] = useState<string>('');
 
   // Modal chọn chỗ ngồi / chọn bàn
   const [isSeatModalOpen, setIsSeatModalOpen] = useState<boolean>(false);
@@ -42,7 +56,6 @@ export const SpaceDetailPage: React.FC = () => {
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
 
-  // Xác định chế độ đặt không gian theo đúng CSDL của Kim Tuyến (cột booking_mode)
   const bookingMode = space?.bookingMode || space?.spaceType?.bookingMode || (
     space?.spaceTypeName?.toLowerCase().includes('bàn') ? 'PER_TABLE' :
     space?.spaceTypeName?.toLowerCase().includes('ghế') || space?.spaceTypeName?.toLowerCase().includes('mở') ? 'PER_SEAT' :
@@ -51,6 +64,8 @@ export const SpaceDetailPage: React.FC = () => {
 
   const isPerSeat = bookingMode === 'PER_SEAT'; // Khu tự học chung (Mở) -> Chọn theo ghế
   const isPerTable = bookingMode === 'PER_TABLE'; // Phòng thảo luận theo bàn -> Chọn theo bàn
+  // LOGIC LIÊN KẾT CSDL: Lấy trực tiếp từ space.requiresApproval (cột space_types.requires_approval của Kim Tuyến)
+  const requiresApproval = space?.requiresApproval ?? (space?.spaceType?.requiresApproval ?? !isPerSeat);
 
   useEffect(() => {
     if (!id) return;
@@ -70,7 +85,18 @@ export const SpaceDetailPage: React.FC = () => {
     e.preventDefault();
     setBookingError(null);
     if (!date || !startTime || !endTime) {
-      alert('Vui lòng điền đầy đủ ngày và khung giờ đặt phòng.');
+      setBookingError('Vui lòng điền đầy đủ ngày và khung giờ đặt phòng.');
+      return;
+    }
+
+    if (startTime >= endTime) {
+      setBookingError('Thời gian bắt đầu phải trước thời gian kết thúc.');
+      return;
+    }
+
+    // Bắt buộc nhập lý do sử dụng nếu phòng cần duyệt trước theo CSDL
+    if (requiresApproval && (!purpose || !purpose.trim())) {
+      setBookingError('Vui lòng nhập mục đích sử dụng (bắt buộc đối với không gian cần nhân viên duyệt).');
       return;
     }
 
@@ -84,17 +110,21 @@ export const SpaceDetailPage: React.FC = () => {
     if (!space) return;
     setSubmitting(true);
     try {
-      const startDateTime = `${date}T${startTime}:00`;
-      const endDateTime = `${date}T${endTime}:00`;
+      const startDateTime = toIsoDateTime(date, startTime);
+      const endDateTime = toIsoDateTime(date, endTime);
       await bookingService.createBooking({
         spaceId: space.id,
         startTime: startDateTime,
         endTime: endDateTime,
-        participantCount,
-        purpose,
+        participantCount: Number(participantCount) || 1,
+        purpose: purpose.trim() || 'Học tập & Thảo luận nhóm',
         selectedSeats: []
       });
-      setToastMessage('✓ Đặt phòng thành công! Toàn bộ không gian đã được giữ chỗ cho nhóm của bạn. Đang chuyển hướng...');
+      if (requiresApproval) {
+        setToastMessage('✓ Yêu cầu đặt phòng đã gửi thành công! Đang chờ Staff xét duyệt...');
+      } else {
+        setToastMessage('✓ Đặt phòng thành công! Toàn bộ không gian đã được giữ chỗ cho nhóm của bạn. Đang chuyển hướng...');
+      }
       setTimeout(() => {
         navigate('/my-bookings');
       }, 1500);
@@ -107,8 +137,11 @@ export const SpaceDetailPage: React.FC = () => {
 
   const handleBookingSuccess = (_bookingId: number, selectedItems: string[]) => {
     setIsSeatModalOpen(false);
-    const label = isPerTable ? 'Bàn' : 'Ghế';
-    setToastMessage(`✓ Đặt chỗ thành công! ${label} của bạn: ${selectedItems.join(', ')}. Đang chuyển hướng...`);
+    if (isPerTable) {
+      setToastMessage(`✓ Yêu cầu đặt bàn ${selectedItems.join(', ')} đã gửi thành công! Đang chờ Staff xét duyệt...`);
+    } else {
+      setToastMessage(`✓ Đặt chỗ thành công! Chỗ ngồi ${selectedItems.join(', ')} đã được xác nhận. Đang chuyển hướng...`);
+    }
     setTimeout(() => {
       navigate('/my-bookings');
     }, 1500);
@@ -116,18 +149,18 @@ export const SpaceDetailPage: React.FC = () => {
 
   if (loading) {
     return (
-      <>
+      <div className="space-detail-page">
         <div className="portal-loading-card">
           <div className="portal-spinner" />
           <p>Đang tải thông tin chi tiết không gian...</p>
         </div>
-      </>
+      </div>
     );
   }
 
   if (error || !space) {
     return (
-      <>
+      <div className="space-detail-page">
         <div className="portal-error-card">
           <span>⚠️</span>
           <h4>Lỗi tải dữ liệu</h4>
@@ -136,14 +169,14 @@ export const SpaceDetailPage: React.FC = () => {
             Quay lại tìm không gian
           </button>
         </div>
-      </>
+      </div>
     );
   }
 
   const imageUrl = space.imageUrl || ROOM_IMAGES[space.id] || DEFAULT_IMAGE;
 
   return (
-    <>
+    <div className="space-detail-page">
       {toastMessage && (
         <div className="portal-toast">
           <span>{toastMessage}</span>
@@ -165,16 +198,16 @@ export const SpaceDetailPage: React.FC = () => {
         </button>
       </div>
 
-      {/* Layout 2 cột theo Ảnh 2 */}
+      {/* Layout 2 cột theo yêu cầu: Cột trái hẹp lại, Cột phải form rộng dài hơn, hiển thị trọn trong 1 màn hình */}
       <div className="space-detail-layout">
-        {/* CỘT TRÁI: THÔNG TIN CHI TIẾT PHÒNG HỌC */}
+        {/* CỘT TRÁI: THÔNG TIN CHI TIẾT PHÒNG HỌC (THU GỌN VỪA VẶN 1 TRANG) */}
         <div className="space-detail-left">
-          {/* Card Hình ảnh lớn và Tiêu đề */}
+          {/* Card Hình ảnh và Tiêu đề tích hợp Thông số & Tiện ích */}
           <div className="space-hero-card">
             <div className="space-hero-image-box">
               <img src={imageUrl} alt={space.name} className="space-hero-img" />
               <div className="hero-badge-pinned">
-                {space.requiresApproval ? (
+                {requiresApproval ? (
                   <span className="badge-status-pill badge-approval">
                     <span className="badge-dot dot-amber" /> Cần phê duyệt
                   </span>
@@ -189,82 +222,76 @@ export const SpaceDetailPage: React.FC = () => {
             <div className="space-hero-content">
               <h1 className="space-detail-title">{space.name}</h1>
               <div className="space-detail-subtitle">
-                <span className="type-badge-solid">{space.spaceTypeName}</span>
-                <span className="meta-separator">•</span>
-                <span className="location-highlight">
-                  📍 {space.building} • {space.floor}
+                <span className="type-badge-solid">
+                  {space.spaceTypeName || space.spaceType?.name || 'Không gian học tập'}
                 </span>
               </div>
 
               {space.description && (
                 <p className="space-description-paragraph">{space.description}</p>
               )}
-            </div>
-          </div>
 
-          {/* Card Thông tin thông số kỹ thuật & sức chứa */}
-          <div className="detail-section-card">
-            <h3 className="section-card-title">Thông tin không gian</h3>
-            <div className="specs-grid">
-              <div className="spec-item">
-                <div className="spec-icon">👥</div>
-                <div className="spec-data">
-                  <span className="spec-label">Sức chứa tối đa</span>
-                  <strong className="spec-value">{space.capacity} người</strong>
-                </div>
-              </div>
-
-              <div className="spec-item">
-                <div className="spec-icon">🛡️</div>
-                <div className="spec-data">
-                  <span className="spec-label">Hình thức phê duyệt</span>
-                  <strong className="spec-value">
-                    {space.requiresApproval ? 'Cần xét duyệt (Staff)' : 'Duyệt tự động (Tức thì)'}
-                  </strong>
-                </div>
-              </div>
-
-              <div className="spec-item">
-                <div className="spec-icon">{isPerSeat ? '🎧' : isPerTable ? '👥' : '🏢'}</div>
-                <div className="spec-data">
-                  <span className="spec-label">Mô hình đặt chỗ</span>
-                  <strong className="spec-value">
-                    {isPerSeat ? 'Chọn ghế ngồi (Cá nhân)' : isPerTable ? 'Chọn theo bàn (Thảo luận)' : 'Đặt trọn phòng (Theo nhóm)'}
-                  </strong>
-                </div>
-              </div>
-
-              <div className="spec-item">
-                <div className="spec-icon">🕒</div>
-                <div className="spec-data">
-                  <span className="spec-label">Giờ phục vụ</span>
-                  <strong className="spec-value">07:00 - 21:00 hàng ngày</strong>
-                </div>
-              </div>
-
-              <div className="spec-item">
-                <div className="spec-icon">📶</div>
-                <div className="spec-data">
-                  <span className="spec-label">Mạng kết nối</span>
-                  <strong className="spec-value">Wifi EduSpace High-Speed</strong>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Card Tiện ích có sẵn */}
-          <div className="detail-section-card">
-            <h3 className="section-card-title">Tiện ích trang bị sẵn trong phòng</h3>
-            <div className="facilities-grid">
-              {space.facilities && space.facilities.length > 0 ? (
-                space.facilities.map((f) => (
-                  <div key={f.id} className="facility-badge-item">
-                    <span className="check-icon">✓</span>
-                    <span className="facility-text">{f.name}</span>
+              {/* Thông số kỹ thuật 100% liên kết CSDL (Địa điểm, Sức chứa, Phê duyệt, Mô hình) */}
+              <div className="specs-compact-grid">
+                {/* Khung 1: Địa điểm */}
+                <div className="spec-compact-item">
+                  <span className="spec-compact-icon">📍</span>
+                  <div>
+                    <span className="spec-compact-label">Địa điểm</span>
+                    <strong className="spec-compact-val">
+                      {space.building} • {space.floor ? (space.floor.toString().toLowerCase().includes('tầng') ? space.floor : `Tầng ${space.floor}`) : 'Đang cập nhật'}
+                    </strong>
                   </div>
-                ))
-              ) : (
-                <p className="text-muted">Đầy đủ bàn ghế, ánh sáng tiêu chuẩn và ổ cắm điện.</p>
+                </div>
+
+                {/* Khung 2: Sức chứa */}
+                <div className="spec-compact-item">
+                  <span className="spec-compact-icon">👥</span>
+                  <div>
+                    <span className="spec-compact-label">Sức chứa</span>
+                    <strong className="spec-compact-val">{space.capacity} người</strong>
+                  </div>
+                </div>
+
+                {/* Khung 3: Phê duyệt */}
+                <div className="spec-compact-item">
+                  <span className="spec-compact-icon">🛡️</span>
+                  <div>
+                    <span className="spec-compact-label">Phê duyệt</span>
+                    <strong className="spec-compact-val">
+                      {requiresApproval ? 'Cần xét duyệt (Staff)' : 'Duyệt tự động'}
+                    </strong>
+                  </div>
+                </div>
+
+                {/* Khung 4: Mô hình */}
+                <div className="spec-compact-item">
+                  <span className="spec-compact-icon">{isPerSeat ? '🎧' : isPerTable ? '👥' : '🏢'}</span>
+                  <div>
+                    <span className="spec-compact-label">Mô hình</span>
+                    <strong className="spec-compact-val">
+                      {isPerSeat ? 'Chọn ghế ngồi' : isPerTable ? 'Chọn theo bàn' : 'Trọn phòng'}
+                    </strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tiện ích có sẵn thu gọn dạng tag */}
+              {space.facilities && space.facilities.length > 0 && (
+                <div className="facilities-compact-box">
+                  <span className="facilities-compact-label">Tiện ích:</span>
+                  <div className="facilities-pills-row">
+                    {space.facilities.map((f: any, idx: number) => {
+                      const name = typeof f === 'string' ? f : f?.name;
+                      const key = typeof f === 'object' && f?.id ? f.id : `${name}-${idx}`;
+                      return (
+                        <span key={key} className="facility-pill-tag">
+                          ✓ {name}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
               )}
             </div>
           </div>
@@ -286,7 +313,7 @@ export const SpaceDetailPage: React.FC = () => {
                 <label className="form-label">Ngày sử dụng</label>
                 <input
                   type="date"
-                  className="form-control-input"
+                  className="form-control-input internal-date-input"
                   value={date}
                   min={today}
                   onChange={(e) => setDate(e.target.value)}
@@ -298,28 +325,26 @@ export const SpaceDetailPage: React.FC = () => {
               <div className="form-time-row">
                 <div className="form-field-group">
                   <label className="form-label">Giờ bắt đầu</label>
-                  <select
-                    className="form-control-select"
+                  <input
+                    type="time"
+                    step="60"
+                    className="form-control-input internal-time-input"
                     value={startTime}
                     onChange={(e) => setStartTime(e.target.value)}
-                  >
-                    {['07:00', '08:00', '09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'].map((t) => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
-                  </select>
+                    required
+                  />
                 </div>
 
                 <div className="form-field-group">
                   <label className="form-label">Giờ kết thúc</label>
-                  <select
-                    className="form-control-select"
+                  <input
+                    type="time"
+                    step="60"
+                    className="form-control-input internal-time-input"
                     value={endTime}
                     onChange={(e) => setEndTime(e.target.value)}
-                  >
-                    {['08:00', '09:00', '10:00', '11:00', '12:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00'].map((t) => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
-                  </select>
+                    required
+                  />
                 </div>
               </div>
 
@@ -332,31 +357,38 @@ export const SpaceDetailPage: React.FC = () => {
                   value={participantCount}
                   min={1}
                   max={space.capacity}
-                  onChange={(e) => setParticipantCount(Math.min(space.capacity, Math.max(1, parseInt(e.target.value) || 1)))}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setParticipantCount(val === '' ? '' : parseInt(val) || 1);
+                  }}
+                  onBlur={() => {
+                    if (!participantCount || Number(participantCount) < 1) {
+                      setParticipantCount(1);
+                    } else if (Number(participantCount) > space.capacity) {
+                      setParticipantCount(space.capacity);
+                    }
+                  }}
                   required
                 />
               </div>
 
               {/* Mục đích sử dụng */}
               <div className="form-field-group">
-                <label className="form-label">Mục đích sử dụng</label>
+                <label className="form-label">
+                  Mục đích sử dụng {requiresApproval && <span style={{ color: '#EF4444', fontWeight: 700 }}>*</span>}
+                </label>
                 <textarea
                   className="form-control-textarea"
                   rows={3}
                   value={purpose}
                   onChange={(e) => setPurpose(e.target.value)}
-                  placeholder="Ví dụ: Học nhóm môn PTPMDV, chuẩn bị thuyết trình..."
-                  required
+                  placeholder={
+                    requiresApproval
+                      ? "Ví dụ: Thuyết trình đồ án, workshop câu lạc bộ, họp nhóm lớn..."
+                      : "Tùy chọn: Tự học cá nhân, ôn thi... (Có thể để trống)"
+                  }
+                  required={requiresApproval}
                 />
-              </div>
-
-              {/* Trạng thái khả dụng tóm tắt */}
-              <div className="availability-highlight-box">
-                <div className="avail-icon">🟢</div>
-                <div className="avail-text">
-                  <strong>Phòng sẵn sàng</strong>
-                  <span>Khung giờ đã chọn khả dụng để đặt chỗ</span>
-                </div>
               </div>
 
               {/* Nút Đặt chỗ */}
@@ -401,11 +433,11 @@ export const SpaceDetailPage: React.FC = () => {
 
               <p className="form-step-hint">
                 {isPerSeat ? (
-                  <>💡 Bấm <strong>Chọn chỗ ngồi & Đặt chỗ</strong> để mở sơ đồ chọn vị trí ghế cá nhân (S01 - S10).</>
+                  <>💡 Bấm <strong>Chọn chỗ ngồi & Đặt chỗ</strong> để mở sơ đồ chọn ghế cá nhân (S01 - S10). Chế độ đặt theo chỗ ngồi được duyệt tự động ngay lập tức, không bắt buộc điền mục đích sử dụng.</>
                 ) : isPerTable ? (
-                  <>💡 Bấm <strong>Chọn bàn thảo luận & Đặt bàn</strong> để mở sơ đồ chọn bàn học nhóm (T01 - T04).</>
+                  <>💡 Bấm <strong>Chọn bàn thảo luận & Đặt bàn</strong> để mở sơ đồ chọn bàn học nhóm (T01 - T04). Bắt buộc điền mục đích sử dụng và chờ Staff xét duyệt.</>
                 ) : (
-                  <>💡 <strong>{space?.name}</strong> được đặt trọn gói toàn bộ không gian ({space?.capacity} chỗ), không áp dụng chọn ghế/bàn riêng lẻ.</>
+                  <>💡 <strong>{space?.name}</strong> được đặt trọn gói toàn bộ không gian ({space?.capacity} chỗ). Bắt buộc điền mục đích sử dụng và chờ Staff xét duyệt.</>
                 )}
               </p>
             </form>
@@ -420,13 +452,13 @@ export const SpaceDetailPage: React.FC = () => {
           date={date}
           startTime={startTime}
           endTime={endTime}
-          participantCount={participantCount}
+          participantCount={Number(participantCount) || 1}
           purpose={purpose}
           mode={isPerTable ? 'TABLE' : 'SEAT'}
           onClose={() => setIsSeatModalOpen(false)}
           onSuccess={handleBookingSuccess}
         />
       )}
-    </>
+    </div>
   );
 };
