@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { PortalLayout } from '../components/PortalLayout';
 import { FilterBar, getNextAvailableSlot } from '../components/FilterBar';
 import { RoomCard } from '../components/RoomCard';
 import { BookingModal } from '../components/BookingModal';
@@ -64,7 +63,7 @@ export const SearchSpacesPage: React.FC = () => {
   const displayEnd = activeFilter.endTime ? activeFilter.endTime.substring(0, 5) : initialSlot.endTime;
 
   return (
-    <PortalLayout pageTitle="Tìm không gian">
+    <>
       {toastMessage && (
         <div className="portal-toast">
           <span>{toastMessage}</span>
@@ -154,6 +153,6 @@ export const SearchSpacesPage: React.FC = () => {
           onSuccess={handleBookingSuccess}
         />
       )}
-    </PortalLayout>
+    </>
   );
 };

@@ -1,49 +1,100 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import api from './services/api';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import { PortalLayout } from './components/PortalLayout';
 
-type Health = { status: string } | null;
+// Import các trang chính thức của dự án
+import LoginPage from './features/auth/pages/LoginPage';
+import Placeholder from './pages/Placeholder';
+import CheckInDemoPage from './features/bookings/checkin/pages/CheckInDemoPage';
+import { SearchSpacesPage } from './pages/SearchSpacesPage';
+import { SpaceDetailPage } from './pages/SpaceDetailPage';
+import { MyBookingsPage } from './pages/MyBookingsPage';
+import { CoreApprovalDemo } from './pages/CoreApprovalDemo';
+import { SpaceTypeDetailPageKT, SpaceTypeListPageKT, SpaceListPageKT, SpaceDetailPageKT, FacilityListPageKT } from "./features/space";
+import { StaffOperationsPageKT } from "./features/staff";
 
-// Skeleton dieu huong theo vai tro se do Tan lam (RequireRole + Layout).
-// Cac trang placeholder ben duoi la cho cho tung thanh vien dien.
-const NAV: Array<{ to: string; label: string; owner: string }> = [
-  { to: '/login', label: 'Dang nhap (Tan)', owner: 'TODO(Tan)' },
-  { to: '/spaces', label: 'Tim khong gian (Van)', owner: 'TODO(Van)' },
-  { to: '/my-bookings', label: 'Lich booking cua toi (Van)', owner: 'TODO(Van)' },
-  { to: '/staff', label: 'Van hanh Staff (Tuyen)', owner: 'TODO(Tuyen)' },
-  { to: '/checkin-demo', label: 'Demo check-in MVP (Vu)', owner: 'MOCK(Vu)' },
-  { to: '/checkin', label: 'Check-in thật (Vu)', owner: 'API(Vu)' },
-  { to: '/qr', label: 'Check-in QR (Vu)', owner: 'TODO(Vu)' },
-  { to: '/equipment', label: 'Thiet bi (Vu)', owner: 'TODO(Vu)' },
-  { to: '/admin/policy', label: 'Chinh sach (Anh)', owner: 'TODO(Anh)' },
-  { to: '/admin/stats', label: 'Thong ke (Anh)', owner: 'TODO(Anh)' },
-];
+// Giữ lại trang check Health của team làm màn hình chào mừng tạm thời
+const DevDashboard = () => {
+    const [health, setHealth] = useState<{ status: string } | null>(null);
+    const [error, setError] = useState<string>('');
+
+    useEffect(() => {
+        api.get('/health')
+            .then((res) => setHealth(res.data))
+            .catch(() => setError('Chưa nối được Backend (kiểm tra BE đang chạy & VITE_API_URL).'));
+    }, []);
+
+    return (
+        <div style={{ maxWidth: 720, margin: '40px auto', fontFamily: 'sans-serif' }}>
+            <h1>EduSpace — Dev Dashboard</h1>
+            <p>
+                Backend: <code>{import.meta.env.VITE_API_URL}</code> — Trạng thái:{' '}
+                <strong style={{ color: health ? 'green' : 'red' }}>
+                    {health ? health.status : error || 'đang kiểm tra...'}
+                </strong>
+            </p>
+            <p>Sử dụng thanh điều hướng bên cạnh để truy cập các tính năng.</p>
+        </div>
+    );
+};
 
 export default function App() {
-  const [health, setHealth] = useState<Health>(null);
-  const [error, setError] = useState<string>('');
+    return (
+        <BrowserRouter>
+            <Routes>
+                {/* Nhóm Public: Không cần đăng nhập */}
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/admin/space-types" element={<SpaceTypeListPageKT />} />
+                <Route path="/admin/space-types/:id" element={<SpaceTypeDetailPageKT />} />
+                <Route path="/admin/spaces" element={<SpaceListPageKT />} />
+                <Route path="/admin/spaces/:id" element={<SpaceDetailPageKT />} />
+                <Route path="/admin/facilities" element={<FacilityListPageKT />} />
+                {/* Nhóm Private: Bắt buộc đăng nhập và bọc bởi khung giao diện PortalLayout */}
+                <Route element={<PortalLayout />}>
+                    {/* Nhóm quyền riêng cho ADMIN */}
+                    <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
+                        <Route path="/admin/policy" element={<Placeholder title="Chính sách" owner="Anh" />} />
+                        <Route path="/admin/stats" element={<Placeholder title="Thống kê" owner="Anh" />} />
+                        {/* <Route path="/admin/space-types" element={<SpaceTypeListPageKT />} />
+                        <Route path="/admin/space-types/:id" element={<SpaceTypeDetailPageKT />} />
+                        <Route path="/admin/spaces" element={<SpaceListPageKT />} />
+                        <Route path="/admin/spaces/:id" element={<SpaceDetailPageKT />} />
+                        <Route path="/admin/facilities" element={<FacilityListPageKT />} /> */}
+                    </Route>
 
-  useEffect(() => {
-    api
-      .get('/health')
-      .then((res) => setHealth(res.data))
-      .catch(() => setError('Chua noi duoc Backend (kiem tra BE :8080 + VITE_API_URL).'));
-  }, []);
+                    {/* Nhóm quyền chung cho STAFF & ADMIN */}
+                    <Route element={<ProtectedRoute allowedRoles={['STAFF', 'ADMIN']} />}>
+                        <Route path="/staff" element={<StaffOperationsPageKT />} />
+                        <Route path="/checkin-demo" element={<CheckInDemoPage />} />
+                        <Route path="/qr" element={<Placeholder title="Check-in QR" owner="Vũ" />} />
+                        <Route path="/equipment" element={<Placeholder title="Thiết bị" owner="Vũ" />} />
+                    </Route>
 
-  return (
-    <main style={{ maxWidth: 720, margin: '40px auto', fontFamily: 'sans-serif' }}>
-      <h1>EduSpace — skeleton</h1>
-      <p>
-        Backend: <code>{import.meta.env.VITE_API_URL}</code> — trang thai:{' '}
-        <strong>{health ? health.status : error || 'dang kiem tra...'}</strong>
-      </p>
-      <ul>
-        {NAV.map((n) => (
-          <li key={n.to}>
-            <Link to={n.to}>{n.label}</Link> <small>{n.owner}</small>
-          </li>
-        ))}
-      </ul>
-    </main>
-  );
+                    {/* Nhóm quyền chung cho mọi user đã đăng nhập (Student, Staff, Admin) */}
+                    <Route element={<ProtectedRoute />}>
+                        <Route path="/spaces" element={<SearchSpacesPage />} />
+                        <Route path="/spaces/:id" element={<SpaceDetailPage />} />
+                        <Route path="/my-bookings" element={<MyBookingsPage />} />
+                        <Route path="/core-approval" element={<CoreApprovalDemo />} />
+
+                        {/* Thêm alias cho space-types nếu sinh viên cần xem */}
+                        <Route path="/space-types" element={<SpaceTypeListPageKT />} />
+                        <Route path="/space-types/:id" element={<SpaceTypeDetailPageKT />} />
+                        <Route path="/spaces-management" element={<SpaceListPageKT />} />
+                        <Route path="/spaces-management/:id" element={<SpaceDetailPageKT />} />
+                        <Route path="/facilities" element={<FacilityListPageKT />} />
+
+                        <Route path="/" element={<DevDashboard />} />
+                    </Route>
+
+                </Route>
+
+                {/* Bắt lỗi đường dẫn không tồn tại hoặc lỗi quyền (403) */}
+                <Route path="/403" element={<div style={{ padding: 20 }}><h3>403 - Không có quyền truy cập</h3></div>} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+        </BrowserRouter>
+    );
 }
