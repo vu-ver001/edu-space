@@ -6,7 +6,7 @@ interface PortalLayoutProps {
   pageTitle?: string;
 }
 
-export const PortalLayout = ({ children, pageTitle }: PortalLayoutProps = {}) => {
+export const PortalLayout = ({ children, pageTitle: customPageTitle }: PortalLayoutProps = {}) => {
   const location = useLocation();
   const [currentUser, setCurrentUser] = useState<string>('student@eduspace.vn');
   const [currentName, setCurrentName] = useState<string>('Nguyễn Văn An');
@@ -66,7 +66,7 @@ export const PortalLayout = ({ children, pageTitle }: PortalLayoutProps = {}) =>
     return 'EduSpace Dashboard';
   };
 
-  const dynamicPageTitle = pageTitle || getPageTitle(location.pathname);
+  const dynamicPageTitle = customPageTitle || getPageTitle(location.pathname);
 
   const navItems = [
     {
@@ -231,8 +231,7 @@ export const PortalLayout = ({ children, pageTitle }: PortalLayoutProps = {}) =>
 
           {/* Content Canvas */}
           <div className="portal-content-canvas">
-            {/* Render children nếu truyền trực tiếp, hoặc Outlet từ React Router */}
-            {children ?? <Outlet />}
+            {children || <Outlet />}
           </div>
         </div>
       </div>
