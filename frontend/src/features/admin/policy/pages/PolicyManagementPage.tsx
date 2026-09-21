@@ -12,7 +12,6 @@ import {
   Save,
   Info,
   History,
-  ShieldCheck,
   AlertCircle,
   ChevronDown,
 } from 'lucide-react';
