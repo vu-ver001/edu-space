@@ -14,6 +14,8 @@ import { MyBookingsPage } from './pages/MyBookingsPage';
 import { CoreApprovalDemo } from './pages/CoreApprovalDemo';
 import {SpaceTypeDetailPageKT, SpaceTypeListPageKT} from "./features/space";
 import {StaffOperationsPageKT} from "./features/staff";
+import PolicyManagementPage from './features/admin/policy/pages/PolicyManagementPage';
+import PolicyHistoryPage from './features/admin/policy/pages/PolicyHistoryPage';
 
 // Giữ lại trang check Health của team làm màn hình chào mừng tạm thời
 const DevDashboard = () => {
@@ -47,12 +49,15 @@ export default function App() {
                 {/* Nhóm Public: Không cần đăng nhập */}
                 <Route path="/login" element={<LoginPage />} />
 
+                {/* Module Quy định đặt chỗ & Lịch sử thay đổi (Ngọc Anh) - Truy cập trực tiếp không qua login */}
+                <Route path="/admin/policy" element={<PolicyManagementPage />} />
+                <Route path="/admin/policy/history" element={<PolicyHistoryPage />} />
+
                 {/* Nhóm Private: Bắt buộc đăng nhập và bọc bởi khung giao diện PortalLayout */}
                 <Route element={<PortalLayout />}>
 
                     {/* Nhóm quyền riêng cho ADMIN */}
                     <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
-                        <Route path="/admin/policy" element={<Placeholder title="Chính sách" owner="Anh" />} />
                         <Route path="/admin/stats" element={<Placeholder title="Thống kê" owner="Anh" />} />
                         <Route path="/admin/space-types" element={<SpaceTypeListPageKT />} />
                         <Route path="/admin/space-types/:id" element={<SpaceTypeDetailPageKT />} />

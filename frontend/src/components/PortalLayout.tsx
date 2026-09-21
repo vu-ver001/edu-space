@@ -1,8 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 
-// Đã bỏ interface Props vì React Router xử lý component con qua Outlet
-export const PortalLayout = () => {
+interface PortalLayoutProps {
+  children?: React.ReactNode;
+  pageTitle?: string;
+}
+
+export const PortalLayout = ({ children, pageTitle: customPageTitle }: PortalLayoutProps = {}) => {
   const location = useLocation();
   const [currentUser, setCurrentUser] = useState<string>('student@eduspace.vn');
   const [currentName, setCurrentName] = useState<string>('Nguyễn Văn An');
@@ -62,7 +66,7 @@ export const PortalLayout = () => {
     return 'EduSpace Dashboard';
   };
 
-  const dynamicPageTitle = getPageTitle(location.pathname);
+  const dynamicPageTitle = customPageTitle || getPageTitle(location.pathname);
 
   const navItems = [
     {
@@ -227,8 +231,7 @@ export const PortalLayout = () => {
 
           {/* Content Canvas */}
           <div className="portal-content-canvas">
-            {/* React Router sẽ tự động chèn màn hình con vào vị trí của Outlet này */}
-            <Outlet />
+            {children || <Outlet />}
           </div>
         </div>
       </div>
