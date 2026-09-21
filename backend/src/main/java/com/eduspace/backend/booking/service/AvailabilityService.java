@@ -591,18 +591,24 @@ public class AvailabilityService {
             throw BusinessException.badRequest("PAST_TIME_NOT_ALLOWED", "Không được đặt phòng vào thời điểm trong quá khứ");
         }
 
-        // LOGIC LIÊN KẾT CSDL NGỌC ANH: Đọc giờ mở cửa / đóng cửa từ bảng booking_policies (OPENING_HOUR, CLOSING_HOUR)
-        int openHour = (int) getPolicyLong("OPENING_HOUR", 7L);
-        int closeHour = (int) getPolicyLong("CLOSING_HOUR", 22L);
-        if (openHour <= 0 || openHour > 23) openHour = 7;
-        if (closeHour <= 0 || closeHour > 24) closeHour = 22;
-        if (openHour >= closeHour) {
-            openHour = 7;
-            closeHour = 22;
+        LocalTime openTime = LocalTime.of(7, 0);
+        LocalTime closeTime = LocalTime.of(22, 0);
+        try {
+            var policy = policyService.getCurrentPolicy();
+            if (policy.getOpeningHour() != null && !policy.getOpeningHour().isBlank()) {
+                openTime = LocalTime.parse(policy.getOpeningHour());
+            }
+            if (policy.getClosingHour() != null && !policy.getClosingHour().isBlank()) {
+                closeTime = LocalTime.parse(policy.getClosingHour());
+            }
+        } catch (Exception ignored) {
+            int openHour = (int) getPolicyLong("OPENING_HOUR", 7L);
+            int closeHour = (int) getPolicyLong("CLOSING_HOUR", 22L);
+            if (openHour <= 0 || openHour > 23) openHour = 7;
+            if (closeHour <= 0 || closeHour > 24) closeHour = 22;
+            openTime = LocalTime.of(openHour, 0);
+            closeTime = (closeHour == 24) ? LocalTime.of(23, 59, 59) : LocalTime.of(closeHour, 0);
         }
-
-        LocalTime openTime = LocalTime.of(openHour, 0);
-        LocalTime closeTime = (closeHour == 24) ? LocalTime.of(23, 59, 59) : LocalTime.of(closeHour, 0);
         if (startTime.toLocalTime().isBefore(openTime) || endTime.toLocalTime().isAfter(closeTime) ||
             (endTime.toLocalTime().equals(LocalTime.MIDNIGHT) && !startTime.toLocalDate().equals(endTime.toLocalDate()))) {
             throw BusinessException.badRequest("OUTSIDE_OPERATING_HOURS",

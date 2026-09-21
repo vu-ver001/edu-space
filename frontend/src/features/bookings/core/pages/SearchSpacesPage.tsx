@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { FilterBar, getNextAvailableSlot } from '../components/FilterBar';
 import { RoomCard } from '../components/RoomCard';
 import { BookingModal } from '../components/BookingModal';
@@ -7,7 +6,6 @@ import type { SearchFilter, Space } from '../services/spaceService';
 import { spaceService } from '../services/spaceService';
 
 export const SearchSpacesPage: React.FC = () => {
-  const navigate = useNavigate();
   const initialSlot = getNextAvailableSlot();
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [loading, setLoading] = useState<boolean>(true);

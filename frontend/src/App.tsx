@@ -5,13 +5,15 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { PortalLayout } from './components/PortalLayout';
 
 // Import các trang chính thức của dự án
-import Login from './pages/Login';
+import LoginPage from './features/auth/pages/LoginPage';
 import Placeholder from './pages/Placeholder';
 import CheckInDemoPage from './features/bookings/checkin/pages/CheckInDemoPage';
 import StudentCheckInPage from './features/bookings/checkin/pages/StudentCheckInPage';
 import { SearchSpacesPage, SpaceDetailPage, MyBookingsPage } from './features/bookings/core';
 import { SpaceTypeListPageKT, SpaceTypeDetailPageKT } from './features/space';
 import { StaffOperationsPageKT } from './features/staff';
+import PolicyManagementPage from './features/admin/policy/pages/PolicyManagementPage';
+import PolicyHistoryPage from './features/admin/policy/pages/PolicyHistoryPage';
 
 // Giữ lại trang check Health của team làm màn hình chào mừng tạm thời (Tân làm)
 const DevDashboard = () => {
@@ -43,14 +45,17 @@ export default function App() {
         <BrowserRouter>
             <Routes>
                 {/* Nhóm Public: Không cần đăng nhập */}
-                <Route path="/login" element={<Login />} />
+                <Route path="/login" element={<LoginPage />} />
+
+                {/* Module Quy định đặt chỗ & Lịch sử thay đổi (Ngọc Anh) - Truy cập trực tiếp không qua login */}
+                <Route path="/admin/policy" element={<PolicyManagementPage />} />
+                <Route path="/admin/policy/history" element={<PolicyHistoryPage />} />
 
                 {/* Nhóm Private: Bắt buộc đăng nhập và bọc bởi khung giao diện PortalLayout */}
                 <Route element={<PortalLayout />}>
 
                     {/* Nhóm quyền riêng cho ADMIN */}
                     <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
-                        <Route path="/admin/policy" element={<Placeholder title="Chính sách" owner="Anh" />} />
                         <Route path="/admin/stats" element={<Placeholder title="Thống kê" owner="Anh" />} />
                         <Route path="/admin/space-types" element={<SpaceTypeListPageKT />} />
                         <Route path="/admin/space-types/:id" element={<SpaceTypeDetailPageKT />} />
