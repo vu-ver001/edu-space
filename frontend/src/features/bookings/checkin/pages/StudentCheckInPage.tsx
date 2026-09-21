@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { PortalLayout } from '../../../../components/PortalLayout';
 import CheckInPanel from '../components/CheckInPanel';
 import { useCheckIn } from '../hooks/useCheckIn';
 import { checkInApiService } from '../services/checkInApiService';
@@ -77,8 +76,7 @@ export default function StudentCheckInPage() {
   ];
 
   return (
-    <PortalLayout pageTitle="Check-in">
-      <main className="checkin-demo checkin-demo--embedded">
+    <main className="checkin-demo checkin-demo--embedded">
         <section className="checkin-summary" aria-label="Tổng quan check-in">
           <article className="checkin-summary__card checkin-summary__card--primary">
             <span className="checkin-summary__icon">
@@ -183,6 +181,5 @@ export default function StudentCheckInPage() {
           )}
         </section>
       </main>
-    </PortalLayout>
   );
 }

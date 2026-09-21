@@ -111,6 +111,17 @@ public class BookingController {
     }
 
     private String resolveCurrentUserEmail() {
+        org.springframework.security.core.Authentication authentication =
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated()) {
+            Object principal = authentication.getPrincipal();
+            if (principal instanceof org.springframework.security.core.userdetails.UserDetails) {
+                return ((org.springframework.security.core.userdetails.UserDetails) principal).getUsername();
+            }
+            if (principal instanceof String && !"anonymousUser".equalsIgnoreCase((String) principal)) {
+                return (String) principal;
+            }
+        }
         String authEmail = SecurityUtils.getCurrentUserEmail();
         if (authEmail != null && !authEmail.isBlank() && !"anonymousUser".equalsIgnoreCase(authEmail)) {
             return authEmail;
