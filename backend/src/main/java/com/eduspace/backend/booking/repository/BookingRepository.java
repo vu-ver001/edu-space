@@ -106,7 +106,6 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     /**
      * Lấy các booking PENDING_APPROVAL đã quá giờ bắt đầu mà chưa xử lý (để chuyển EXPIRED).
      */
-    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT b FROM Booking b WHERE b.status = :status AND b.startTime <= :now ORDER BY b.id")
     List<Booking> findPendingOverdueBookings(
             @Param("status") BookingStatus status,

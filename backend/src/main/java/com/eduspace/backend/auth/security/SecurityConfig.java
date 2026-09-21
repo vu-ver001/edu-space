@@ -32,8 +32,8 @@ public class SecurityConfig {
 	private final CustomAuthenticationEntryPoint authenticationEntryPoint;
 
 	public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
-						  CustomAccessDeniedHandler accessDeniedHandler,
-						  CustomAuthenticationEntryPoint authenticationEntryPoint) {
+	                      CustomAccessDeniedHandler accessDeniedHandler,
+	                      CustomAuthenticationEntryPoint authenticationEntryPoint) {
 		this.jwtAuthenticationFilter = jwtAuthenticationFilter;
 		this.accessDeniedHandler = accessDeniedHandler;
 		this.authenticationEntryPoint = authenticationEntryPoint;
@@ -65,9 +65,14 @@ public class SecurityConfig {
 	@Bean
 	CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration config = new CorsConfiguration();
-		config.setAllowedOrigins(List.of("http://localhost:5173"));
+		config.setAllowedOrigins(List.of(
+				"http://localhost:5173",
+				"http://localhost:5174",
+				"http://127.0.0.1:5174"
+		));
 		config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
 		config.setAllowedHeaders(List.of("*"));
+		config.setAllowCredentials(true);
 		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 		source.registerCorsConfiguration("/**", config);
 		return source;

@@ -42,6 +42,9 @@ public class MaintenanceBlock {
     @Column(name = "created_by", nullable = false)
     private Long createdBy;
 
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -49,4 +52,8 @@ public class MaintenanceBlock {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    public boolean isActive() {
+        return this.deletedAt == null;
+    }
 }

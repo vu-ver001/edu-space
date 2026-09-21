@@ -1,12 +1,14 @@
 package com.eduspace.backend.space.controller;
 
 import com.eduspace.backend.space.dto.response.SeatResponseKT;
+import com.eduspace.backend.space.dto.response.SpaceImageResponseKT;
 import com.eduspace.backend.space.dto.response.SpaceResponseKT;
+import com.eduspace.backend.space.dto.response.SpaceTableResponseKT;
 import com.eduspace.backend.space.entity.BookingMode;
 import com.eduspace.backend.space.entity.SpaceStatus;
 import com.eduspace.backend.space.service.SeatService;
+import com.eduspace.backend.space.service.SpaceImageService;
 import com.eduspace.backend.space.service.SpaceService;
-import com.eduspace.backend.space.dto.response.SpaceTableResponseKT;
 import com.eduspace.backend.space.service.SpaceTableService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +24,7 @@ public class SpaceControllerKT {
     private final SpaceService spaceService;
     private final SeatService seatService;
     private final SpaceTableService spaceTableService;
+    private final SpaceImageService spaceImageService;
 
     /**
      * Public/User query danh sách Space kèm bộ lọc metadata
@@ -71,5 +74,14 @@ public class SpaceControllerKT {
     @GetMapping("/{spaceId}/tables")
     public ResponseEntity<List<SpaceTableResponseKT>> getTablesBySpace(@PathVariable Long spaceId) {
         return ResponseEntity.ok(spaceTableService.getTablesBySpace(spaceId));
+    }
+
+    /**
+     * Danh sách hình ảnh của một không gian
+     * GET /api/spaces/{spaceId}/images
+     */
+    @GetMapping("/{spaceId}/images")
+    public ResponseEntity<List<SpaceImageResponseKT>> getImagesBySpace(@PathVariable Long spaceId) {
+        return ResponseEntity.ok(spaceImageService.getImagesBySpace(spaceId));
     }
 }

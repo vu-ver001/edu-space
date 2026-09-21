@@ -8,6 +8,7 @@ import com.eduspace.backend.checkin.service.CheckInService;
 import com.eduspace.backend.auth.entity.Role;
 import com.eduspace.backend.auth.entity.User;
 import com.eduspace.backend.auth.repository.UserRepository;
+import com.eduspace.backend.space.repository.SpaceTableRepository;
 import java.time.*;
 import java.util.Optional;
 import org.junit.jupiter.api.*;
@@ -51,7 +52,9 @@ class BookingCheckInTest {
 
     void at(LocalDateTime now) {
         var bookingService = new BookingService(bookings, audits, mock(StudentScheduleRepository.class),
-                availability, mock(com.eduspace.backend.space.repository.SpaceTableRepository.class), users, Clock.fixed(now.toInstant(ZoneOffset.UTC), ZoneOffset.UTC));
+                availability, mock(com.eduspace.backend.space.repository.SpaceTableRepository.class), users,
+                Clock.fixed(now.toInstant(ZoneOffset.UTC), ZoneOffset.UTC),
+                mock(com.eduspace.backend.staff.repository.MaintenanceBlockRepository.class));
         service = new CheckInService(bookings, audits, availability, users,
                 Clock.fixed(now.toInstant(ZoneOffset.UTC), ZoneOffset.UTC), bookingService);
     }

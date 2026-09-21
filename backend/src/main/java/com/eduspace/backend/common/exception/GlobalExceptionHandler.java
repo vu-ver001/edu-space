@@ -4,6 +4,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -39,6 +41,12 @@ public class GlobalExceptionHandler {
 				.body(new ApiError("FORBIDDEN", "Bạn không có quyền truy cập tài nguyên này."));
 	}
 
+	@ExceptionHandler({DisabledException.class, LockedException.class})
+	public ResponseEntity<ApiError> handleAccountLocked(Exception ex) {
+		return ResponseEntity.status(HttpStatus.FORBIDDEN)
+				.body(new ApiError("ACCOUNT_LOCKED", "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Admin."));
+	}
+
 	@ExceptionHandler(MethodArgumentNotValidException.class)
 	public ResponseEntity<ApiError> handleValidation(MethodArgumentNotValidException ex) {
 		String errorMessage = ex.getBindingResult().getAllErrors().get(0).getDefaultMessage();
@@ -53,6 +61,13 @@ public class GlobalExceptionHandler {
 		String message = "Tham số [" + paramName + "] có định dạng không hợp lệ. Vui lòng kiểm tra lại (đặc biệt không để khoảng trắng hay ký tự xuống dòng ở cuối).";
 		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
 				.body(new ApiError("INVALID_PARAMETER_FORMAT", message, List.of()));
+	}
+
+	@ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+	public ResponseEntity<ApiError> handleMessageNotReadable(org.springframework.http.converter.HttpMessageNotReadableException ex) {
+		String msg = "Dữ liệu gửi lên không đúng định dạng chuẩn (ví dụ thời gian phải là YYYY-MM-DDTHH:mm:ss).";
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+				.body(new ApiError("INVALID_FORMAT", msg));
 	}
 
 	// ================= BEGIN KT =================
@@ -84,7 +99,8 @@ public class GlobalExceptionHandler {
 
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<ApiError> handleUnknown(Exception ex) {
+		ex.printStackTrace();
 		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-				.body(new ApiError("INTERNAL_ERROR", "Loi he thong chua xu ly."));
+				.body(new ApiError("INTERNAL_ERROR", "Loi he thong chua xu ly: " + ex.getMessage()));
 	}
 }

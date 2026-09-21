@@ -49,6 +49,9 @@ public class BookingService {
     private final SpaceTableRepository spaceTableRepository;
     private final UserRepository userRepository;
     private final java.time.Clock checkInClock;
+    // ================= BEGIN KT =================
+    private final com.eduspace.backend.staff.repository.MaintenanceBlockRepository maintenanceBlockRepository;
+    // ================= END KT =================
 
     /**
      * API Tạo booking với 10 BƯỚC VALIDATE TUẦN TỰ BẮT BUỘC (02_Yeu_cau_logic §4.2):
@@ -94,10 +97,33 @@ public class BookingService {
         // BƯỚC 4: Giải phóng pending quá hạn trước khi kiểm tra
         availabilityService.expirePendingApproval(now);
 
+        // ================= BEGIN KT =================
+        // BƯỚC 4a: Kiểm tra bảo trì phòng
+        if (maintenanceBlockRepository != null) {
+            List<com.eduspace.backend.space.entity.MaintenanceBlock> maintenanceConflicts =
+                    maintenanceBlockRepository.findOverlappingBlocks(space.getId(), startTime, endTime);
+            if (!maintenanceConflicts.isEmpty()) {
+                com.eduspace.backend.space.entity.MaintenanceBlock mb = maintenanceConflicts.get(0);
+                throw BusinessException.conflict("SPACE_IN_MAINTENANCE",
+                        "Phòng đang trong thời gian bảo trì từ " + mb.getStartTime() + " đến " + mb.getEndTime() + " (Lý do: " + mb.getReason() + ")");
+            }
+        }
+        // ================= END KT =================
+
         // BƯỚC 4b: Kiểm tra loại không gian có hỗ trợ chọn chỗ ngồi hay bàn hay không
         boolean isPerSeat = "PER_SEAT".equalsIgnoreCase(space.getBookingMode());
         boolean isPerTable = "PER_TABLE".equalsIgnoreCase(space.getBookingMode());
         boolean isWholeSpace = !isPerSeat && !isPerTable;
+
+        // LOGIC MỚI:
+        // - per-seat: Không bắt buộc nhập lý do sử dụng
+        // - per-table & whole-space: Bắt buộc phải nhập lý do sử dụng
+        if (!isPerSeat) {
+            if (request.getPurpose() == null || request.getPurpose().trim().isBlank()) {
+                throw BusinessException.badRequest("PURPOSE_REQUIRED", 
+                        "Mục đích sử dụng là bắt buộc đối với hình thức đặt toàn bộ không gian (whole-space) hoặc đặt bàn thảo luận nhóm (per-table).");
+            }
+        }
 
         List<String> requestedSeats = request.getSelectedSeats();
         Long requestedTableId = request.getTableId();
@@ -285,7 +311,10 @@ public class BookingService {
         }
 
         // BƯỚC 9: Xác định trạng thái ban đầu
-        boolean requiresApproval = space.isRequiresApproval();
+        // LOGIC MỚI:
+        // - per-seat: duyệt tự động (CONFIRMED), không cần chờ staff duyệt
+        // - per-table & whole-space: bắt buộc chờ staff duyệt (PENDING_APPROVAL)
+        boolean requiresApproval = !isPerSeat;
         BookingStatus initialStatus = requiresApproval ? BookingStatus.PENDING_APPROVAL : BookingStatus.CONFIRMED;
 
         // BƯỚC 10: Lưu booking và nhật ký thao tác
@@ -293,13 +322,17 @@ public class BookingService {
                 ? request.getSelectedSeats().size()
                 : request.getParticipantCount();
 
+        String finalPurpose = (request.getPurpose() != null && !request.getPurpose().trim().isBlank())
+                ? request.getPurpose().trim()
+                : (isPerSeat ? "Tự học cá nhân" : "Học tập & Thảo luận");
+
         Booking booking = Booking.builder()
                 .studentId(studentId)
                 .spaceId(space.getId())
                 .startTime(startTime)
                 .endTime(endTime)
                 .participantCount(actualParticipantCount)
-                .purpose(request.getPurpose() != null ? request.getPurpose() : "Học tập & Thảo luận")
+                .purpose(finalPurpose)
                 .status(initialStatus)
                 .tableId(requestedTableId)
                 .build();
@@ -547,7 +580,7 @@ public class BookingService {
         AvailabilityService.SpaceCatalogItem space = availabilityService.getSpaceCatalogItem(booking.getSpaceId());
         String spaceName = space != null ? space.getName() : "Phòng #" + booking.getSpaceId();
         String spaceTypeName = space != null ? space.getSpaceTypeName() : "Phòng học";
-        boolean requiresApproval = space != null && space.isRequiresApproval();
+        boolean requiresApproval = space != null ? space.isRequiresApproval() : (booking.getStatus() == BookingStatus.PENDING_APPROVAL);
         String building = space != null ? space.getBuilding() : "Khu vực chính";
         String floor = space != null ? space.getFloor() : "Tầng 1";
 

@@ -4,6 +4,7 @@ import type {
   CheckInBooking,
   CheckInResult,
   CheckInServiceError,
+  CheckInService,
 } from '../types/checkIn';
 
 const REQUEST_DELAY_MS = 450;
@@ -19,8 +20,11 @@ const serviceError = (code: CheckInServiceError['code'], message: string) => {
   return error;
 };
 
-export const checkInService = {
-  async listBookings(): Promise<CheckInBooking[]> {
+export const checkInService: CheckInService & {
+  reset: () => void;
+  setFailureMode: (mode: 'NONE' | 'NETWORK') => void;
+} = {
+  async listBookings(_actor: CheckInActor): Promise<CheckInBooking[]> {
     await wait(250);
     if (failureMode === 'NETWORK') {
       throw serviceError('NETWORK_ERROR', 'Không thể kết nối đến máy chủ demo.');

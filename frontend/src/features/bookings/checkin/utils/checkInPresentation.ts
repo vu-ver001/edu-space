@@ -7,11 +7,13 @@ export type CheckInPresentation = {
   canSubmit: boolean;
 };
 
-const formatTime = (value: string) =>
-  new Intl.DateTimeFormat('vi-VN', {
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(value));
+const formatTime = (value?: string) =>
+  value
+    ? new Intl.DateTimeFormat('vi-VN', {
+        hour: '2-digit',
+        minute: '2-digit',
+      }).format(new Date(value))
+    : 'thời gian máy chủ xác định';
 
 export const formatDateTime = (value: string) =>
   new Intl.DateTimeFormat('vi-VN', {
@@ -26,10 +28,11 @@ export function getCheckInPresentation(
   actor: CheckInActor,
 ): CheckInPresentation {
   if (booking.status === 'CHECKED_IN') {
+    const performedBy = booking.checkedInBy ?? (booking.checkedInById ? 'tài khoản đã xác nhận' : 'người dùng');
     return {
       label: 'Đã check-in',
       tone: 'success',
-      description: `Thực hiện lúc ${formatTime(booking.checkedInAt ?? booking.startTime)} bởi ${booking.checkedInBy ?? 'người dùng'}.`,
+      description: `Thực hiện lúc ${formatTime(booking.checkedInAt ?? booking.startTime)} bởi ${performedBy}.`,
       canSubmit: false,
     };
   }
@@ -47,6 +50,15 @@ export function getCheckInPresentation(
       label: labels[booking.status] ?? booking.status,
       tone: 'neutral',
       description: 'Booking này không còn đủ điều kiện check-in.',
+      canSubmit: false,
+    };
+  }
+
+  if (booking.canCheckIn === false) {
+    return {
+      label: 'Chưa thể check-in',
+      tone: 'info',
+      description: 'Booking hiện chưa nằm trong cửa sổ check-in.',
       canSubmit: false,
     };
   }
