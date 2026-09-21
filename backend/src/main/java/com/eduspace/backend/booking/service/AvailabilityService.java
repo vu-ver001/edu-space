@@ -30,7 +30,11 @@ import com.eduspace.backend.common.exception.BusinessException;
 import com.eduspace.backend.space.entity.Facility;
 import com.eduspace.backend.space.entity.Space;
 import com.eduspace.backend.space.repository.SpaceRepository;
+import com.eduspace.backend.space.repository.SpaceImageRepository;
+import com.eduspace.backend.space.repository.SpaceTypeRepository;
+import com.eduspace.backend.space.repository.FacilityRepository;
 import com.eduspace.backend.policy.service.PolicyService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * Phân hệ Kiểm tra Khả dụng Tổng hợp & Tìm kiếm Phòng (Module M03).
@@ -51,6 +55,39 @@ public class AvailabilityService {
     // ================= BEGIN KT =================
     private final com.eduspace.backend.staff.repository.MaintenanceBlockRepository maintenanceBlockRepository;
     // ================= END KT =================
+
+    // Repositories tùy chọn từ module Kim Tuyến - tự động inject khi ứng dụng khởi chạy
+    @Autowired(required = false)
+    private SpaceImageRepository spaceImageRepository;
+
+    @Autowired(required = false)
+    private SpaceTypeRepository spaceTypeRepository;
+
+    @Autowired(required = false)
+    private FacilityRepository facilityRepository;
+
+    @Autowired(required = false)
+    private java.time.Clock clock = java.time.Clock.systemDefaultZone();
+
+    public void setClock(java.time.Clock clock) {
+        this.clock = clock;
+    }
+
+    public LocalDateTime getCurrentDateTime() {
+        return clock != null ? LocalDateTime.now(clock) : LocalDateTime.now();
+    }
+
+    public void setSpaceImageRepository(SpaceImageRepository spaceImageRepository) {
+        this.spaceImageRepository = spaceImageRepository;
+    }
+
+    public void setSpaceTypeRepository(SpaceTypeRepository spaceTypeRepository) {
+        this.spaceTypeRepository = spaceTypeRepository;
+    }
+
+    public void setFacilityRepository(FacilityRepository facilityRepository) {
+        this.facilityRepository = facilityRepository;
+    }
 
     public static final List<BookingStatus> OCCUPYING_STATUSES = List.of(
             BookingStatus.PENDING_APPROVAL,
@@ -151,15 +188,38 @@ public class AvailabilityService {
         String bookingMode = (space.getSpaceType() != null && space.getSpaceType().getBookingMode() != null)
                 ? space.getSpaceType().getBookingMode().name()
                 : "WHOLE_SPACE";
-        // LOGIC MỚI: PER_SEAT không cần duyệt (false), PER_TABLE & WHOLE_SPACE bắt buộc phải chờ staff duyệt (true)
-        boolean requiresApproval = !"PER_SEAT".equalsIgnoreCase(bookingMode);
+        // LOGIC LIÊN KẾT CSDL KIM TUYẾN: Đọc trực tiếp từ cột requires_approval trong bảng space_types
+        boolean requiresApproval = (space.getSpaceType() != null)
+                ? space.getSpaceType().isRequiresApproval()
+                : !"PER_SEAT".equalsIgnoreCase(bookingMode);
         String typeName = space.getSpaceType() != null ? space.getSpaceType().getName() : "Phòng học tiêu chuẩn";
         Long typeId = space.getSpaceType() != null ? space.getSpaceType().getId() : 1L;
         String statusStr = space.getStatus() != null ? space.getStatus().name() : "AVAILABLE";
 
-        String img = (space.getId() != null && SPACE_CATALOG.containsKey(space.getId()))
-                ? SPACE_CATALOG.get(space.getId()).getImageUrl()
-                : "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&auto=format&fit=crop";
+        // LOGIC LIÊN KẾT CSDL KIM TUYẾN: Lấy ảnh chính (is_primary = true) từ bảng space_images
+        String img = null;
+        if (spaceImageRepository != null && space.getId() != null) {
+            try {
+                img = spaceImageRepository.findBySpaceIdAndIsPrimaryTrue(space.getId())
+                        .map(com.eduspace.backend.space.entity.SpaceImage::getImageUrl)
+                        .orElse(null);
+                if (img == null || img.isBlank()) {
+                    List<com.eduspace.backend.space.entity.SpaceImage> imgs =
+                            spaceImageRepository.findBySpaceIdOrderBySortOrderAscIdAsc(space.getId());
+                    if (!imgs.isEmpty()) {
+                        img = imgs.get(0).getImageUrl();
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Không thể truy vấn space_images cho spaceId {}: {}", space.getId(), e.getMessage());
+            }
+        }
+        if (img == null || img.isBlank()) {
+            img = (space.getId() != null && SPACE_CATALOG.containsKey(space.getId()))
+                    ? SPACE_CATALOG.get(space.getId()).getImageUrl()
+                    : "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&auto=format&fit=crop";
+        }
+
 
         return SpaceCatalogItem.builder()
                 .id(space.getId())
@@ -275,7 +335,7 @@ public class AvailabilityService {
      */
     @Transactional
     public AvailabilityResponse checkSpaceAvailability(Long spaceId, LocalDateTime startTime, LocalDateTime endTime) {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = getCurrentDateTime();
         expirePendingApproval(now);
 
         SpaceCatalogItem space = getSpaceCatalogItem(spaceId);
@@ -340,11 +400,17 @@ public class AvailabilityService {
      */
     @Transactional
     public List<SpaceResponse> searchAvailableSpaces(SearchSpaceFilter filter) {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = getCurrentDateTime();
         expirePendingApproval(now);
 
         LocalDateTime rawStart = resolveStartDateTime(filter);
         LocalDateTime rawEnd = resolveEndDateTime(filter);
+
+        if (rawStart != null && rawEnd != null) {
+            if (!rawStart.isBefore(rawEnd)) {
+                throw BusinessException.badRequest("INVALID_TIME_RANGE", "Thời gian bắt đầu phải trước thời gian kết thúc");
+            }
+        }
 
         final LocalDateTime effectiveStart = (rawStart != null && rawStart.isBefore(now)) ? now : rawStart;
         final LocalDateTime effectiveEnd = rawEnd;
@@ -456,6 +522,26 @@ public class AvailabilityService {
     }
 
     public List<java.util.Map<String, Object>> getSpaceTypes() {
+        if (spaceTypeRepository != null) {
+            try {
+                List<com.eduspace.backend.space.entity.SpaceType> types = spaceTypeRepository.findAllByDeletedAtIsNull();
+                if (types != null && !types.isEmpty()) {
+                    return types.stream()
+                            .map(t -> {
+                                Map<String, Object> map = new HashMap<>();
+                                map.put("id", t.getId());
+                                map.put("name", t.getName());
+                                map.put("bookingMode", t.getBookingMode() != null ? t.getBookingMode().name() : "WHOLE_SPACE");
+                                map.put("requiresApproval", t.isRequiresApproval());
+                                map.put("description", t.getDescription() != null ? t.getDescription() : "");
+                                return map;
+                            })
+                            .collect(Collectors.toList());
+                }
+            } catch (Exception e) {
+                log.warn("Lỗi khi đọc space_types từ CSDL: {}", e.getMessage());
+            }
+        }
         return List.of(
                 java.util.Map.of("id", 1L, "name", "Phòng học nhóm tiêu chuẩn", "bookingMode", "WHOLE_SPACE", "requiresApproval", true, "description", "Đặt nguyên phòng 4-6 chỗ, cần Staff duyệt"),
                 java.util.Map.of("id", 2L, "name", "Phòng thuyết trình & Hội thảo", "bookingMode", "WHOLE_SPACE", "requiresApproval", true, "description", "Đặt nguyên phòng, cần Staff duyệt"),
@@ -466,6 +552,23 @@ public class AvailabilityService {
     }
 
     public List<java.util.Map<String, Object>> getFacilities() {
+        if (facilityRepository != null) {
+            try {
+                List<Facility> facs = facilityRepository.findAllByDeletedAtIsNull();
+                if (facs != null && !facs.isEmpty()) {
+                    return facs.stream()
+                            .map(f -> {
+                                Map<String, Object> map = new HashMap<>();
+                                map.put("id", f.getId());
+                                map.put("name", f.getName());
+                                return map;
+                            })
+                            .collect(Collectors.toList());
+                }
+            } catch (Exception e) {
+                log.warn("Lỗi khi đọc facilities từ CSDL: {}", e.getMessage());
+            }
+        }
         return List.of(
                 java.util.Map.of("id", 1L, "name", "Bảng trắng"),
                 java.util.Map.of("id", 2L, "name", "Điều hòa"),
@@ -484,13 +587,28 @@ public class AvailabilityService {
         if (!startTime.isBefore(endTime)) {
             throw BusinessException.badRequest("INVALID_TIME_RANGE", "Thời gian bắt đầu phải trước thời gian kết thúc");
         }
-        if (startTime.isBefore(LocalDateTime.now())) {
+        if (startTime.isBefore(getCurrentDateTime())) {
             throw BusinessException.badRequest("PAST_TIME_NOT_ALLOWED", "Không được đặt phòng vào thời điểm trong quá khứ");
         }
 
-        var policy = policyService.getCurrentPolicy();
-        LocalTime openTime = policy.getOpeningHour() != null ? LocalTime.parse(policy.getOpeningHour()) : LocalTime.of(7, 0);
-        LocalTime closeTime = policy.getClosingHour() != null ? LocalTime.parse(policy.getClosingHour()) : LocalTime.of(22, 0);
+        LocalTime openTime = LocalTime.of(7, 0);
+        LocalTime closeTime = LocalTime.of(22, 0);
+        try {
+            var policy = policyService.getCurrentPolicy();
+            if (policy.getOpeningHour() != null && !policy.getOpeningHour().isBlank()) {
+                openTime = LocalTime.parse(policy.getOpeningHour());
+            }
+            if (policy.getClosingHour() != null && !policy.getClosingHour().isBlank()) {
+                closeTime = LocalTime.parse(policy.getClosingHour());
+            }
+        } catch (Exception ignored) {
+            int openHour = (int) getPolicyLong("OPENING_HOUR", 7L);
+            int closeHour = (int) getPolicyLong("CLOSING_HOUR", 22L);
+            if (openHour <= 0 || openHour > 23) openHour = 7;
+            if (closeHour <= 0 || closeHour > 24) closeHour = 22;
+            openTime = LocalTime.of(openHour, 0);
+            closeTime = (closeHour == 24) ? LocalTime.of(23, 59, 59) : LocalTime.of(closeHour, 0);
+        }
         if (startTime.toLocalTime().isBefore(openTime) || endTime.toLocalTime().isAfter(closeTime) ||
             (endTime.toLocalTime().equals(LocalTime.MIDNIGHT) && !startTime.toLocalDate().equals(endTime.toLocalDate()))) {
             throw BusinessException.badRequest("OUTSIDE_OPERATING_HOURS",
@@ -525,7 +643,7 @@ public class AvailabilityService {
         if (spaceId == null || startTime == null || endTime == null) {
             return Collections.emptyList();
         }
-        expirePendingApproval(LocalDateTime.now());
+        expirePendingApproval(getCurrentDateTime());
         List<Booking> overlapping = bookingRepository.findOverlappingSpaceBookings(
                 spaceId, startTime, endTime, OCCUPYING_STATUSES
         );

@@ -1,64 +1,7 @@
-import api from './api';
+import api from '../../../../services/api';
+import type { Booking, BookingStatus, BookingAuditLog, CreateBookingPayload } from '../types/booking.types';
 
-export type BookingStatus = 
-  | 'PENDING_APPROVAL'
-  | 'CONFIRMED'
-  | 'CHECKED_IN'
-  | 'REJECTED'
-  | 'CANCELLED'
-  | 'EXPIRED'
-  | 'NO_SHOW'
-  | 'COMPLETED';
-
-export interface Booking {
-  id: number;
-  studentId: number;
-  studentName: string;
-  studentEmail: string;
-  spaceId: number;
-  spaceName: string;
-  spaceTypeName: string;
-  requiresApproval: boolean;
-  building: string;
-  floor: string;
-  startTime: string;
-  endTime: string;
-  participantCount: number;
-  purpose?: string;
-  status: BookingStatus;
-  statusDisplayName: string;
-  isOccupying: boolean;
-  rejectReason?: string;
-  rejectedAt?: string;
-  expireReason?: string;
-  expiredAt?: string;
-  checkedInAt?: string;
-  createdAt: string;
-  canCancel: boolean;
-  canCheckIn: boolean;
-  selectedSeats?: string[];
-}
-
-export interface BookingAuditLog {
-  id: number;
-  bookingId: number;
-  action: string;
-  actionDescription: string;
-  performedByName: string;
-  performedByEmail: string;
-  performedAt: string;
-  reason?: string;
-  note?: string;
-}
-
-export interface CreateBookingPayload {
-  spaceId: number;
-  startTime: string;
-  endTime: string;
-  participantCount: number;
-  purpose?: string;
-  selectedSeats?: string[];
-}
+export * from '../types/booking.types';
 
 export const bookingService = {
   // Tạo booking mới (10 bước validate tuần tự)
@@ -117,7 +60,7 @@ export const bookingService = {
     return res.data;
   },
 
-  // Lấy danh sách ghế đang bận theo thời gian thực (MoMo Cinema)
+  // Lấy danh sách ghế đang bận theo thời gian thực
   getOccupiedSeats: async (spaceId: number, startTime: string, endTime: string): Promise<string[]> => {
     const res = await api.get<string[]>(`/api/spaces/${spaceId}/occupied-seats`, {
       params: { startTime, endTime }
