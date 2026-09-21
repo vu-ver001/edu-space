@@ -29,26 +29,61 @@ export const BookingModal: React.FC<Props> = ({
   const [endTime, setEndTime] = useState<string>(
     defaultEndTime ? defaultEndTime.substring(0, 5) : '11:00'
   );
-  const [participantCount, setParticipantCount] = useState<number>(defaultCount || 2);
-  const [purpose, setPurpose] = useState<string>('Thảo luận đồ án môn học');
+  const [participantCount, setParticipantCount] = useState<number | string>(defaultCount || 2);
+  const [purpose, setPurpose] = useState<string>('');
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [errorInfo, setErrorInfo] = useState<{ code: string; message: string; details?: any[] } | null>(null);
+
+  const bookingMode = space.bookingMode || space.spaceType?.bookingMode || (
+    space.spaceTypeName?.toLowerCase().includes('bàn') ? 'PER_TABLE' :
+    space.spaceTypeName?.toLowerCase().includes('ghế') || space.spaceTypeName?.toLowerCase().includes('mở') ? 'PER_SEAT' :
+    'WHOLE_SPACE'
+  );
+  const isPerSeat = bookingMode === 'PER_SEAT';
+  // LOGIC MỚI: PER_SEAT duyệt tức thì (false), PER_TABLE & WHOLE_SPACE chờ Staff duyệt (true)
+  const requiresApproval = space.requiresApproval !== undefined ? space.requiresApproval : !isPerSeat;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorInfo(null);
+
+    // LOGIC MỚI: Bắt buộc nhập lý do đối với per-table và whole-space
+    if (requiresApproval && (!purpose || !purpose.trim())) {
+      setErrorInfo({
+        code: 'PURPOSE_REQUIRED',
+        message: 'Vui lòng nhập mục đích sử dụng (bắt buộc đối với phòng trọn gói và đặt theo bàn).'
+      });
+      return;
+    }
+
+    if (startTime >= endTime) {
+      setErrorInfo({
+        code: 'INVALID_TIME_RANGE',
+        message: 'Thời gian bắt đầu phải trước thời gian kết thúc.'
+      });
+      return;
+    }
+
     setSubmitting(true);
 
-    const startDateTime = `${date}T${startTime}:00`;
-    const endDateTime = `${date}T${endTime}:00`;
+    const toIsoDateTime = (dateStr: string, timeStr: string) => {
+      const parts = (timeStr || '').trim().split(':');
+      const h = (parts[0] || '08').padStart(2, '0');
+      const m = (parts[1] || '00').padStart(2, '0');
+      const s = (parts[2] || '00').padStart(2, '0');
+      return `${dateStr}T${h}:${m}:${s}`;
+    };
+
+    const startDateTime = toIsoDateTime(date, startTime);
+    const endDateTime = toIsoDateTime(date, endTime);
 
     try {
       await bookingService.createBooking({
         spaceId: space.id,
         startTime: startDateTime,
         endTime: endDateTime,
-        participantCount,
-        purpose
+        participantCount: Number(participantCount) || 1,
+        purpose: purpose.trim() || (isPerSeat ? 'Tự học cá nhân' : '')
       });
       onSuccess();
     } catch (err: any) {
@@ -90,14 +125,14 @@ export const BookingModal: React.FC<Props> = ({
         </div>
 
         {/* Thông báo loại phòng */}
-        <div className={`policy-notice-box ${space.requiresApproval ? 'notice-approval' : 'notice-auto'}`}>
-          {space.requiresApproval ? (
+        <div className={`policy-notice-box ${requiresApproval ? 'notice-approval' : 'notice-auto'}`}>
+          {requiresApproval ? (
             <div>
-              <strong>⚠️ Lưu ý phê duyệt (Staff Approval):</strong> Phòng này thuộc diện kiểm soát đặc biệt. Yêu cầu sẽ bắt đầu ở trạng thái <code>PENDING_APPROVAL</code> và cần Staff xét duyệt trước giờ bắt đầu.
+              <strong>⚠️ Lưu ý phê duyệt (Staff Approval):</strong> Phòng này yêu cầu xét duyệt trước khi sử dụng. Lượt đặt bắt đầu ở trạng thái <code>PENDING_APPROVAL</code> và mục đích sử dụng là <strong>bắt buộc</strong>.
             </div>
           ) : (
             <div>
-              <strong>✓ Đặt chỗ tức thì (Instant Confirmation):</strong> Không gian sẽ được xác nhận ngay <code>CONFIRMED</code> nếu không bị xung đột lịch hoặc bảo trì.
+              <strong>✓ Đặt chỗ tức thì (Instant Confirmation):</strong> Chế độ đặt chỗ cá nhân không cần Staff phê duyệt, được xác nhận ngay <code>CONFIRMED</code> và mục đích sử dụng không bắt buộc.
             </div>
           )}
         </div>
@@ -129,7 +164,7 @@ export const BookingModal: React.FC<Props> = ({
               <label className="form-label">📅 Ngày sử dụng *</label>
               <input
                 type="date"
-                className="form-input"
+                className="form-input internal-date-input"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 min={today}
@@ -143,7 +178,17 @@ export const BookingModal: React.FC<Props> = ({
                 type="number"
                 className="form-input"
                 value={participantCount}
-                onChange={(e) => setParticipantCount(parseInt(e.target.value) || 1)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setParticipantCount(val === '' ? '' : parseInt(val) || 1);
+                }}
+                onBlur={() => {
+                  if (!participantCount || Number(participantCount) < 1) {
+                    setParticipantCount(1);
+                  } else if (Number(participantCount) > space.capacity) {
+                    setParticipantCount(space.capacity);
+                  }
+                }}
                 min={1}
                 max={space.capacity}
                 required
@@ -153,43 +198,49 @@ export const BookingModal: React.FC<Props> = ({
 
             <div className="form-group">
               <label className="form-label">⏰ Giờ bắt đầu *</label>
-              <select
-                className="form-select"
+              <input
+                type="time"
+                step="60"
+                className="form-input internal-time-input"
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
-              >
-                {['07:00', '08:00', '09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'].map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
+                required
+              />
             </div>
 
             <div className="form-group">
               <label className="form-label">⌛ Giờ kết thúc *</label>
-              <select
-                className="form-select"
+              <input
+                type="time"
+                step="60"
+                className="form-input internal-time-input"
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
-              >
-                {['08:00', '09:00', '10:00', '11:00', '12:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00'].map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
+                required
+              />
             </div>
           </div>
 
           <div className="form-group" style={{ marginTop: '12px' }}>
-            <label className="form-label">🎯 Mục đích sử dụng không gian</label>
+            <label className="form-label">
+              🎯 Mục đích sử dụng không gian{' '}
+              {requiresApproval ? (
+                <span style={{ color: '#EF4444', fontWeight: 600 }}>* (Bắt buộc)</span>
+              ) : (
+                <span style={{ color: '#64748B', fontWeight: 400 }}>(Không bắt buộc)</span>
+              )}
+            </label>
             <input
               type="text"
               className="form-input"
               value={purpose}
               onChange={(e) => setPurpose(e.target.value)}
-              placeholder="VD: Học nhóm ôn thi, Thuyết trình đồ án, Thảo luận bài tập..."
+              placeholder={
+                isPerSeat
+                  ? "Tùy chọn: Tự học cá nhân, ôn thi... (Có thể để trống)"
+                  : "VD: Học nhóm ôn thi, Thuyết trình đồ án, Thảo luận bài tập..."
+              }
+              required={requiresApproval}
             />
           </div>
 

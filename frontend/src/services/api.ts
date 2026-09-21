@@ -4,7 +4,7 @@ import axios from 'axios';
 // Moi domain (auth, spaces, bookings, ...) viet 1 service rieng
 // import instance nay, khong tu tao axios moi.
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:8081',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8081',
   timeout: 15000,
   headers: { 'Content-Type': 'application/json' },
 });
@@ -18,9 +18,9 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err?.response?.status === 401) {
+    // Không xóa token hay redirect nếu request là login thử mật khẩu
+    if (err?.response?.status === 401 && !err.config?.url?.includes('/api/auth/login')) {
       localStorage.removeItem('eduspace_token');
-      if (window.location.pathname !== '/login') window.location.href = '/login';
     }
     return Promise.reject(err);
   },

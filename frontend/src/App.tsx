@@ -8,12 +8,12 @@ import { PortalLayout } from './components/PortalLayout';
 import Login from './pages/Login';
 import Placeholder from './pages/Placeholder';
 import CheckInDemoPage from './features/bookings/checkin/pages/CheckInDemoPage';
-import { SearchSpacesPage } from './pages/SearchSpacesPage';
-import { SpaceDetailPage } from './pages/SpaceDetailPage';
-import { MyBookingsPage } from './pages/MyBookingsPage';
-import { CoreApprovalDemo } from './pages/CoreApprovalDemo';
+import StudentCheckInPage from './features/bookings/checkin/pages/StudentCheckInPage';
+import { SearchSpacesPage, SpaceDetailPage, MyBookingsPage } from './features/bookings/core';
+import { SpaceTypeListPageKT, SpaceTypeDetailPageKT } from './features/space';
+import { StaffOperationsPageKT } from './features/staff';
 
-// Giữ lại trang check Health của team làm màn hình chào mừng tạm thời
+// Giữ lại trang check Health của team làm màn hình chào mừng tạm thời (Tân làm)
 const DevDashboard = () => {
     const [health, setHealth] = useState<{ status: string } | null>(null);
     const [error, setError] = useState<string>('');
@@ -69,7 +69,7 @@ export default function App() {
                         <Route path="/spaces" element={<SearchSpacesPage />} />
                         <Route path="/spaces/:id" element={<SpaceDetailPage />} />
                         <Route path="/my-bookings" element={<MyBookingsPage />} />
-                        <Route path="/core-approval" element={<CoreApprovalDemo />} />
+                        <Route path="/checkin" element={<StudentCheckInPage />} />
                         
                         {/* Thêm alias cho space-types nếu sinh viên cần xem */}
                         <Route path="/space-types" element={<SpaceTypeListPageKT />} />
