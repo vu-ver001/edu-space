@@ -53,7 +53,7 @@ public class SecurityConfig {
 						.accessDeniedHandler(accessDeniedHandler)
 						.authenticationEntryPoint(authenticationEntryPoint))
 				.authorizeHttpRequests(auth -> auth
-						.requestMatchers("/health", "/api/auth/login", "/api/auth/**").permitAll()
+						.requestMatchers("/health", "/api/auth/login", "/api/auth/**", "/uploads/**").permitAll()
 						.requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/admin/policies", "/api/admin/policies/**").hasRole("ADMIN")
 						.requestMatchers("/api/admin/policies/history").hasRole("ADMIN")
 						.requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "STAFF")

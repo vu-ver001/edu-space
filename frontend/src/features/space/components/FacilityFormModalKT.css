@@ -1,0 +1,28 @@
+/* ========================================================
+   EduSpace — Facility Form Modal Styles
+   Author: Nguyen Thi Kim Tuyen
+   ======================================================== */
+
+.facility-modal-card {
+  width: 100%;
+  max-width: 520px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: facilityModalIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes facilityModalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}

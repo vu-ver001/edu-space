@@ -24,6 +24,10 @@ api.interceptors.response.use(
       localStorage.removeItem('eduspace_token');
       localStorage.removeItem('token');
       localStorage.removeItem('accessToken');
+
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(err);
   },

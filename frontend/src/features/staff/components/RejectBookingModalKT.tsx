@@ -23,16 +23,12 @@ export const RejectBookingModalKT: React.FC<RejectBookingModalKTProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!reason.trim()) {
-      setError('Lý do từ chối là bắt buộc (Quy tắc R-20).');
-      return;
-    }
     setError(null);
     try {
       await onConfirm(reason.trim());
       setReason('');
     } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || 'Có lỗi xảy ra.');
+      setError(err?.response?.data?.message || err?.message || 'Có lỗi xảy ra khi từ chối yêu cầu.');
     }
   };
 
@@ -60,18 +56,20 @@ export const RejectBookingModalKT: React.FC<RejectBookingModalKTProps> = ({
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="staff-modal-form">
+        <form onSubmit={handleSubmit} className="staff-modal-form" noValidate>
           <div className="staff-form-group">
             <label className="staff-form-label">
               Lý do từ chối (Bắt buộc theo quy tắc R-20) <span style={{ color: '#dc2626' }}>*</span>
             </label>
             <textarea
-              className="staff-textarea"
+              className={`staff-textarea ${error ? 'input-error' : ''}`}
               rows={4}
               value={reason}
-              onChange={(e) => setReason(e.target.value)}
+              onChange={(e) => {
+                setReason(e.target.value);
+                if (error) setError(null);
+              }}
               placeholder="VD: Không gian ưu tiên cho sự kiện cấp trường; Khung giờ trùng lịch bảo trì thiết bị..."
-              required
               disabled={isLoading}
             />
             <small style={{ color: '#64748b', fontSize: '12px' }}>
@@ -91,7 +89,7 @@ export const RejectBookingModalKT: React.FC<RejectBookingModalKTProps> = ({
             <button
               type="submit"
               className="staff-btn staff-btn-danger"
-              disabled={isLoading || !reason.trim()}
+              disabled={isLoading}
             >
               {isLoading ? 'Đang xử lý...' : 'Xác nhận từ chối'}
             </button>

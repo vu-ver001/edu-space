@@ -47,14 +47,6 @@ public class GlobalExceptionHandler {
 				.body(new ApiError("ACCOUNT_LOCKED", "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Admin."));
 	}
 
-	@ExceptionHandler(MethodArgumentNotValidException.class)
-	public ResponseEntity<ApiError> handleValidation(MethodArgumentNotValidException ex) {
-		String errorMessage = ex.getBindingResult().getAllErrors().get(0).getDefaultMessage();
-
-		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-				.body(new ApiError("VALIDATION_ERROR", errorMessage));
-	}
-
 	@ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
 	public ResponseEntity<ApiError> handleTypeMismatch(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException ex) {
 		String paramName = ex.getName();
@@ -71,6 +63,23 @@ public class GlobalExceptionHandler {
 	}
 
 	// ================= BEGIN KT =================
+
+	@ExceptionHandler(MethodArgumentNotValidException.class)
+	public ResponseEntity<ApiError> handleValidation(MethodArgumentNotValidException ex) {
+		List<Object> details = new ArrayList<>();
+		for (org.springframework.validation.FieldError fe : ex.getBindingResult().getFieldErrors()) {
+			details.add(fe.getField() + ": " + fe.getDefaultMessage());
+		}
+
+		String errorMessage = details.size() > 1
+				? "Vui lòng kiểm tra và điền đầy đủ các thông tin bắt buộc."
+				: (ex.getBindingResult().getAllErrors().isEmpty()
+						? "Dữ liệu không hợp lệ."
+						: ex.getBindingResult().getAllErrors().get(0).getDefaultMessage());
+
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+				.body(new ApiError("VALIDATION_ERROR", errorMessage, details));
+	}
 
 	@ExceptionHandler(AppException.class)
 	public ResponseEntity<ApiError> handleAppException(AppException ex) {

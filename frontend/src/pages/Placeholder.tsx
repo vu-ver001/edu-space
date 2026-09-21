@@ -31,7 +31,7 @@ export default function Placeholder({ title, owner }: Props) {
     const targetPass = loginPass || password;
 
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8081';
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
       const res = await axios.post(`${baseUrl}/api/auth/login`, {
         email: targetEmail,
         password: targetPass,
