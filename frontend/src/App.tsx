@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import api from './services/api';
 import { ProtectedRoute } from './components/ProtectedRoute';
-import { PortalLayout } from './components/PortalLayout';
+import { PortalLayout } from './components/layouts/PortalLayout.tsx';
 
 // Import các trang chính thức của dự án
 import LoginPage from './features/auth/pages/LoginPage';
@@ -14,6 +14,7 @@ import { MyBookingsPage } from './pages/MyBookingsPage';
 import { CoreApprovalDemo } from './pages/CoreApprovalDemo';
 import {SpaceTypeDetailPageKT, SpaceTypeListPageKT} from "./features/space";
 import {StaffOperationsPageKT} from "./features/staff";
+import {GeneralSettingsPage} from "./features/admin/settings-general/pages/GeneralSettingsPage.tsx";
 
 const ADMIN_BASE = import.meta.env.VITE_ROUTE_ADMIN || '/admin';
 const STAFF_BASE = import.meta.env.VITE_ROUTE_STAFF || '/staff';
@@ -78,6 +79,7 @@ export default function App() {
                         <Route path={`${ADMIN_BASE}/stats`} element={<Placeholder title="Thống kê" owner="Anh" />} />
                         <Route path={`${ADMIN_BASE}/space-types`} element={<SpaceTypeListPageKT />} />
                         <Route path={`${ADMIN_BASE}/space-types/:id`} element={<SpaceTypeDetailPageKT />} />
+                        <Route path={`${ADMIN_BASE}/settings-general`} element={<GeneralSettingsPage />} />
                     </Route>
 
                     {/* Nhóm quyền chung cho STAFF & ADMIN */}

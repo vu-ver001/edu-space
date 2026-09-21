@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { PortalLayout } from '../../../../components/PortalLayout';
+import { PortalLayout } from '../../../../components/layouts/PortalLayout.tsx';
 import CheckInPanel from '../components/CheckInPanel';
 import { useCheckIn } from '../hooks/useCheckIn';
 import { checkInApiService } from '../services/checkInApiService';
