@@ -22,20 +22,39 @@ export const SearchSpacesPage: React.FC = () => {
   const fetchSpaces = (filter: SearchFilter = activeFilter) => {
     setLoading(true);
     setError(null);
+
+    // Kiểm tra tính hợp lệ của thời gian (02_Yeu_cau_logic §1.1: startTime < endTime)
+    if (filter.startTime && filter.endTime && filter.startTime >= filter.endTime) {
+      setError('Thời gian bắt đầu phải trước thời gian kết thúc.');
+      setSpaces([]);
+      setLoading(false);
+      return;
+    }
+
     spaceService
       .searchAvailableSpaces(filter)
       .then((data) => {
         setSpaces(data);
       })
       .catch((err) => {
-        // Dự phòng tải toàn bộ phòng nếu khung giờ lọc gặp sự cố để người dùng luôn thấy phòng
+        const serverMsg = err?.response?.data?.message;
+        const errCode = err?.response?.data?.code;
+
+        // Nếu là lỗi dữ liệu không hợp lệ (400 Bad Request như INVALID_TIME_RANGE), hiển thị lỗi chính xác
+        if (err?.response?.status === 400 || errCode === 'INVALID_TIME_RANGE') {
+          setError(serverMsg || 'Thời gian bắt đầu phải trước thời gian kết thúc.');
+          setSpaces([]);
+          return;
+        }
+
+        // Dự phòng tải toàn bộ phòng nếu máy chủ gặp trục trặc mạng tạm thời
         spaceService
           .getAllSpaces()
           .then((allData) => {
             setSpaces(allData);
           })
           .catch(() => {
-            setError(err?.response?.data?.message || 'Không thể kết nối đến máy chủ');
+            setError(serverMsg || 'Không thể kết nối đến máy chủ');
           });
       })
       .finally(() => setLoading(false));
@@ -43,6 +62,13 @@ export const SearchSpacesPage: React.FC = () => {
 
   useEffect(() => {
     fetchSpaces(activeFilter);
+
+    // Lắng nghe sự kiện chuyển user hoặc cấp token tự động từ PortalLayout
+    const handleUserSwitch = () => {
+      fetchSpaces(activeFilter);
+    };
+    window.addEventListener('user-switched', handleUserSwitch);
+    return () => window.removeEventListener('user-switched', handleUserSwitch);
   }, []);
 
   const handleSearch = (filter: SearchFilter) => {
@@ -63,7 +89,7 @@ export const SearchSpacesPage: React.FC = () => {
   const displayEnd = activeFilter.endTime ? activeFilter.endTime.substring(0, 5) : initialSlot.endTime;
 
   return (
-    <>
+    <div className="search-spaces-page">
       {toastMessage && (
         <div className="portal-toast">
           <span>{toastMessage}</span>
@@ -71,7 +97,7 @@ export const SearchSpacesPage: React.FC = () => {
         </div>
       )}
 
-      {/* Tiêu đề trang theo Ảnh 1 */}
+      {/* Tiêu đề trang */}
       <div className="portal-page-intro">
         <h2 className="portal-page-main-heading">Tìm không gian</h2>
         <p className="portal-page-sub-heading">Tìm kiếm phòng học, phòng họp hoặc khu làm việc phù hợp với nhu cầu</p>
@@ -153,6 +179,6 @@ export const SearchSpacesPage: React.FC = () => {
           onSuccess={handleBookingSuccess}
         />
       )}
-    </>
+    </div>
   );
 };

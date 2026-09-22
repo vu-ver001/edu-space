@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS space_types (
 CREATE TABLE IF NOT EXISTS spaces (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
+    space_code VARCHAR(50) NOT NULL,
     space_type_id BIGINT NOT NULL,
     building VARCHAR(100) NOT NULL,
     floor VARCHAR(20) NOT NULL,
@@ -32,6 +33,7 @@ CREATE TABLE IF NOT EXISTS spaces (
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT chk_spaces_capacity CHECK (capacity > 0),
     CONSTRAINT chk_spaces_status CHECK (status IN ('AVAILABLE', 'MAINTENANCE', 'INACTIVE')),
+    CONSTRAINT uq_spaces_space_code UNIQUE (space_code),
     CONSTRAINT fk_spaces_space_type FOREIGN KEY (space_type_id) REFERENCES space_types (id) ON DELETE RESTRICT
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 

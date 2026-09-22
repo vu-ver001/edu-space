@@ -15,6 +15,9 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(length = 50, unique = true)
+    private String username;
+
     @Column(nullable = false, unique = true, length = 100)
     private String email;
 
@@ -34,4 +37,12 @@ public class User {
     @Builder.Default
     @Column(name = "is_active", nullable = false)
     private boolean active = true;
+
+    @PrePersist
+    @PreUpdate
+    public void generateUsernameFromEmail() {
+        if ((username == null || username.trim().isEmpty()) && email != null && email.contains("@")) {
+            this.username = email.substring(0, email.indexOf("@"));
+        }
+    }
 }

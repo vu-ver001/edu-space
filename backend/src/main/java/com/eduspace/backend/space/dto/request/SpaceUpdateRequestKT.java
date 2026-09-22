@@ -17,6 +17,9 @@ public class SpaceUpdateRequestKT {
     @NotBlank(message = "Tên không gian không được để trống")
     private String name;
 
+    @NotBlank(message = "Mã không gian không được để trống")
+    private String spaceCode;
+
     @NotNull(message = "Loại không gian không được để trống")
     private Long spaceTypeId;
 
@@ -34,6 +37,9 @@ public class SpaceUpdateRequestKT {
     private SpaceStatus status;
 
     private String description;
+
+    @NotBlank(message = "Hình ảnh không gian không được để trống")
+    private String imageUrl;
 
     private List<Long> facilityIds;
 }

@@ -15,6 +15,8 @@ import {
   Wrench,
   AlertOctagon,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import type { SpaceType, SpaceTypeUpdateRequest } from '../types/spaceType';
 import type { Space } from '../types/space';
@@ -115,7 +117,7 @@ export const SpaceTypeDetailPageKT: React.FC = () => {
       setIsEditOpen(false);
       showToast(`Đã cập nhật loại không gian "${updated.name}"`);
     } catch (err: any) {
-      showToast(err?.response?.data?.message || 'Không thể lưu thông tin. Vui lòng thử lại.', 'error');
+      // Lỗi được modal (SpaceTypeFormModalKT) hiển thị trực tiếp trên form, không cần hiện thêm toast ở góc
       throw err;
     } finally {
       setIsSubmitting(false);
@@ -135,13 +137,7 @@ export const SpaceTypeDetailPageKT: React.FC = () => {
         navigate('/admin/space-types');
       }, 700);
     } catch (err: any) {
-      const rawMsg = err?.response?.data?.message || err?.message || '';
-      let msg = 'Không thể xóa loại không gian.';
-      if (rawMsg.includes('Vẫn còn phòng') || rawMsg.includes('SPACE_TYPE_IN_USE')) {
-        msg = 'Không thể xóa do vẫn còn phòng đang hoạt động.';
-      } else if (rawMsg) {
-        msg = rawMsg;
-      }
+      const msg = err?.response?.data?.message || err?.message || 'Không thể xóa loại không gian.';
       setDeleteError(msg);
       showToast(msg, 'error');
     } finally {
@@ -166,16 +162,14 @@ export const SpaceTypeDetailPageKT: React.FC = () => {
   };
 
   const formatLocation = (space: Space) => {
-    const building = space.building
-      ? space.building.toLowerCase().startsWith('tòa')
-        ? space.building
-        : `Tòa ${space.building}`
-      : 'Tòa B';
-    const floor = space.floor
-      ? space.floor.toLowerCase().startsWith('tầng')
-        ? space.floor
-        : `Tầng ${space.floor}`
-      : 'Tầng 2';
+    let building = space.building ? space.building.trim() : 'Tòa B';
+    if (!/^tòa\s+/i.test(building)) {
+      building = `Tòa ${building}`;
+    }
+    let floor = space.floor ? space.floor.trim() : 'Tầng 1';
+    if (!/^tầng\s+/i.test(floor)) {
+      floor = `Tầng ${floor}`;
+    }
     return `${building} - ${floor}`;
   };
 
@@ -303,11 +297,13 @@ export const SpaceTypeDetailPageKT: React.FC = () => {
     );
   }
 
-  const displayedSpaces = showAllSpaces ? associatedSpaces : associatedSpaces.slice(0, 3);
-  const remainingCount = Math.max(0, associatedSpaces.length - 3);
-
-  // Formatted Code e.g. ST001
-  const spaceTypeCode = `ST${String(spaceType.id).padStart(3, '0')}`;
+  // Hiển thị trực tiếp nếu có <= 5 không gian, nếu nhiều hơn 5 mới hiển thị nút mở rộng
+  const INITIAL_SHOW_LIMIT = 5;
+  const shouldLimit = associatedSpaces.length > INITIAL_SHOW_LIMIT;
+  const displayedSpaces = (showAllSpaces || !shouldLimit)
+    ? associatedSpaces
+    : associatedSpaces.slice(0, INITIAL_SHOW_LIMIT);
+  const remainingCount = Math.max(0, associatedSpaces.length - INITIAL_SHOW_LIMIT);
 
   return (
     <div className="space-type-detail-page">
@@ -398,10 +394,10 @@ export const SpaceTypeDetailPageKT: React.FC = () => {
               </h3>
 
               <div className="info-specs-list">
-                {/* 1. Mã loại không gian */}
+                {/* 1. Mã định danh loại không gian */}
                 <div className="info-spec-item">
-                  <span className="spec-label-text">Mã loại không gian</span>
-                  <div className="spec-value-box">{spaceTypeCode}</div>
+                  <span className="spec-label-text">Mã định danh (ID)</span>
+                  <div className="spec-value-box monospace-code">#{spaceType.id}</div>
                 </div>
 
                 {/* 2. Tên loại không gian */}
@@ -534,13 +530,13 @@ export const SpaceTypeDetailPageKT: React.FC = () => {
                 <h3 className="associated-spaces-title">
                   Các không gian thuộc loại này ({associatedSpaces.length})
                 </h3>
-                {associatedSpaces.length > 3 && (
+                {shouldLimit && (
                   <button
                     type="button"
                     className="btn-view-all-spaces"
                     onClick={() => setShowAllSpaces(!showAllSpaces)}
                   >
-                    {showAllSpaces ? 'Thu gọn' : 'Xem tất cả'}
+                    {showAllSpaces ? 'Thu gọn' : `Xem tất cả (${associatedSpaces.length})`}
                   </button>
                 )}
               </div>
@@ -555,7 +551,7 @@ export const SpaceTypeDetailPageKT: React.FC = () => {
                     <div
                       key={space.id}
                       className="space-card-item"
-                      onClick={() => navigate(`/spaces/${space.id}`)}
+                      onClick={() => navigate(`/admin/spaces/${space.id}`)}
                       title={`Bấm để xem chi tiết phòng ${space.name}`}
                     >
                       <div className="space-card-item-left">
@@ -579,16 +575,20 @@ export const SpaceTypeDetailPageKT: React.FC = () => {
                     </div>
                   ))}
 
-                  {/* Summary tile when more spaces exist */}
-                  {!showAllSpaces && remainingCount > 0 && (
-                    <div
-                      className="space-card-more"
-                      onClick={() => setShowAllSpaces(true)}
-                      title="Bấm để xem tất cả không gian"
+                  {/* Nút mở rộng/thu gọn đẹp mắt, trực quan khi có nhiều hơn 5 không gian */}
+                  {shouldLimit && (
+                    <button
+                      type="button"
+                      className="btn-expand-spaces"
+                      onClick={() => setShowAllSpaces(!showAllSpaces)}
                     >
-                      <div className="space-more-icon-box">•••</div>
-                      <span className="space-more-text">và {remainingCount} không gian khác</span>
-                    </div>
+                      <span>
+                        {showAllSpaces
+                          ? 'Thu gọn danh sách không gian'
+                          : `Xem thêm ${remainingCount} không gian khác`}
+                      </span>
+                      {showAllSpaces ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </button>
                   )}
                 </div>
               )}

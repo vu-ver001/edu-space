@@ -26,9 +26,9 @@ export const Navbar: React.FC = () => {
     try {
       const res = await api.post<{ token: string }>('/api/auth/login', {
         email,
-        password: 'password' // Mật khẩu mặc định trong DB
+        password: '123456' // Mật khẩu chuẩn trong DB
       }).catch(async () => {
-        // Fallback thử 123456
+        // Fallback thử password
         return await api.post<{ token: string }>('/api/auth/login', {
           email,
           password: 'password'
@@ -52,8 +52,7 @@ export const Navbar: React.FC = () => {
 
   const navItems = [
     { to: '/spaces', label: 'Tìm Không Gian', icon: '🔍', badge: 'M03' },
-    { to: '/my-bookings', label: 'Lịch Đặt Của Tôi', icon: '📅', badge: 'M04' },
-    { to: '/core-approval', label: 'Duyệt Đặt Chỗ (Staff)', icon: '🛡️', badge: 'Core' }
+    { to: '/my-bookings', label: 'Lịch Đặt Của Tôi', icon: '📅', badge: 'M04' }
   ];
 
   return (

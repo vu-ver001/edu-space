@@ -4,7 +4,7 @@
 // ========================================================
 
 import { spaceTypeApi } from '../features/space/api/spaceTypeApi';
-import type { Space } from './spaceService';
+import type { Space } from '../features/space/types/space';
 import type {
   SpaceType,
   SpaceTypeCreateRequest,
