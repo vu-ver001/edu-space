@@ -32,11 +32,11 @@ public class DataSeeder implements CommandLineRunner {
     private final BookingPolicyRepository bookingPolicyRepository;
 
     public DataSeeder(UserRepository userRepository,
-                      PasswordEncoder passwordEncoder,
-                      SpaceRepository spaceRepository,
-                      SpaceTypeRepository spaceTypeRepository,
-                      BookingRepository bookingRepository,
-                      BookingPolicyRepository bookingPolicyRepository) {
+            PasswordEncoder passwordEncoder,
+            SpaceRepository spaceRepository,
+            SpaceTypeRepository spaceTypeRepository,
+            BookingRepository bookingRepository,
+            BookingPolicyRepository bookingPolicyRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.spaceRepository = spaceRepository;
@@ -79,19 +79,35 @@ public class DataSeeder implements CommandLineRunner {
             System.out.println("Đã khởi tạo thành công 3 tài khoản test!");
         }
 
-        // 2. Khởi tạo một số không gian mẫu để test thống kê nếu chưa có
-        if (spaceRepository.count() == 0) {
-            SpaceType defaultType = spaceTypeRepository.findAll().stream().findFirst().orElseGet(() ->
-                    spaceTypeRepository.save(SpaceType.builder()
-                            .name("Phòng họp / Học nhóm")
-                            .bookingMode(BookingMode.WHOLE_SPACE)
-                            .build())
-            );
+        // 2. Khởi tạo 5 loại không gian chuẩn hệ thống
+        if (spaceTypeRepository.count() == 0) {
+            List<SpaceType> sampleTypes = List.of(
+                    SpaceType.builder().name("Phòng học nhóm tiêu chuẩn").description("Phòng học nhóm tiêu chuẩn")
+                            .bookingMode(BookingMode.WHOLE_SPACE).requiresApproval(true).build(),
+                    SpaceType.builder().name("Phòng thuyết trình & Hội thảo (Yêu cầu duyệt)")
+                            .description("Không gian thuyết trình, báo cáo dự án và hội thảo")
+                            .bookingMode(BookingMode.WHOLE_SPACE).requiresApproval(true).build(),
+                    SpaceType.builder().name("Khu tự học chung (Mở)").description("Khu vực tự học chung không gian mở")
+                            .bookingMode(BookingMode.PER_SEAT).requiresApproval(false).build(),
+                    SpaceType.builder().name("Study Booth cá nhân").description("Cabin/booth tự học cá nhân yên tĩnh")
+                            .bookingMode(BookingMode.PER_SEAT).requiresApproval(false).build(),
+                    SpaceType.builder().name("Phòng thảo luận theo bàn")
+                            .description("Phòng thảo luận theo từng cụm bàn").bookingMode(BookingMode.PER_TABLE)
+                            .requiresApproval(true).build());
+            spaceTypeRepository.saveAll(sampleTypes);
+        }
 
-            Space s1 = Space.builder().name("Phòng học nhóm A101").spaceType(defaultType).building("Tòa A").floor("1").capacity(6).status(SpaceStatus.AVAILABLE).build();
-            Space s2 = Space.builder().name("Phòng học nhóm A102").spaceType(defaultType).building("Tòa A").floor("1").capacity(8).status(SpaceStatus.AVAILABLE).build();
-            Space s3 = Space.builder().name("Phòng thuyết trình B201").spaceType(defaultType).building("Tòa B").floor("2").capacity(20).status(SpaceStatus.AVAILABLE).build();
-            Space s4 = Space.builder().name("Phòng kỹ thuật C301").spaceType(defaultType).building("Tòa C").floor("3").capacity(4).status(SpaceStatus.MAINTENANCE).build();
+        if (spaceRepository.count() == 0) {
+            SpaceType defaultType = spaceTypeRepository.findAll().stream().findFirst().orElseThrow();
+
+            Space s1 = Space.builder().name("Phòng học nhóm A101").spaceType(defaultType).building("Tòa A").floor("1")
+                    .capacity(6).status(SpaceStatus.AVAILABLE).build();
+            Space s2 = Space.builder().name("Phòng học nhóm A102").spaceType(defaultType).building("Tòa A").floor("1")
+                    .capacity(8).status(SpaceStatus.AVAILABLE).build();
+            Space s3 = Space.builder().name("Phòng thuyết trình B201").spaceType(defaultType).building("Tòa B")
+                    .floor("2").capacity(20).status(SpaceStatus.AVAILABLE).build();
+            Space s4 = Space.builder().name("Phòng kỹ thuật C301").spaceType(defaultType).building("Tòa C").floor("3")
+                    .capacity(4).status(SpaceStatus.MAINTENANCE).build();
             spaceRepository.saveAll(List.of(s1, s2, s3, s4));
             System.out.println("Đã khởi tạo không gian mẫu!");
         }
@@ -99,11 +115,21 @@ public class DataSeeder implements CommandLineRunner {
         // 3. Khởi tạo một số booking mẫu để test số liệu thống kê nếu chưa có
         if (bookingRepository.count() == 0) {
             LocalDateTime now = LocalDateTime.now();
-            Booking b1 = Booking.builder().studentId(3L).spaceId(1L).startTime(now.minusHours(4)).endTime(now.minusHours(2)).participantCount(4).purpose("Học nhóm Toán").status(BookingStatus.COMPLETED).createdAt(now.minusDays(1)).build();
-            Booking b2 = Booking.builder().studentId(3L).spaceId(2L).startTime(now.minusMinutes(30)).endTime(now.plusMinutes(90)).participantCount(6).purpose("Ôn thi Lý").status(BookingStatus.CHECKED_IN).createdAt(now.minusHours(2)).build();
-            Booking b3 = Booking.builder().studentId(3L).spaceId(3L).startTime(now.plusHours(2)).endTime(now.plusHours(4)).participantCount(10).purpose("Thuyết trình Đồ án").status(BookingStatus.PENDING_APPROVAL).createdAt(now.minusMinutes(10)).build();
-            Booking b4 = Booking.builder().studentId(3L).spaceId(1L).startTime(now.minusDays(2)).endTime(now.minusDays(2).plusHours(2)).participantCount(3).purpose("Học nhóm Hóa").status(BookingStatus.NO_SHOW).createdAt(now.minusDays(3)).build();
-            Booking b5 = Booking.builder().studentId(3L).spaceId(2L).startTime(now.minusDays(1)).endTime(now.minusDays(1).plusHours(2)).participantCount(5).purpose("Học nhóm Anh").status(BookingStatus.EXPIRED).createdAt(now.minusDays(2)).build();
+            Booking b1 = Booking.builder().studentId(3L).spaceId(1L).startTime(now.minusHours(4))
+                    .endTime(now.minusHours(2)).participantCount(4).purpose("Học nhóm Toán")
+                    .status(BookingStatus.COMPLETED).createdAt(now.minusDays(1)).build();
+            Booking b2 = Booking.builder().studentId(3L).spaceId(2L).startTime(now.minusMinutes(30))
+                    .endTime(now.plusMinutes(90)).participantCount(6).purpose("Ôn thi Lý")
+                    .status(BookingStatus.CHECKED_IN).createdAt(now.minusHours(2)).build();
+            Booking b3 = Booking.builder().studentId(3L).spaceId(3L).startTime(now.plusHours(2))
+                    .endTime(now.plusHours(4)).participantCount(10).purpose("Thuyết trình Đồ án")
+                    .status(BookingStatus.PENDING_APPROVAL).createdAt(now.minusMinutes(10)).build();
+            Booking b4 = Booking.builder().studentId(3L).spaceId(1L).startTime(now.minusDays(2))
+                    .endTime(now.minusDays(2).plusHours(2)).participantCount(3).purpose("Học nhóm Hóa")
+                    .status(BookingStatus.NO_SHOW).createdAt(now.minusDays(3)).build();
+            Booking b5 = Booking.builder().studentId(3L).spaceId(2L).startTime(now.minusDays(1))
+                    .endTime(now.minusDays(1).plusHours(2)).participantCount(5).purpose("Học nhóm Anh")
+                    .status(BookingStatus.EXPIRED).createdAt(now.minusDays(2)).build();
             bookingRepository.saveAll(List.of(b1, b2, b3, b4, b5));
             System.out.println("Đã khởi tạo booking mẫu để test thống kê!");
         }
@@ -112,12 +138,27 @@ public class DataSeeder implements CommandLineRunner {
         if (bookingPolicyRepository.count() == 0) {
             LocalDateTime now = LocalDateTime.now();
             bookingPolicyRepository.saveAll(List.of(
-                BookingPolicy.builder().policyKey("DAILY_BOOKING_QUOTA").policyValue("2").description("Số lượt đặt tối đa trong ngày").updatedBy("SYSTEM_INIT").updatedAt(now).build(),
-                BookingPolicy.builder().policyKey("MAX_DURATION_MINUTES").policyValue("180").description("Thời lượng tối đa mỗi lượt đặt (phút)").updatedBy("SYSTEM_INIT").updatedAt(now).build(),
-                BookingPolicy.builder().policyKey("RATE_LIMIT_HOURLY").policyValue("10").description("Giới hạn số request tạo booking mỗi giờ").updatedBy("SYSTEM_INIT").updatedAt(now).build(),
-                BookingPolicy.builder().policyKey("CHECKIN_OPEN_MINUTES").policyValue("15").description("Thời gian mở check-in sớm (phút)").updatedBy("SYSTEM_INIT").updatedAt(now).build(),
-                BookingPolicy.builder().policyKey("CHECKIN_GRACE_MINUTES").policyValue("15").description("Thời gian ân hạn check-in trễ (phút)").updatedBy("SYSTEM_INIT").updatedAt(now).build()
-            ));
+                    BookingPolicy.builder().policyKey("DAILY_BOOKING_QUOTA").policyValue("2")
+                            .description("Số lượt đặt tối đa trong ngày").updatedBy("SYSTEM_INIT").updatedAt(now)
+                            .build(),
+                    BookingPolicy.builder().policyKey("MAX_DURATION_MINUTES").policyValue("180")
+                            .description("Thời lượng tối đa mỗi lượt đặt (phút)").updatedBy("SYSTEM_INIT")
+                            .updatedAt(now).build(),
+                    BookingPolicy.builder().policyKey("RATE_LIMIT_HOURLY").policyValue("10")
+                            .description("Giới hạn số request tạo booking mỗi giờ").updatedBy("SYSTEM_INIT")
+                            .updatedAt(now).build(),
+                    BookingPolicy.builder().policyKey("CHECKIN_OPEN_MINUTES").policyValue("15")
+                            .description("Thời gian mở check-in sớm (phút)").updatedBy("SYSTEM_INIT").updatedAt(now)
+                            .build(),
+                    BookingPolicy.builder().policyKey("CHECKIN_GRACE_MINUTES").policyValue("15")
+                            .description("Thời gian ân hạn check-in trễ (phút)").updatedBy("SYSTEM_INIT").updatedAt(now)
+                            .build(),
+                    BookingPolicy.builder().policyKey("OPENING_HOUR").policyValue("07:00")
+                            .description("Giờ mở cửa toàn hệ thống").updatedBy("SYSTEM_INIT").updatedAt(now)
+                            .build(),
+                    BookingPolicy.builder().policyKey("CLOSING_HOUR").policyValue("22:00")
+                            .description("Giờ đóng cửa toàn hệ thống").updatedBy("SYSTEM_INIT").updatedAt(now)
+                            .build()));
             System.out.println("Đã khởi tạo cấu hình chính sách mặc định!");
         }
     }

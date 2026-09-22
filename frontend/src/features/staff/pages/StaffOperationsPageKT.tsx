@@ -180,7 +180,7 @@ export const StaffOperationsPageKT: React.FC = () => {
       setRejectingBooking(null);
       fetchPending();
     } catch (err: any) {
-      showToast(err?.response?.data?.message || 'Lỗi khi từ chối đặt phòng', 'error');
+      // Lỗi được modal (RejectBookingModalKT) hiển thị trực tiếp trên form
       throw err;
     } finally {
       setActionLoading(false);
@@ -217,7 +217,7 @@ export const StaffOperationsPageKT: React.FC = () => {
       setMaintModalOpen(false);
       fetchMaintenance(spId);
     } catch (err: any) {
-      showToast(err?.response?.data?.message || 'Lỗi khi lưu bảo trì', 'error');
+      // Lỗi được modal (MaintenanceFormModalKT) hiển thị trực tiếp trên form
       throw err;
     }
   };

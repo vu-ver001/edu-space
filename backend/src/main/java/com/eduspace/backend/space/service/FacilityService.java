@@ -23,8 +23,17 @@ public class FacilityService {
 
     @Transactional(readOnly = true)
     public List<FacilityResponseKT> getAllFacilities() {
+        java.util.Map<Long, Long> countMap = new java.util.HashMap<>();
+        try {
+            for (Object[] row : facilityRepository.countSpacesPerFacility()) {
+                if (row != null && row.length >= 2 && row[0] != null && row[1] != null) {
+                    countMap.put(((Number) row[0]).longValue(), ((Number) row[1]).longValue());
+                }
+            }
+        } catch (Exception ignored) {}
+
         return facilityRepository.findAllByDeletedAtIsNull().stream()
-                .map(FacilityResponseKT::fromEntity)
+                .map(f -> FacilityResponseKT.fromEntity(f, countMap.getOrDefault(f.getId(), 0L)))
                 .collect(Collectors.toList());
     }
 
@@ -36,7 +45,11 @@ public class FacilityService {
                         "FACILITY_NOT_FOUND",
                         "Không tìm thấy tiện ích với id: " + id
                 ));
-        return FacilityResponseKT.fromEntity(facility);
+        long count = 0;
+        try {
+            count = facilityRepository.countSpacesByFacilityId(id);
+        } catch (Exception ignored) {}
+        return FacilityResponseKT.fromEntity(facility, count);
     }
 
     @Transactional
@@ -55,7 +68,7 @@ public class FacilityService {
                 .description(request.getDescription())
                 .build();
 
-        return FacilityResponseKT.fromEntity(facilityRepository.save(facility));
+        return FacilityResponseKT.fromEntity(facilityRepository.save(facility), 0L);
     }
 
     @Transactional
@@ -83,7 +96,12 @@ public class FacilityService {
             facility.setDescription(request.getDescription());
         }
 
-        return FacilityResponseKT.fromEntity(facilityRepository.save(facility));
+        long count = 0;
+        try {
+            count = facilityRepository.countSpacesByFacilityId(id);
+        } catch (Exception ignored) {}
+
+        return FacilityResponseKT.fromEntity(facilityRepository.save(facility), count);
     }
 
     @Transactional
@@ -94,6 +112,19 @@ public class FacilityService {
                         "FACILITY_NOT_FOUND",
                         "Không tìm thấy tiện ích với id: " + id
                 ));
+
+        long count = 0;
+        try {
+            count = facilityRepository.countSpacesByFacilityId(id);
+        } catch (Exception ignored) {}
+
+        if (count > 0) {
+            throw new AppException(
+                    HttpStatus.CONFLICT,
+                    "FACILITY_IN_USE",
+                    "Không thể xóa tiện ích '" + facility.getName() + "' vì đang được sử dụng bởi " + count + " không gian."
+            );
+        }
 
         facility.setDeletedAt(LocalDateTime.now());
         facilityRepository.save(facility);

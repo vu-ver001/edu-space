@@ -48,6 +48,8 @@ export const RoomCard: React.FC<Props> = ({ space, searchParams }) => {
   );
   const isPerSeat = bookingMode === 'PER_SEAT';
   const isPerTable = bookingMode === 'PER_TABLE';
+  // LOGIC LIÊN KẾT CSDL: Lấy trực tiếp từ space.requiresApproval (hoặc space.spaceType.requiresApproval từ Kim Tuyến)
+  const requiresApproval = space.requiresApproval ?? space.spaceType?.requiresApproval ?? !isPerSeat;
 
   return (
     <div className={`room-card-v1 ${!isAvailable ? 'card-disabled' : ''}`}>
@@ -60,7 +62,7 @@ export const RoomCard: React.FC<Props> = ({ space, searchParams }) => {
           loading="lazy" 
         />
         <div className="room-card-badge-pinned">
-          {space.requiresApproval ? (
+          {requiresApproval ? (
             <span className="badge-status-pill badge-approval">
               <span className="badge-dot dot-amber" /> Cần phê duyệt
             </span>
@@ -96,22 +98,41 @@ export const RoomCard: React.FC<Props> = ({ space, searchParams }) => {
 
         <div className="room-card-location-meta">
           <span className="meta-item">
-            <svg className="meta-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            {space.building} • {space.floor}
+            <svg className="meta-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg>
+            {space.building}, {space.floor ? (space.floor.toString().toLowerCase().includes('tầng') ? space.floor.toLowerCase() : `tầng ${space.floor}`) : ''}
           </span>
           <span className="meta-item capacity">
-            <svg className="meta-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-            Tối đa {space.capacity} người
+            <svg className="meta-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M23 21v-2a4 4 0 00-3-3.87" />
+              <path d="M16 3.13a4 4 0 010 7.75" />
+            </svg>
+            {space.capacity} chỗ ngồi
           </span>
         </div>
 
         {/* Amenities Pills */}
         <div className="room-card-amenities">
-          {space.facilities && space.facilities.slice(0, 3).map((f) => (
-            <span key={f.id} className="amenity-chip">
-              {f.name}
-            </span>
-          ))}
+          {space.facilities && space.facilities.slice(0, 3).map((f: any, idx: number) => {
+            const rawName = typeof f === 'string' ? f : f?.name || '';
+            const displayName =
+              rawName.toLowerCase().includes('bảng trắng') ? 'Bảng trắng' :
+              rawName.toLowerCase().includes('máy chiếu') ? 'Máy chiếu' :
+              rawName.toLowerCase().includes('điều hòa') ? 'Điều hòa' :
+              rawName.toLowerCase().includes('ổ cắm') ? 'Ổ cắm điện' :
+              rawName.toLowerCase().includes('tv') || rawName.toLowerCase().includes('màn hình') ? 'Màn hình TV' :
+              rawName;
+
+            return (
+              <span key={f?.id || `${rawName}-${idx}`} className="amenity-chip">
+                {displayName}
+              </span>
+            );
+          })}
           {space.facilities && space.facilities.length > 3 && (
             <span className="amenity-chip more">
               +{space.facilities.length - 3}

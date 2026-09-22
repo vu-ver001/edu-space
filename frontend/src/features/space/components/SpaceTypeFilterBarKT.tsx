@@ -37,6 +37,7 @@ export const SpaceTypeFilterBarKT: React.FC<Props> = ({
           placeholder="Tìm kiếm loại không gian..."
           value={searchTerm}
           onChange={onSearchChange}
+          height={36}
         />
 
         <select
@@ -60,9 +61,14 @@ export const SpaceTypeFilterBarKT: React.FC<Props> = ({
           <option value="NO">Không yêu cầu duyệt</option>
         </select>
 
-        <button className="btn-filter-refresh" onClick={onReset} type="button" title="Làm mới">
-          <RotateCcw size={14} />
-          <span>Làm mới</span>
+        <button
+          className="btn-filter-refresh btn-filter-refresh-icon-only"
+          onClick={onReset}
+          type="button"
+          title="Làm mới bộ lọc và danh sách"
+          aria-label="Làm mới bộ lọc và danh sách"
+        >
+          <RotateCcw size={16} />
         </button>
       </div>
     </div>

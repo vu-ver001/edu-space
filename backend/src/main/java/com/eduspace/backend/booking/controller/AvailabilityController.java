@@ -72,6 +72,24 @@ public class AvailabilityController {
 
 
     /**
+     * Danh mục loại không gian (hỗ trợ bộ lọc tìm kiếm & hiển thị các chế độ đặt phòng):
+     * GET /api/spaces/types
+     */
+    @GetMapping("/types")
+    public ResponseEntity<List<java.util.Map<String, Object>>> getSpaceTypes() {
+        return ResponseEntity.ok(availabilityService.getSpaceTypes());
+    }
+
+    /**
+     * Danh mục tiện ích không gian (hỗ trợ bộ lọc tìm kiếm):
+     * GET /api/spaces/facilities
+     */
+    @GetMapping("/facilities")
+    public ResponseEntity<List<java.util.Map<String, Object>>> getFacilities() {
+        return ResponseEntity.ok(availabilityService.getFacilities());
+    }
+
+    /**
      * Lấy danh sách ghế đang bận theo thời gian thực (MoMo Cinema Seat Selection):
      * GET /api/spaces/{spaceId}/occupied-seats?startTime={ISO-8601}&endTime={ISO-8601}
      */

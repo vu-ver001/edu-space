@@ -151,6 +151,26 @@
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
+/* Input Error State */
+.astp-input.input-error,
+.astp-textarea.input-error {
+  border-color: #ef4444 !important;
+  background-color: #fffaf0;
+}
+
+.astp-input.input-error:focus,
+.astp-textarea.input-error:focus {
+  box-shadow: 0 0 0 3.5px rgba(239, 68, 68, 0.15) !important;
+}
+
+.astp-field-error-msg {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: #ef4444;
+  margin-top: 5px;
+}
+
 .astp-input:disabled {
   background-color: #f1f5f9;
   cursor: not-allowed;

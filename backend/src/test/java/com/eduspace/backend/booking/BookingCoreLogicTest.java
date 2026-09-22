@@ -99,6 +99,7 @@ class BookingCoreLogicTest {
                 policyService,
                 maintenanceBlockRepo
         );
+        availabilityService.setClock(fixedClock);
 
         bookingService = new BookingService(
                 bookingRepository,
@@ -148,6 +149,8 @@ class BookingCoreLogicTest {
         when(policyService.getLong(eq("MAX_ADVANCE_DAYS"), anyLong())).thenReturn(7L);
         when(policyService.getLong(eq("CHECKIN_OPEN_MINUTES"), anyLong())).thenReturn(15L);
         when(policyService.getLong(eq("CHECKIN_GRACE_MINUTES"), anyLong())).thenReturn(15L);
+        when(policyService.getLong(eq("OPENING_HOUR"), anyLong())).thenReturn(7L);
+        when(policyService.getLong(eq("CLOSING_HOUR"), anyLong())).thenReturn(22L);
 
         when(bookingRepository.save(any(Booking.class))).thenAnswer(inv -> {
             Booking b = inv.getArgument(0);

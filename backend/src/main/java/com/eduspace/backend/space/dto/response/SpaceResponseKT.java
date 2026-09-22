@@ -17,6 +17,7 @@ public class SpaceResponseKT {
 
     private Long id;
     private String name;
+    private String spaceCode;
     private String building;
     private String floor;
     private Integer capacity;
@@ -70,6 +71,7 @@ public class SpaceResponseKT {
         return SpaceResponseKT.builder()
                 .id(space.getId())
                 .name(space.getName())
+                .spaceCode(space.getSpaceCode())
                 .building(space.getBuilding())
                 .floor(space.getFloor())
                 .capacity(space.getCapacity())

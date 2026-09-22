@@ -5,6 +5,7 @@ interface SearchInputProps {
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
+  height?: string | number;
 }
 
 export const SearchInput: React.FC<SearchInputProps> = ({
@@ -12,6 +13,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
   onChange,
   placeholder = 'Tìm kiếm theo tên, mô tả...',
   className = '',
+  height,
 }) => {
   return (
     <div
@@ -22,6 +24,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
         minWidth: '240px',
         display: 'flex',
         alignItems: 'center',
+        height: height ?? '40px',
       }}
     >
       <svg
@@ -53,7 +56,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
         onChange={(e) => onChange(e.target.value)}
         style={{
           width: '100%',
-          height: '40px',
+          height: height ?? '40px',
           padding: '0 14px 0 38px',
           fontSize: '13.5px',
           color: '#0f172a',

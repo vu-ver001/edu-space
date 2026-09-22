@@ -1,0 +1,926 @@
+/* ========================================================
+   EduSpace — Space Management Styles (KT Module)
+   Author: Nguyen Thi Kim Tuyen
+   ======================================================== */
+
+@import './SpaceTypeListPageKT.css';
+
+/* Sub-Navigation Bar */
+.kt-subnav-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  padding: 8px 16px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.kt-subnav-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #64748b;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.kt-subnav-item:hover {
+  color: #2563eb;
+  background: #eff6ff;
+}
+
+.kt-subnav-item.active {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+/* Specific Stat Card Colors (Full Pastel Theme) */
+
+/* 3. Pastel Amber: Bảo trì */
+.stat-card-pastel-amber {
+  background-color: #fffbeb;
+  border-color: #fef3c7;
+}
+
+.stat-card-pastel-amber:hover {
+  box-shadow: 0 10px 24px -4px rgba(217, 119, 6, 0.12), 0 2px 6px rgba(0, 0, 0, 0.02);
+  border-color: #fde68a;
+}
+
+.stat-card-pastel-amber .stat-card-label {
+  color: #b45309;
+}
+
+.stat-card-pastel-amber .stat-card-value {
+  color: #78350f;
+}
+
+.stat-card-pastel-amber .icon-amber {
+  color: #d97706;
+  background-color: #ffffff;
+  border: 1px solid #fef3c7;
+  box-shadow: 0 4px 10px rgba(217, 119, 6, 0.1);
+}
+
+/* 4. Pastel Rose: Ngưng hoạt động */
+.stat-card-pastel-slate {
+  background-color: #fff1f2;
+  border-color: #ffe4e6;
+}
+
+.stat-card-pastel-slate:hover {
+  box-shadow: 0 10px 24px -4px rgba(225, 29, 72, 0.12), 0 2px 6px rgba(0, 0, 0, 0.02);
+  border-color: #fecdd3;
+}
+
+.stat-card-pastel-slate .stat-card-label {
+  color: #be123c;
+}
+
+.stat-card-pastel-slate .stat-card-value {
+  color: #881337;
+}
+
+.stat-card-pastel-slate .icon-slate {
+  color: #e11d48;
+  background-color: #ffffff;
+  border: 1px solid #ffe4e6;
+  box-shadow: 0 4px 10px rgba(225, 29, 72, 0.1);
+}
+
+/* ========================================================
+   Custom Spaces Table V2 (Matching User Reference Image)
+   ======================================================== */
+.table-container-card .table-responsive-wrapper,
+.table-responsive-wrapper {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  background: #ffffff;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  overflow-x: auto;
+}
+
+.custom-spaces-table-v2 {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  text-align: left;
+  background: #ffffff;
+}
+
+.custom-spaces-table-v2 th {
+  background: #f8fafc;
+  color: #0f172a;
+  font-weight: 700;
+  font-size: 13.5px;
+  padding: 14px 16px;
+  border-bottom: 1.5px solid #e2e8f0;
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+
+.custom-spaces-table-v2 td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+  color: #334155;
+}
+
+.custom-spaces-table-v2 tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.custom-spaces-table-v2 tbody tr:hover {
+  background-color: #f8fafc;
+}
+
+.custom-spaces-table-v2 tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Col Index */
+.col-index-text {
+  font-size: 13.5px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+/* Space Table Thumbnail (from space_images) */
+.space-table-thumb-container {
+  width: 68px;
+  height: 45px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  background: #f1f5f9;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.space-table-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.space-thumb-placeholder-box {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f8fafc;
+  color: #94a3b8;
+  border-radius: 6px;
+}
+
+
+/* Space Code */
+.space-code-text {
+  font-weight: 700;
+  font-size: 14px;
+  color: #2563eb;
+  letter-spacing: 0.01em;
+}
+
+/* Space Plain Name */
+.space-name-plain {
+  font-weight: 500;
+  font-size: 13.5px;
+  color: #1e293b;
+}
+
+/* Space Type Badges (Pastel Pills with Icon) */
+.space-type-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.space-type-icon {
+  flex-shrink: 0;
+}
+
+/* Type 1: Phòng thảo luận - Purple */
+.badge-type-discussion {
+  background-color: #f3e8ff;
+  color: #9333ea;
+  border: 1px solid #e9d5ff;
+}
+
+/* Type 2: Phòng học nhóm - Fuchsia / Purple */
+.badge-type-group {
+  background-color: #f5d0fe;
+  color: #a21caf;
+  border: 1px solid #f0abfc;
+}
+
+/* Type 3: Phòng tự học - Violet */
+.badge-type-self-study {
+  background-color: #ede9fe;
+  color: #7c3aed;
+  border: 1px solid #ddd6fe;
+}
+
+/* Type 4: Khu bàn học - Sky / Cyan */
+.badge-type-desk {
+  background-color: #e0f2fe;
+  color: #0284c7;
+  border: 1px solid #bae6fd;
+}
+
+/* Type 5: Phòng seminar - Pink */
+.badge-type-seminar {
+  background-color: #fce7f3;
+  color: #db2777;
+  border: 1px solid #fbcfe8;
+}
+
+/* Building & Floor */
+.space-building-text {
+  font-size: 13px;
+  color: #334155;
+  font-weight: 400;
+}
+
+/* Capacity Number */
+.col-capacity-number {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #334155;
+}
+
+/* Compact Columns */
+.custom-spaces-table-v2 th.col-compact,
+.custom-spaces-table-v2 td.col-compact {
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+  white-space: nowrap !important;
+}
+
+/* Space Code Badge */
+.space-code-badge {
+  display: inline-flex;
+  align-items: center;
+  font-family: 'SF Mono', Consolas, Monaco, 'Courier New', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1e293b;
+  background-color: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 3px 8px;
+  letter-spacing: 0.5px;
+}
+
+/* Status Badges (Pills matching image - Compact & Clean) */
+.status-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.status-pill-available {
+  background-color: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.status-pill-maintenance {
+  background-color: #fef3c7;
+  color: #d97706;
+  border: 1px solid #fde68a;
+}
+
+.status-pill-inactive {
+  background-color: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+/* Action Buttons V2 (Square rounded icon buttons) */
+.action-buttons-group-v2 {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-action-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+}
+
+.btn-action-view {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+}
+
+.btn-action-view:hover {
+  background: #f8fafc;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+
+.btn-action-edit {
+  background: #eff6ff;
+  border: 1px solid #dbeafe;
+  color: #2563eb;
+}
+
+.btn-action-edit:hover {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.btn-action-delete {
+  background: #fef2f2;
+  border: 1px solid #fee2e2;
+  color: #ef4444;
+}
+
+.btn-action-delete:hover {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+/* ========================================================
+   Pagination V2 (Matching User Reference Image)
+   ======================================================== */
+.table-pagination-footer-v2 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: #ffffff;
+  border-top: 1px solid #f1f5f9;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.table-container-card .table-pagination-footer-v2 {
+  background: transparent;
+  padding: 16px 0 0;
+  margin: 0;
+  width: 100%;
+}
+
+.pagination-left-group {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.pagination-pagesize-select-v2 {
+  appearance: none;
+  background-color: #ffffff;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 8px center;
+  background-repeat: no-repeat;
+  background-size: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 6px 30px 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #334155;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.pagination-pagesize-select-v2:hover {
+  border-color: #cbd5e1;
+}
+
+.pagination-pagesize-select-v2:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.pagination-info-text-v2 {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 400;
+}
+
+.pagination-right-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pagination-btn-arrow {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+}
+
+.pagination-btn-arrow:hover:not(:disabled) {
+  background: #f8fafc;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+
+.pagination-btn-arrow:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pagination-page-numbers {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pagination-num-btn {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 6px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pagination-num-btn:hover:not(.active) {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+}
+
+.pagination-num-btn.active {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.25);
+}
+
+.pagination-dots {
+  padding: 0 4px;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+/* ========================================================
+   Khóa chặt thanh bộ lọc trên 1 hàng duy nhất (Không bao giờ xuống hàng)
+   ======================================================== */
+.table-container-card .table-card-header-bar {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  flex-wrap: nowrap !important;
+  gap: 12px !important;
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.table-container-card .table-card-header-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.table-container-card .table-card-title-group {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.table-container-card .table-card-actions-group {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: nowrap !important;
+  gap: 10px !important;
+  flex-shrink: 0;
+}
+
+/* ========================================================
+   Thanh bộ lọc Không gian (Cách chữ Danh sách đúng 60px, các nút đi liền nhau)
+   ======================================================== */
+.table-container-card .table-card-header-bar.space-header-bar-fluid {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  flex-wrap: nowrap !important;
+  gap: 100px !important; /* Khoảng cách 100px với chữ danh sách không gian theo yêu cầu */
+  width: 100% !important;
+}
+
+.table-container-card .table-card-header-bar.space-header-bar-fluid .table-card-title-group {
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
+}
+
+/* Toàn bộ cụm tìm kiếm, lọc, làm mới và chọn thẻ/bảng đi liền kề nhau */
+.space-filters-cluster-group {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  flex-wrap: nowrap !important;
+  gap: 10px !important;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Khung tìm kiếm thu giãn theo màn hình */
+.space-filter-search-fluid {
+  flex: 1.5 1 160px;
+  min-width: 130px;
+  max-width: 280px;
+  height: 36px;
+}
+
+.space-filter-search-fluid .filter-search-box {
+  min-width: unset !important;
+  width: 100% !important;
+  height: 36px !important;
+}
+
+.space-filter-search-fluid .filter-search-input {
+  height: 36px !important;
+  font-size: 13px !important;
+}
+
+/* Các ô chọn lọc thu giãn linh hoạt theo màn hình */
+.space-select-fluid {
+  flex: 1 1 130px;
+  min-width: 110px;
+  max-width: 190px;
+  height: 36px;
+  padding: 7px 24px 7px 9px !important;
+  font-size: 13px !important;
+  background-position: right 8px center !important;
+  background-size: 10px !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  flex-shrink: 1;
+}
+
+/* Nút chọn Thẻ / Bảng nằm liền kề trong cụm, không bị đẩy xa */
+.space-filters-cluster-group .view-mode-toggle-group {
+  flex-shrink: 0 !important;
+  margin: 0 !important;
+  margin-left: 0 !important;
+}
+
+/* Nút Làm mới dạng chỉ icon */
+.btn-filter-refresh-icon-only {
+  width: 36px;
+  height: 36px;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 8px;
+}
+
+
+/* ========================================================
+   View Mode Switcher (Thẻ / Bảng)
+   ======================================================== */
+.view-mode-toggle-group {
+  display: flex;
+  align-items: center;
+  background: #f1f5f9;
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  gap: 2px;
+}
+
+.btn-view-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-view-mode:hover {
+  color: #0f172a;
+}
+
+.btn-view-mode.active {
+  background: #ffffff;
+  color: #2563eb;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+/* ========================================================
+   Space Card Grid (Matching Reference Screenshot)
+   ======================================================== */
+.space-card-grid-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+  padding: 0;
+  background: transparent;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.space-grid-card-item {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  transition: all 0.22s ease;
+}
+
+.space-grid-card-item:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px -6px rgba(15, 23, 42, 0.08);
+  border-color: #cbd5e1;
+}
+
+/* Image Container */
+.space-card-image-wrap {
+  position: relative;
+  width: 100%;
+  height: 190px;
+  overflow: hidden;
+  background: #f1f5f9;
+  cursor: pointer;
+}
+
+.space-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.3s ease;
+}
+
+.space-grid-card-item:hover .space-card-img {
+  transform: scale(1.03);
+}
+
+.space-card-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f8fafc;
+  color: #94a3b8;
+}
+
+/* Badge Overlay on Image (Top-Right) */
+.space-card-badge-overlay {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+}
+
+.card-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+}
+
+.badge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.badge-success {
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+.dot-success {
+  background-color: #16a34a;
+}
+
+.badge-warning {
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+.dot-warning {
+  background-color: #f59e0b;
+}
+
+.badge-danger {
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+.dot-danger {
+  background-color: #ef4444;
+}
+
+/* Card Content */
+.space-card-content {
+  padding: 18px 20px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.space-card-title {
+  font-size: 16.5px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 6px 0;
+  line-height: 1.35;
+  cursor: pointer;
+  transition: color 0.15s ease;
+  min-height: 22px;
+}
+
+.space-card-title:hover {
+  color: #2563eb;
+}
+
+.space-card-meta {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0 0 12px 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  min-height: 20px;
+  line-height: 1.4;
+}
+
+.space-card-meta-type {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: text;
+}
+
+.meta-dot {
+  color: #94a3b8;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.space-card-meta-loc,
+.space-card-meta-cap {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* Facilities row */
+.space-card-facilities {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 6px;
+  margin-bottom: 12px;
+  min-height: 58px;
+}
+
+.space-card-facility-tag {
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.facility-empty-hint {
+  font-size: 12px;
+  color: #94a3b8;
+  font-style: italic;
+  padding-top: 4px;
+}
+
+/* Bottom Actions: Chỉnh sửa | Xóa không gian */
+.space-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 8px;
+}
+
+.btn-card-edit {
+  flex: 1;
+  padding: 9px 0;
+  border-radius: 24px;
+  background: #ffffff;
+  border: 1px solid #bfdbfe;
+  color: #2563eb;
+  font-weight: 600;
+  font-size: 13px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-card-edit:hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
+}
+
+.btn-card-delete,
+.btn-card-hide {
+  flex: 1;
+  padding: 9px 0;
+  border-radius: 24px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  font-weight: 600;
+  font-size: 13px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-card-delete:hover,
+.btn-card-hide:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #dc2626;
+}
+
+/* Loading & Empty states */
+.space-card-grid-loading,
+.space-card-grid-empty {
+  padding: 60px 20px;
+  text-align: center;
+  color: #64748b;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: #ffffff;
+}
+

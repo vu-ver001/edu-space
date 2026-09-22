@@ -18,6 +18,9 @@ public class SpaceCreateRequestKT {
     @NotBlank(message = "Tên không gian không được để trống")
     private String name;
 
+    @NotBlank(message = "Mã không gian không được để trống")
+    private String spaceCode;
+
     @NotNull(message = "Loại không gian không được để trống")
     private Long spaceTypeId;
 
@@ -35,6 +38,9 @@ public class SpaceCreateRequestKT {
     private SpaceStatus status;
 
     private String description;
+
+    @NotBlank(message = "Hình ảnh không gian không được để trống")
+    private String imageUrl;
 
     @Builder.Default
     private List<Long> facilityIds = new ArrayList<>();
