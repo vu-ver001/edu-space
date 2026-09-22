@@ -84,6 +84,12 @@ export const SpaceDetailPage: React.FC = () => {
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBookingError(null);
+
+    if (space?.status && space.status !== 'AVAILABLE') {
+      setBookingError(`Không gian này hiện đang ở trạng thái ${space.status === 'MAINTENANCE' ? 'Bảo trì' : 'Tạm khóa'}, tạm thời không nhận đặt chỗ.`);
+      return;
+    }
+
     if (!date || !startTime || !endTime) {
       setBookingError('Vui lòng điền đầy đủ ngày và khung giờ đặt phòng.');
       return;
@@ -207,7 +213,15 @@ export const SpaceDetailPage: React.FC = () => {
             <div className="space-hero-image-box">
               <img src={imageUrl} alt={space.name} className="space-hero-img" />
               <div className="hero-badge-pinned">
-                {requiresApproval ? (
+                {space.status === 'MAINTENANCE' ? (
+                  <span className="badge-status-pill" style={{ background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECDD3' }}>
+                    <span className="badge-dot" style={{ background: '#DC2626' }} /> Đang bảo trì
+                  </span>
+                ) : space.status === 'INACTIVE' ? (
+                  <span className="badge-status-pill" style={{ background: '#F8FAFC', color: '#64748B', border: '1px solid #E2E8F0' }}>
+                    <span className="badge-dot" style={{ background: '#94A3B8' }} /> Tạm khóa
+                  </span>
+                ) : requiresApproval ? (
                   <span className="badge-status-pill badge-approval">
                     <span className="badge-dot dot-amber" /> Cần phê duyệt
                   </span>
@@ -307,6 +321,19 @@ export const SpaceDetailPage: React.FC = () => {
               </p>
             </div>
 
+            {space.status === 'MAINTENANCE' && (
+              <div style={{ margin: '14px 20px 0', padding: '12px 14px', background: '#FEF2F2', border: '1px solid #FECDD3', borderRadius: '10px', color: '#DC2626', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '16px' }}>🔧</span>
+                <span><strong>Không gian đang bảo trì:</strong> Tạm thời không thể tiếp nhận đặt chỗ mới.</span>
+              </div>
+            )}
+            {space.status === 'INACTIVE' && (
+              <div style={{ margin: '14px 20px 0', padding: '12px 14px', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', color: '#64748B', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '16px' }}>🔒</span>
+                <span><strong>Không gian tạm ngưng:</strong> Hiện không khả dụng cho các phiên đặt phòng.</span>
+              </div>
+            )}
+
             <form onSubmit={handleFormSubmit} className="detail-booking-form">
               {/* Ngày */}
               <div className="form-field-group">
@@ -395,12 +422,26 @@ export const SpaceDetailPage: React.FC = () => {
               <button 
                 type="submit" 
                 className="btn-detail-book-now"
-                disabled={submitting}
+                disabled={submitting || (space?.status != null && space.status !== 'AVAILABLE')}
+                style={{
+                  opacity: (space?.status != null && space.status !== 'AVAILABLE') ? 0.6 : 1,
+                  cursor: (space?.status != null && space.status !== 'AVAILABLE') ? 'not-allowed' : 'pointer'
+                }}
               >
                 {submitting ? (
                   <>
                     <div className="portal-spinner" style={{ width: 18, height: 18, borderWidth: 2, marginRight: 8, display: 'inline-block', verticalAlign: 'middle' }} />
                     Đang xử lý đặt phòng...
+                  </>
+                ) : space?.status === 'MAINTENANCE' ? (
+                  <>
+                    <span style={{ fontSize: '18px', marginRight: '6px' }}>🔧</span>
+                    Không gian đang bảo trì (Tạm khóa)
+                  </>
+                ) : space?.status === 'INACTIVE' ? (
+                  <>
+                    <span style={{ fontSize: '18px', marginRight: '6px' }}>🔒</span>
+                    Không gian tạm ngưng hoạt động
                   </>
                 ) : isPerSeat ? (
                   <>
