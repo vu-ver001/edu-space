@@ -7,22 +7,32 @@
 
 :root {
   /* Bảng màu chuẩn giao diện nội bộ */
-  --portal-blue-primary: #2563EB;    /* Xanh dương chuẩn hệ thống */
-  --portal-blue-hover: #1D4ED8;      /* Xanh đậm khi hover */
-  --portal-blue-light: #EFF6FF;      /* Xanh pastel siêu nhẹ */
-  --portal-blue-pastel: #DBEAFE;     /* Xanh pastel viền/pill */
+  --portal-blue-primary: #2563EB;
+  /* Xanh dương chuẩn hệ thống */
+  --portal-blue-hover: #1D4ED8;
+  /* Xanh đậm khi hover */
+  --portal-blue-light: #EFF6FF;
+  /* Xanh pastel siêu nhẹ */
+  --portal-blue-pastel: #DBEAFE;
+  /* Xanh pastel viền/pill */
   --portal-blue-border: #BFDBFE;
 
   /* Nền hệ thống nội bộ */
-  --portal-bg: #F8FAFD;              /* Nền canvas làm việc sáng sủa */
-  --portal-card-bg: #FFFFFF;         /* Thẻ trắng chuẩn hệ thống */
-  --portal-border: #E2E8F0;          /* Viền xám mảnh chuẩn form */
+  --portal-bg: #F8FAFD;
+  /* Nền canvas làm việc sáng sủa */
+  --portal-card-bg: #FFFFFF;
+  /* Thẻ trắng chuẩn hệ thống */
+  --portal-border: #E2E8F0;
+  /* Viền xám mảnh chuẩn form */
   --portal-border-subtle: #F1F5F9;
 
   /* Màu chữ phân tầng */
-  --portal-text-main: #0F172A;       /* Xanh than đậm sắc nét */
-  --portal-text-muted: #475569;      /* Xám trung tính */
-  --portal-text-subtle: #94A3B8;     /* Xám phụ */
+  --portal-text-main: #0F172A;
+  /* Xanh than đậm sắc nét */
+  --portal-text-muted: #475569;
+  /* Xám trung tính */
+  --portal-text-subtle: #94A3B8;
+  /* Xám phụ */
 
   /* Đổ bóng nhẹ nội bộ (Subtle enterprise shadows) */
   --portal-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
@@ -192,7 +202,8 @@ body {
   align-items: center;
   gap: 12px;
   padding: 12px 20px;
-  border-radius: 9999px; /* Dạng capsule bo tròn toàn bộ theo Ảnh 2 */
+  border-radius: 9999px;
+  /* Dạng capsule bo tròn toàn bộ theo Ảnh 2 */
   text-decoration: none;
   font-size: 0.925rem;
   font-weight: 600;
@@ -443,9 +454,10 @@ body {
 /* 1.3. Content Canvas */
 .portal-content-canvas {
   padding: 24px 32px 60px;
-  max-width: 1280px;
+  max-width: 100%;
   width: 100%;
-  margin: 0 auto;
+  margin: 0;
+  box-sizing: border-box;
 }
 
 /* ========================================================
@@ -972,9 +984,17 @@ body {
   font-weight: 700;
 }
 
-.status-badge-mini.avail { color: #16A34A; }
-.status-badge-mini.busy { color: #DC2626; }
-.status-badge-mini.maint { color: #D97706; }
+.status-badge-mini.avail {
+  color: #16A34A;
+}
+
+.status-badge-mini.busy {
+  color: #DC2626;
+}
+
+.status-badge-mini.maint {
+  color: #D97706;
+}
 
 .btn-card-book {
   background: var(--portal-blue-primary);
@@ -1066,7 +1086,8 @@ body {
   font-size: 0.825rem;
 }
 
-.date-text, .time-range-text {
+.date-text,
+.time-range-text {
   font-weight: 600;
   color: #0F172A;
 }
@@ -1093,8 +1114,13 @@ body {
   font-weight: 600;
 }
 
-.cell-note.text-danger { color: #DC2626; }
-.cell-note.text-success { color: #16A34A; }
+.cell-note.text-danger {
+  color: #DC2626;
+}
+
+.cell-note.text-success {
+  color: #16A34A;
+}
 
 .table-actions-flex {
   display: flex;
@@ -1579,22 +1605,43 @@ body {
 
 /* Animations */
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes scaleUp {
-  from { opacity: 0; transform: scale(0.97); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 @keyframes slideDown {
-  from { transform: translateY(-16px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from {
+    transform: translateY(-16px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Responsive */
@@ -1602,6 +1649,7 @@ body {
   .internal-form-row.four-cols {
     grid-template-columns: 1fr 1fr;
   }
+
   .internal-form-row.two-cols {
     grid-template-columns: 1fr;
   }
@@ -1611,12 +1659,15 @@ body {
   .portal-sidebar {
     width: 60px;
   }
+
   .internal-form-row.four-cols {
     grid-template-columns: 1fr;
   }
+
   .portal-top-bar {
     padding: 0 16px;
   }
+
   .portal-content-canvas {
     padding: 16px;
   }
@@ -2752,6 +2803,7 @@ body {
     opacity: 0;
     transform: translateY(16px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
