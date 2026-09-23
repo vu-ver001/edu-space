@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import api from '../../../../services/api';
 
 const settingsStyles = `
   .settings-container { max-width: 900px; margin: 0 auto; padding-bottom: 40px; font-family: 'Inter', sans-serif; }
@@ -21,30 +22,35 @@ const settingsStyles = `
   .btn-save:disabled { background: #94a3b8; cursor: not-allowed; transform: none; box-shadow: none; }
   
   .note-box { background: #eff6ff; color: #1e40af; padding: 12px 16px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 20px; border-left: 4px solid #3b82f6; }
+
+  /* CSS CHO NÚT UPLOAD VÀ PREVIEW */
+  .upload-btn { background: #f8fafc; color: #334155; border: 1px solid #cbd5e1; padding: 8px 14px; border-radius: 6px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 0.85rem; transition: 0.2s; }
+  .upload-btn:hover { background: #e2e8f0; }
+  .upload-btn:disabled { opacity: 0.6; cursor: wait; }
+  .logo-preview-box { margin-top: 12px; padding: 12px 24px; background: #1e293b; border-radius: 6px; display: inline-flex; align-items: center; gap: 12px; }
+  .logo-preview-box img { max-height: 32px; max-width: 150px; object-fit: contain; }
+  .logo-preview-box .svg-wrapper svg { width: 32px; height: 32px; fill: currentColor; color: white; }
 `;
 
 export const GeneralSettingsPage = () => {
     const [loading, setLoading] = useState(false);
+    const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Khởi tạo state với các giá trị mặc định của hệ thống
     const [settings, setSettings] = useState({
         appName: 'EduSpace',
         logoIcon: '<svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>',
 
-        // Menu Sinh viên
         stuHomeLabel: 'Trang chủ', stuHomeIcon: '🏠',
         stuSpaceLabel: 'Tìm & Đặt phòng', stuSpaceIcon: '🔍',
 
-        // Menu Staff
         staffHomeLabel: 'Dashboard Vận hành', staffHomeIcon: '🖥️',
         staffApproveLabel: 'Duyệt đặt chỗ', staffApproveIcon: '✅',
 
-        // Menu Admin
         adminStatsLabel: 'Thống kê tổng quan', adminStatsIcon: '📊',
         adminUsersLabel: 'Quản lý người dùng', adminUsersIcon: '👥',
     });
 
-    // Tải cấu hình từ localStorage khi mở trang
     useEffect(() => {
         const savedSettings = localStorage.getItem('eduspace_ui_settings');
         if (savedSettings) {
@@ -56,17 +62,72 @@ export const GeneralSettingsPage = () => {
         setSettings(prev => ({ ...prev, [key]: value }));
     };
 
-    const handleSave = () => {
+    // Hàm Upload lên Cloudinary
+    const handleUploadCloudinary = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsUploadingLogo(true);
+        const formData = new FormData();
+        formData.append('file', file);
+
+        // TODO: Thay thế 2 thông số này bằng thông tin tài khoản Cloudinary của bạn
+        formData.append('upload_preset', 'eduspace_preset');
+        const CLOUD_NAME = 'daxdtgf2j';
+
+        try {
+            const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+                method: 'POST',
+                body: formData,
+            });
+            const data = await response.json();
+
+            if (data.secure_url) {
+                // Tự động điền link ảnh vừa up vào ô Logo
+                handleChange('logoIcon', data.secure_url);
+            } else {
+                alert('Tải ảnh thất bại: ' + (data.error?.message || 'Lỗi không xác định'));
+            }
+        } catch (error) {
+            alert('Lỗi kết nối đến Cloudinary');
+        } finally {
+            setIsUploadingLogo(false);
+            if (fileInputRef.current) fileInputRef.current.value = ''; // Reset input
+        }
+    };
+
+    const handleSave = async () => {
         setLoading(true);
-        setTimeout(() => {
-            // TODO: Nối API PUT /api/settings sau
+        try {
+            const payload = Object.keys(settings).map(key => ({
+                key,
+                value: settings[key as keyof typeof settings]
+            }));
+
+            // GỌI API THẬT XUỐNG SPRING BOOT
+            await api.put('/api/settings/bulk', payload);
+
             localStorage.setItem('eduspace_ui_settings', JSON.stringify(settings));
 
-            alert('Đã lưu cấu hình thành công! Giao diện sẽ được cập nhật lại.');
-            window.location.reload(); // Reload lại trang để PortalLayout ăn cấu hình mới ngay lập tức
-
+            alert('Đã lưu cấu hình thành công!');
+            window.location.reload();
+        } catch (error) {
+            alert('Lỗi khi lưu cấu hình');
+        } finally {
             setLoading(false);
-        }, 600);
+        }
+    };
+
+    // Hàm phụ trợ để render preview (giống cơ chế DynamicIcon)
+    const renderPreview = (data: string) => {
+        if (!data) return null;
+        if (data.startsWith('<svg')) {
+            return <div className="svg-wrapper" dangerouslySetInnerHTML={{ __html: data }} />;
+        }
+        if (data.startsWith('http')) {
+            return <img src={data} alt="preview" />;
+        }
+        return <span style={{ fontSize: '24px', color: 'white' }}>{data}</span>;
     };
 
     return (
@@ -97,11 +158,31 @@ export const GeneralSettingsPage = () => {
                         placeholder="VD: EduSpace"
                     />
                 </div>
+
                 <div className="form-group">
-                    <label>Biểu tượng Logo (Mã SVG hoặc Link ảnh)</label>
-                    <div className="note-box">
-                        Khuyên dùng mã thẻ <code>&lt;svg&gt;...&lt;/svg&gt;</code> nét mảnh, màu trắng để xuyên thấu được background của thanh điều hướng.
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 8 }}>
+                        <label style={{ marginBottom: 0 }}>Biểu tượng Logo (Mã SVG hoặc Link ảnh)</label>
+
+                        {/* NÚT UPLOAD ẨN */}
+                        <input
+                            type="file"
+                            accept="image/png, image/jpeg, image/svg+xml"
+                            ref={fileInputRef}
+                            style={{ display: 'none' }}
+                            onChange={handleUploadCloudinary}
+                        />
+                        {/* NÚT UPLOAD HIỂN THỊ */}
+                        <button
+                            type="button"
+                            className="upload-btn"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={isUploadingLogo}
+                        >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                            {isUploadingLogo ? 'Đang tải lên...' : 'Tải ảnh lên (Cloudinary)'}
+                        </button>
                     </div>
+
                     <textarea
                         className="form-control"
                         rows={3}
@@ -109,13 +190,18 @@ export const GeneralSettingsPage = () => {
                         onChange={(e) => handleChange('logoIcon', e.target.value)}
                         placeholder="Dán mã SVG hoặc link hình ảnh vào đây..."
                     />
+
+                    {/* KHUNG PREVIEW TRỰC QUAN */}
+                    <div className="logo-preview-box">
+                        {renderPreview(settings.logoIcon)}
+                        <span style={{ color: 'white', fontWeight: 'bold', fontSize: '1.15rem' }}>{settings.appName || 'EduSpace'}</span>
+                    </div>
                 </div>
             </div>
 
             {/* BLOCK 2: MENU SINH VIÊN */}
             <div className="settings-card">
                 <h3 className="settings-card-title">2. Cấu hình Menu Sinh viên (STUDENT)</h3>
-
                 <div className="menu-item-row">
                     <div className="form-group">
                         <label>Menu 1: Text hiển thị</label>
@@ -126,7 +212,6 @@ export const GeneralSettingsPage = () => {
                         <input className="form-control" value={settings.stuHomeIcon} onChange={(e) => handleChange('stuHomeIcon', e.target.value)} />
                     </div>
                 </div>
-
                 <div className="menu-item-row">
                     <div className="form-group">
                         <label>Menu 2: Text hiển thị</label>
@@ -163,7 +248,6 @@ export const GeneralSettingsPage = () => {
                     </div>
                 </div>
             </div>
-
         </div>
     );
 };
