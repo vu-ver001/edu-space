@@ -1,5 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import api from '../../../../services/api';
+
+const UPLOAD_PRESET = import.meta.env.UPLOAD_PRESET;
+const CLOUD_NAME = import.meta.env.CLOUD_NAME;
 
 const settingsStyles = `
   .settings-container { max-width: 900px; margin: 0 auto; padding-bottom: 40px; font-family: 'Inter', sans-serif; }
@@ -62,7 +65,7 @@ export const GeneralSettingsPage = () => {
         setSettings(prev => ({ ...prev, [key]: value }));
     };
 
-    // Hàm Upload lên Cloudinary
+    // Hàm Upload lên Cloudinary đã fix chuẩn
     const handleUploadCloudinary = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -70,10 +73,7 @@ export const GeneralSettingsPage = () => {
         setIsUploadingLogo(true);
         const formData = new FormData();
         formData.append('file', file);
-
-        // TODO: Thay thế 2 thông số này bằng thông tin tài khoản Cloudinary của bạn
-        formData.append('upload_preset', 'eduspace_preset');
-        const CLOUD_NAME = 'daxdtgf2j';
+        formData.append('upload_preset', UPLOAD_PRESET);
 
         try {
             const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
@@ -83,7 +83,6 @@ export const GeneralSettingsPage = () => {
             const data = await response.json();
 
             if (data.secure_url) {
-                // Tự động điền link ảnh vừa up vào ô Logo
                 handleChange('logoIcon', data.secure_url);
             } else {
                 alert('Tải ảnh thất bại: ' + (data.error?.message || 'Lỗi không xác định'));
@@ -92,7 +91,7 @@ export const GeneralSettingsPage = () => {
             alert('Lỗi kết nối đến Cloudinary');
         } finally {
             setIsUploadingLogo(false);
-            if (fileInputRef.current) fileInputRef.current.value = ''; // Reset input
+            if (fileInputRef.current) fileInputRef.current.value = '';
         }
     };
 
@@ -104,9 +103,7 @@ export const GeneralSettingsPage = () => {
                 value: settings[key as keyof typeof settings]
             }));
 
-            // GỌI API THẬT XUỐNG SPRING BOOT
             await api.put('/api/settings/bulk', payload);
-
             localStorage.setItem('eduspace_ui_settings', JSON.stringify(settings));
 
             alert('Đã lưu cấu hình thành công!');
@@ -118,7 +115,6 @@ export const GeneralSettingsPage = () => {
         }
     };
 
-    // Hàm phụ trợ để render preview (giống cơ chế DynamicIcon)
     const renderPreview = (data: string) => {
         if (!data) return null;
         if (data.startsWith('<svg')) {
@@ -163,7 +159,6 @@ export const GeneralSettingsPage = () => {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 8 }}>
                         <label style={{ marginBottom: 0 }}>Biểu tượng Logo (Mã SVG hoặc Link ảnh)</label>
 
-                        {/* NÚT UPLOAD ẨN */}
                         <input
                             type="file"
                             accept="image/png, image/jpeg, image/svg+xml"
@@ -171,7 +166,6 @@ export const GeneralSettingsPage = () => {
                             style={{ display: 'none' }}
                             onChange={handleUploadCloudinary}
                         />
-                        {/* NÚT UPLOAD HIỂN THỊ */}
                         <button
                             type="button"
                             className="upload-btn"
@@ -191,7 +185,6 @@ export const GeneralSettingsPage = () => {
                         placeholder="Dán mã SVG hoặc link hình ảnh vào đây..."
                     />
 
-                    {/* KHUNG PREVIEW TRỰC QUAN */}
                     <div className="logo-preview-box">
                         {renderPreview(settings.logoIcon)}
                         <span style={{ color: 'white', fontWeight: 'bold', fontSize: '1.15rem' }}>{settings.appName || 'EduSpace'}</span>
