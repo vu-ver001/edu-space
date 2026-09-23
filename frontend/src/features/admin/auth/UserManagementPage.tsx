@@ -113,12 +113,21 @@ export const UserManagementPage = () => {
 
         setLoading(true);
         try {
+            const formatPasswordFromDob = (dobStr: string) => {
+                if (!dobStr) return '123456';
+                const parts = dobStr.split('-'); // Tách [2005, 05, 18]
+                if (parts.length === 3) {
+                    return parts[2] + parts[1] + parts[0]; // Đảo thành 18052005
+                }
+                return dobStr.replace(/[-/]/g, '');
+            };
+
             const payload = {
                 email: manualForm.email,
                 fullName: manualForm.fullName,
                 role: manualForm.role,
                 dob: manualForm.dob,
-                password: manualForm.dob.replace(/[-/]/g, ''),
+                password: formatPasswordFromDob(manualForm.dob),
                 studentId: manualForm.role === 'STUDENT' ? manualForm.studentId : null,
                 department: manualForm.role !== 'STUDENT' ? manualForm.department : null
             };

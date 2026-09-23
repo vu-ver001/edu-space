@@ -53,25 +53,41 @@ public class UserService {
             throw new RuntimeException("Email đã tồn tại trong hệ thống");
         }
 
-        // Xử lý tạo mật khẩu tự động nếu Frontend không gửi
+        // Xử lý tạo mật khẩu tự động chuẩn ngày-tháng-năm (DDMMYYYY)
         String rawPassword = request.getPassword();
         if (rawPassword == null || rawPassword.trim().isEmpty()) {
             if (request.getDob() != null && !request.getDob().isEmpty()) {
-                rawPassword = request.getDob().replaceAll("[-/]", ""); // Lấy ngày sinh bỏ dấu
+                String[] parts = request.getDob().split("-");
+                if (parts.length == 3) {
+                    rawPassword = parts[2] + parts[1] + parts[0]; // 18052005
+                } else {
+                    rawPassword = request.getDob().replaceAll("[-/]", "");
+                }
             } else {
-                rawPassword = "123456"; // Mặc định cuối cùng
+                rawPassword = "123456"; // Mặc định nếu không có ngày sinh
             }
         }
 
-        // Dùng Builder tạo User mới (Đã có thêm dob, studentId, department)
+        // Tự động tạo username nếu request không gửi lên
+        String generatedUsername = request.getUsername();
+        if (generatedUsername == null || generatedUsername.trim().isEmpty()) {
+            if (request.getStudentId() != null && !request.getStudentId().trim().isEmpty()) {
+                generatedUsername = request.getStudentId();
+            } else {
+                generatedUsername = request.getEmail().split("@")[0];
+            }
+        }
+
+        // Dùng Builder tạo User mới (Đã có đầy đủ dob, studentId, department, username)
         User user = User.builder()
                 .email(request.getEmail())
-                .password(passwordEncoder.encode(rawPassword)) // Mã hóa ngay lập tức
+                .username(generatedUsername) // <-- Bổ sung dòng này để không bị null
+                .password(passwordEncoder.encode(rawPassword))
                 .fullName(request.getFullName())
                 .role(request.getRole())
-                .dob(request.getDob())
-                .studentId(request.getStudentId())
-                .department(request.getDepartment())
+                .dob(request.getDob())                 // Đã có
+                .studentId(request.getStudentId())     // Đã có
+                .department(request.getDepartment())   // Đã có
                 .active(true)
                 .build();
 
