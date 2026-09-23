@@ -321,7 +321,10 @@ public class BookingService {
                 ? request.getPurpose().trim()
                 : (isPerSeat ? "Tự học cá nhân" : "Học tập & Thảo luận");
 
+        String bookingCode = generateBookingCode(now);
+
         Booking booking = Booking.builder()
+                .bookingCode(bookingCode)
                 .studentId(studentId)
                 .spaceId(space.getId())
                 .startTime(startTime)
@@ -587,9 +590,16 @@ public class BookingService {
                         .orElse(null);
             } catch (Exception ignored) {}
         }
+        String bookingCode = booking.getBookingCode();
+        if (bookingCode == null || bookingCode.isBlank()) {
+            String datePart = (booking.getCreatedAt() != null ? booking.getCreatedAt() : LocalDateTime.now())
+                    .format(java.time.format.DateTimeFormatter.ofPattern("yyMMdd"));
+            bookingCode = String.format("BK-%s-%04d", datePart, booking.getId() != null ? booking.getId() : 1);
+        }
 
         return BookingResponse.builder()
                 .id(booking.getId())
+                .bookingCode(bookingCode)
                 .studentId(booking.getStudentId())
                 .studentName(userRepository.findById(booking.getStudentId()).map(User::getFullName).orElse(null))
                 .studentEmail(resolveEmailFromStudentId(booking.getStudentId()))
@@ -640,5 +650,31 @@ public class BookingService {
 
     private String resolveEmailFromStudentId(Long id) {
         return userRepository.findById(id).map(User::getEmail).orElse(null);
+    }
+
+    /**
+     * Sinh mã booking tự động ngắn gọn, logic và thực tế nghiệp vụ cao:
+     * Định dạng: BK-YYMMDD-[SEQ:04d] (Ví dụ: BK-260923-0001)
+     * - BK: Tiền tố nhận diện đơn đặt chỗ EduSpace (Booking)
+     * - YYMMDD: Ngày giao dịch đặt phòng (Ví dụ: 260923 tức 23/09/2026)
+     * - SEQ: Số thứ tự đơn trong ngày (0001, 0002...), tăng dần và chống trùng lặp tuyệt đối.
+     */
+    public String generateBookingCode(LocalDateTime bookingTime) {
+        String datePart = (bookingTime != null ? bookingTime : LocalDateTime.now())
+                .format(java.time.format.DateTimeFormatter.ofPattern("yyMMdd"));
+
+        java.time.LocalDate today = (bookingTime != null ? bookingTime : LocalDateTime.now()).toLocalDate();
+        LocalDateTime dayStart = today.atStartOfDay();
+        LocalDateTime dayEnd = today.plusDays(1).atStartOfDay();
+
+        long countToday = bookingRepository.countByCreatedAtBetween(dayStart, dayEnd);
+        long seq = countToday + 1;
+
+        String candidateCode = String.format("BK-%s-%04d", datePart, seq);
+        while (bookingRepository.existsByBookingCode(candidateCode)) {
+            seq++;
+            candidateCode = String.format("BK-%s-%04d", datePart, seq);
+        }
+        return candidateCode;
     }
 }

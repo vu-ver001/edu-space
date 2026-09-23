@@ -112,7 +112,8 @@ export const MyBookingsPage: React.FC = () => {
         const matchPurpose = b.purpose?.toLowerCase().includes(q);
         const matchBuilding = b.building?.toLowerCase().includes(q);
         const matchId = String(b.id).includes(q);
-        if (!matchName && !matchType && !matchPurpose && !matchBuilding && !matchId) {
+        const matchCode = b.bookingCode?.toLowerCase().includes(q);
+        if (!matchName && !matchType && !matchPurpose && !matchBuilding && !matchId && !matchCode) {
           return false;
         }
       }
@@ -210,7 +211,7 @@ export const MyBookingsPage: React.FC = () => {
           <div className="mb-metric-info">
             <span className="mb-metric-val">{metrics.occupying}</span>
             <span className="mb-metric-label">Đang giữ chỗ</span>
-            <span className="mb-metric-subtext">Hạn mức tối đa 2 đơn/ngày</span>
+
           </div>
         </div>
 
@@ -225,7 +226,7 @@ export const MyBookingsPage: React.FC = () => {
           <div className="mb-metric-info">
             <span className="mb-metric-val">{metrics.pending}</span>
             <span className="mb-metric-label">Chờ Staff duyệt</span>
-            <span className="mb-metric-subtext">Phòng hội thảo/cần duyệt trước</span>
+
           </div>
         </div>
 
@@ -240,9 +241,7 @@ export const MyBookingsPage: React.FC = () => {
           <div className="mb-metric-info">
             <span className="mb-metric-val">{metrics.readyCheckIn > 0 ? `${metrics.readyCheckIn} sẵn sàng` : metrics.confirmed}</span>
             <span className="mb-metric-label">Đã xác nhận & Check-in</span>
-            <span className="mb-metric-subtext">
-              {metrics.readyCheckIn > 0 ? '🟢 Cửa sổ check-in đang mở!' : 'Mở trước giờ bắt đầu 15p'}
-            </span>
+
           </div>
         </div>
 
@@ -256,7 +255,7 @@ export const MyBookingsPage: React.FC = () => {
           <div className="mb-metric-info">
             <span className="mb-metric-val">{metrics.completed}</span>
             <span className="mb-metric-label">Đã hoàn thành</span>
-            <span className="mb-metric-subtext">Tổng số {metrics.total} lượt đặt trong lịch sử</span>
+
           </div>
         </div>
       </div>
@@ -270,7 +269,7 @@ export const MyBookingsPage: React.FC = () => {
             { key: 'PENDING', label: 'Chờ duyệt', count: metrics.pending },
             { key: 'CONFIRMED', label: 'Đã xác nhận', count: metrics.confirmed },
             { key: 'CHECKED_IN', label: 'Đã check-in', count: bookings.filter(b => b.status === 'CHECKED_IN').length },
-            { key: 'HISTORY', label: 'Lịch sử / Đã kết thúc', count: bookings.filter(b => !b.isOccupying).length }
+            { key: 'HISTORY', label: 'Lịch sử', count: bookings.filter(b => !b.isOccupying).length }
           ].map((tab) => (
             <button
               key={tab.key}
@@ -334,7 +333,7 @@ export const MyBookingsPage: React.FC = () => {
             type="button"
             className="btn-mb-new-booking"
             style={{ margin: '0 auto' }}
-            onClick={() => navigate('/spaces')}
+            onClick={() => navigate('/student/spaces')}
           >
             Khám phá phòng học & Đặt ngay
           </button>
@@ -358,12 +357,24 @@ export const MyBookingsPage: React.FC = () => {
                 <div>
                   {/* Thanh trên cùng của Thẻ */}
                   <div className="mb-card-top-bar">
-                    <span className="mb-card-booking-id">
+                    <span
+                      className="mb-card-booking-id"
+                      title={b.bookingCode ? `Mã đặt phòng: ${b.bookingCode} (Bấm để sao chép)` : `Đơn #${b.id}`}
+                      style={{ cursor: b.bookingCode ? 'pointer' : 'default' }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (b.bookingCode) {
+                          navigator.clipboard?.writeText(b.bookingCode);
+                          setToastMessage(`✓ Đã sao chép mã booking: ${b.bookingCode}`);
+                          setTimeout(() => setToastMessage(null), 3000);
+                        }
+                      }}
+                    >
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
                         <line x1="7" y1="7" x2="7.01" y2="7"/>
                       </svg>
-                      Đơn #{b.id}
+                      {b.bookingCode || `Đơn #${b.id}`}
                     </span>
                     <StatusBadge status={b.status} size="md" />
                   </div>
@@ -379,7 +390,7 @@ export const MyBookingsPage: React.FC = () => {
                     {/* Chi tiết Không gian & Thời gian */}
                     <div className="mb-space-details">
                       <div className="mb-space-name-row">
-                        <Link to={`/spaces/${b.spaceId}`} className="mb-space-title">
+                        <Link to={`/student/spaces/${b.spaceId}`} className="mb-space-title">
                           {b.spaceName}
                         </Link>
 
@@ -547,7 +558,7 @@ export const MyBookingsPage: React.FC = () => {
 
                 {/* Các nút thao tác ở chân Thẻ */}
                 <div className="mb-card-actions">
-                  <div className="mb-actions-left">
+                   <div className="mb-actions-left">
                     {/* Nút Check-in nổi bật nếu đủ điều kiện */}
                     {b.status === 'CONFIRMED' && (
                       <button
@@ -555,17 +566,12 @@ export const MyBookingsPage: React.FC = () => {
                         className="btn-card-checkin"
                         onClick={() => handleCheckIn(b)}
                         disabled={!b.canCheckIn || actionLoading}
-                        style={{
-                          opacity: b.canCheckIn ? 1 : 0.65,
-                          cursor: b.canCheckIn ? 'pointer' : 'not-allowed',
-                          background: b.canCheckIn ? undefined : '#94A3B8'
-                        }}
-                        title={b.canCheckIn ? 'Bấm để check-in có mặt' : 'Chưa đến giờ check-in (mở trước giờ bắt đầu 15 phút)'}
+                        title={b.canCheckIn ? 'Bấm để check-in có mặt' : 'Cần chờ đến 15 phút trước giờ bắt đầu mới có thể check-in'}
                       >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="20 6 9 17 4 12"/>
                         </svg>
-                        {b.canCheckIn ? 'Check-in ngay' : 'Chưa đến giờ check-in'}
+                        Check-in
                       </button>
                     )}
 
@@ -595,7 +601,7 @@ export const MyBookingsPage: React.FC = () => {
                     <button
                       type="button"
                       className="btn-card-icon-action btn-action-view"
-                      onClick={() => navigate(`/spaces/${b.spaceId}`)}
+                      onClick={() => navigate(`/student/spaces/${b.spaceId}`)}
                       title="Xem phòng"
                       aria-label="Xem phòng"
                     >
