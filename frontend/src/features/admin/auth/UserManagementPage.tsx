@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import api from '../../../services/api';
 
 const userStyles = `
   .user-mgt-container { max-width: 1100px; margin: 0 auto; padding-bottom: 40px; font-family: 'Inter', sans-serif; }
@@ -30,7 +31,6 @@ const userStyles = `
   .status-active { background: #dcfce7; color: #166534; }
   .status-locked { background: #fee2e2; color: #991b1b; }
   
-  /* CẬP NHẬT CSS NÚT HÀNH ĐỘNG */
   .action-btn { background: none; border: none; cursor: pointer; color: #64748b; padding: 6px; border-radius: 4px; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; }
   .action-btn:hover { background: #e2e8f0; color: #0f172a; }
   .action-btn.danger:hover { background: #fee2e2; color: #991b1b; }
@@ -43,6 +43,7 @@ const userStyles = `
   
   .btn-primary { background: #2563eb; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 8px; }
   .btn-primary:hover { background: #1d4ed8; }
+  .btn-primary:disabled { background: #94a3b8; cursor: not-allowed; }
   
   .role-badge { padding: 4px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
   .role-student { background: #dbeafe; color: #1e40af; }
@@ -61,22 +62,18 @@ interface UserData {
     role: string;
     username?: string;
     password?: string;
-    status?: 'ACTIVE' | 'LOCKED';
+    isActive?: boolean;
     studentId?: string;
     department?: string;
 }
-
-const mockUsersList: UserData[] = [
-    { id: 1, username: 'admin_hethong', fullName: 'Quản trị viên', email: 'admin@eduspace.vn', role: 'ADMIN', dob: '01/01/1990', status: 'ACTIVE', department: 'Phòng IT' },
-    { id: 2, username: 'SV2021001', fullName: 'Nguyễn Khánh Vân', email: 'vannguyen@eduspace.vn', role: 'STUDENT', dob: '15/05/2002', status: 'ACTIVE', studentId: 'SV2021001' },
-    { id: 3, username: 'vutran', fullName: 'Trần Anh Vũ', email: 'vutran@eduspace.vn', role: 'STAFF', dob: '22/10/1998', status: 'ACTIVE', department: 'Phòng Quản trị thiết bị' },
-    { id: 4, username: 'SV2021088', fullName: 'Lê Minh Tân', email: 'tanle@eduspace.vn', role: 'STUDENT', dob: '09/09/2003', status: 'LOCKED', studentId: 'SV2021088' },
-];
 
 export const UserManagementPage = () => {
     const [activeTab, setActiveTab] = useState<'list' | 'manual' | 'csv'>('list');
     const [loading, setLoading] = useState(false);
     const [listFilter, setListFilter] = useState<'ALL' | 'STUDENT' | 'STAFF' | 'ADMIN'>('ALL');
+
+    // State lưu dữ liệu thật từ Backend
+    const [usersList, setUsersList] = useState<UserData[]>([]);
 
     const [manualForm, setManualForm] = useState<UserData>({
         fullName: '', dob: '', email: '', role: 'STUDENT', studentId: '', department: ''
@@ -86,27 +83,71 @@ export const UserManagementPage = () => {
     const [csvData, setCsvData] = useState<UserData[]>([]);
     const [fileName, setFileName] = useState<string>('');
 
-    const filteredUsers = mockUsersList.filter(user => listFilter === 'ALL' || user.role === listFilter);
+    // 1. GỌI API LẤY DANH SÁCH USER KHI MỞ TAB 'list'
+    useEffect(() => {
+        if (activeTab === 'list') {
+            fetchUsers();
+        }
+    }, [activeTab]);
+
+    const fetchUsers = async () => {
+        try {
+            const response = await api.get('/api/users');
+            setUsersList(response.data);
+        } catch (error) {
+            console.error('Lỗi khi tải danh sách người dùng:', error);
+        }
+    };
+
+    const filteredUsers = usersList.filter(user => listFilter === 'ALL' || user.role === listFilter);
 
     const handleManualChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setManualForm({ ...manualForm, [e.target.name]: e.target.value });
     };
 
+    // 2. GỌI API THÊM USER THỦ CÔNG
     const handleSaveManual = async () => {
-        if (!manualForm.email || !manualForm.fullName || !manualForm.dob) return alert('Vui lòng điền đủ thông tin bắt buộc');
-        const username = (manualForm.role === 'STUDENT' && manualForm.studentId) ? manualForm.studentId : manualForm.email.split('@')[0];
-        const password = manualForm.dob.replace(/[-/]/g, '');
+        if (!manualForm.email || !manualForm.fullName || !manualForm.dob) {
+            return alert('Vui lòng điền đủ thông tin bắt buộc (Họ Tên, Email, Ngày sinh)');
+        }
 
         setLoading(true);
-        setTimeout(() => {
-            alert(`Đã tạo tài khoản!\nUser: ${username}\nPass: ${password}`);
+        try {
+            const payload = {
+                email: manualForm.email,
+                fullName: manualForm.fullName,
+                role: manualForm.role,
+                dob: manualForm.dob,
+                password: manualForm.dob.replace(/[-/]/g, ''),
+                studentId: manualForm.role === 'STUDENT' ? manualForm.studentId : null,
+                department: manualForm.role !== 'STUDENT' ? manualForm.department : null
+            };
+
+            await api.post('/api/users', payload);
+            alert('Tạo tài khoản thành công!');
+
             setManualForm({ fullName: '', dob: '', email: '', role: 'STUDENT', studentId: '', department: '' });
-            setLoading(false);
             setListFilter(manualForm.role as any);
-            setActiveTab('list');
-        }, 800);
+            setActiveTab('list'); // Đẩy về tab danh sách, useEffect sẽ tự động gọi lại fetchUsers
+        } catch (error: any) {
+            alert('Lỗi tạo tài khoản: ' + (error.response?.data?.message || 'Có lỗi xảy ra'));
+        } finally {
+            setLoading(false);
+        }
     };
 
+    // 3. GỌI API KHÓA/MỞ KHÓA TÀI KHOẢN
+    const handleToggleStatus = async (userId: number | undefined) => {
+        if (!userId) return;
+        try {
+            await api.patch(`/api/users/${userId}/toggle-status`);
+            fetchUsers(); // Cập nhật lại bảng ngay sau khi đổi trạng thái thành công
+        } catch (error: any) {
+            alert('Lỗi: ' + (error.response?.data?.message || 'Không thể thay đổi trạng thái'));
+        }
+    };
+
+    // XỬ LÝ IMPORT CSV (Tạm thời Frontend - Để Backend hỗ trợ Bulk API sau)
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -148,14 +189,24 @@ export const UserManagementPage = () => {
     const handleSaveCSV = async () => {
         if (csvData.length === 0) return alert('Chưa có dữ liệu');
         setLoading(true);
-        setTimeout(() => {
-            alert(`Đã import thành công ${csvData.length} ${importType === 'STUDENT' ? 'Sinh viên' : 'Cán bộ'}!`);
-            setCsvData([]);
-            setFileName('');
-            setLoading(false);
-            setListFilter(importType);
-            setActiveTab('list');
-        }, 1000);
+
+        // Gọi API POST cho từng dòng (Nên tối ưu bằng Bulk API ở Backend sau này)
+        let successCount = 0;
+        for (const user of csvData) {
+            try {
+                await api.post('/api/users', { ...user, password: user.password });
+                successCount++;
+            } catch (err) {
+                console.error(`Lỗi import user ${user.email}:`, err);
+            }
+        }
+
+        alert(`Đã import thành công ${successCount}/${csvData.length} tài khoản!`);
+        setCsvData([]);
+        setFileName('');
+        setLoading(false);
+        setListFilter(importType);
+        setActiveTab('list');
     };
 
     return (
@@ -218,18 +269,22 @@ export const UserManagementPage = () => {
                                         {user.studentId && <span style={{fontSize: '0.85rem', color: '#64748b'}}>Mã SV: {user.studentId}</span>}
                                         {user.department && <span style={{fontSize: '0.85rem', color: '#64748b'}}>Phòng: {user.department}</span>}
                                     </td>
-                                    <td><span className={`role-badge role-${user.role.toLowerCase()}`}>{user.role}</span></td>
+                                    <td><span className={`role-badge role-${user.role?.toLowerCase()}`}>{user.role}</span></td>
                                     <td>
-                                        {user.status === 'ACTIVE' ? <span className="status-badge status-active">Đang hoạt động</span> : <span className="status-badge status-locked">Bị khóa</span>}
+                                        {user.isActive ? <span className="status-badge status-active">Đang hoạt động</span> : <span className="status-badge status-locked">Bị khóa</span>}
                                     </td>
 
-                                    {/* CỘT HÀNH ĐỘNG ĐÃ ĐƯỢC THÊM LẠI */}
                                     <td style={{textAlign: 'center'}}>
                                         <button className="action-btn" title="Chỉnh sửa">
                                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                         </button>
-                                        <button className="action-btn danger" title={user.status === 'ACTIVE' ? 'Khóa tài khoản' : 'Mở khóa'}>
-                                            {user.status === 'ACTIVE' ? (
+                                        {/* Nút Khóa / Mở khóa tích hợp API */}
+                                        <button
+                                            className="action-btn danger"
+                                            title={user.isActive ? 'Khóa tài khoản' : 'Mở khóa'}
+                                            onClick={() => handleToggleStatus(user.id)}
+                                        >
+                                            {user.isActive ? (
                                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                                             ) : (
                                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>
@@ -289,7 +344,7 @@ export const UserManagementPage = () => {
                     </div>
                     <button className="btn-primary" onClick={handleSaveManual} disabled={loading}>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-                        {loading ? 'Đang tạo...' : 'Tạo tài khoản'}
+                        {loading ? 'Đang xử lý...' : 'Tạo tài khoản'}
                     </button>
                 </div>
             )}
