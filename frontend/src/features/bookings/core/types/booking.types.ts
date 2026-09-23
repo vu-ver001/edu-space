@@ -61,3 +61,19 @@ export interface CreateBookingPayload {
   tableId?: number;
   selectedSeats?: string[];
 }
+
+export interface BulkBookingFailureItem {
+  bookingId: number;
+  bookingCode?: string;
+  errorCode?: string;
+  errorMessage?: string;
+}
+
+export interface BulkBookingOperationResponse {
+  totalRequested: number;
+  successCount: number;
+  failureCount: number;
+  successfulBookings: Booking[];
+  failedBookings: BulkBookingFailureItem[];
+}
+

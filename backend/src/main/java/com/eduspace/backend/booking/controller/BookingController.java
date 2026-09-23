@@ -7,10 +7,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
+import com.eduspace.backend.booking.dto.request.BulkApproveBookingRequest;
+import com.eduspace.backend.booking.dto.request.BulkRejectBookingRequest;
 import com.eduspace.backend.booking.dto.request.CreateBookingRequest;
 import com.eduspace.backend.booking.dto.request.RejectBookingRequest;
 import com.eduspace.backend.booking.dto.response.BookingAuditLogResponse;
 import com.eduspace.backend.booking.dto.response.BookingResponse;
+import com.eduspace.backend.booking.dto.response.BulkBookingOperationResponse;
 import com.eduspace.backend.booking.entity.BookingStatus;
 import com.eduspace.backend.booking.service.BookingService;
 import com.eduspace.backend.auth.security.SecurityUtils;
@@ -98,6 +101,31 @@ public class BookingController {
             @Valid @RequestBody RejectBookingRequest request) {
         String currentUserEmail = resolveCurrentUserEmail();
         return ResponseEntity.ok(bookingService.rejectBooking(id, currentUserEmail, request.getRejectReason()));
+    }
+
+    /**
+     * Duyệt booking hàng loạt (Staff/Admin):
+     * POST /api/bookings/bulk-approve
+     */
+    @PostMapping("/bulk-approve")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")
+    public ResponseEntity<BulkBookingOperationResponse> bulkApproveBookings(
+            @Valid @RequestBody BulkApproveBookingRequest request) {
+        String currentUserEmail = resolveCurrentUserEmail();
+        return ResponseEntity.ok(bookingService.bulkApproveBookings(request.getBookingIds(), currentUserEmail));
+    }
+
+    /**
+     * Từ chối booking hàng loạt (Staff/Admin bắt buộc nhập lý do):
+     * POST /api/bookings/bulk-reject
+     */
+    @PostMapping("/bulk-reject")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")
+    public ResponseEntity<BulkBookingOperationResponse> bulkRejectBookings(
+            @Valid @RequestBody BulkRejectBookingRequest request) {
+        String currentUserEmail = resolveCurrentUserEmail();
+        return ResponseEntity.ok(bookingService.bulkRejectBookings(
+                request.getBookingIds(), currentUserEmail, request.getRejectReason()));
     }
 
     /**
