@@ -8,6 +8,7 @@ import com.eduspace.backend.booking.dto.request.SearchSpaceFilter;
 import com.eduspace.backend.booking.dto.response.AvailabilityResponse;
 import com.eduspace.backend.booking.dto.response.BookingAuditLogResponse;
 import com.eduspace.backend.booking.dto.response.BookingResponse;
+import com.eduspace.backend.booking.dto.response.BulkBookingOperationResponse;
 import com.eduspace.backend.booking.dto.response.SpaceResponse;
 import com.eduspace.backend.booking.entity.AuditAction;
 import com.eduspace.backend.booking.entity.Booking;
@@ -643,6 +644,69 @@ class BookingCoreLogicTest {
                     bookingService.getBookingById(bookingId, otherStudent.getEmail())
             );
             assertEquals("BOOKING_FORBIDDEN", ex.getCode());
+        }
+
+        @Test
+        @DisplayName("3.7. Staff duyệt hàng loạt: đơn hợp lệ thành công, đơn lỗi báo chi tiết")
+        void testBulkApproveBookings() {
+            Long b1 = 51L;
+            Long b2 = 52L;
+
+            Booking pending1 = Booking.builder()
+                    .id(b1)
+                    .studentId(student.getId())
+                    .spaceId(2L)
+                    .status(BookingStatus.PENDING_APPROVAL)
+                    .startTime(baseTime.plusHours(1))
+                    .endTime(baseTime.plusHours(3))
+                    .build();
+
+            Booking confirmed2 = Booking.builder()
+                    .id(b2)
+                    .studentId(student.getId())
+                    .spaceId(2L)
+                    .status(BookingStatus.CONFIRMED)
+                    .startTime(baseTime.plusHours(1))
+                    .endTime(baseTime.plusHours(3))
+                    .build();
+
+            when(bookingRepository.findByIdForUpdate(b1)).thenReturn(Optional.of(pending1));
+            when(bookingRepository.findByIdForUpdate(b2)).thenReturn(Optional.of(confirmed2));
+
+            BulkBookingOperationResponse res = bookingService.bulkApproveBookings(List.of(b1, b2), staff.getEmail());
+
+            assertEquals(2, res.getTotalRequested());
+            assertEquals(1, res.getSuccessCount());
+            assertEquals(1, res.getFailureCount());
+            assertEquals(1, res.getSuccessfulBookings().size());
+            assertEquals(1, res.getFailedBookings().size());
+            assertEquals(b2, res.getFailedBookings().get(0).getBookingId());
+            assertEquals("INVALID_STATUS_FOR_APPROVAL", res.getFailedBookings().get(0).getErrorCode());
+        }
+
+        @Test
+        @DisplayName("3.8. Staff từ chối hàng loạt: cập nhật REJECTED và lưu lý do từ chối")
+        void testBulkRejectBookings() {
+            Long b1 = 61L;
+
+            Booking pending1 = Booking.builder()
+                    .id(b1)
+                    .studentId(student.getId())
+                    .spaceId(2L)
+                    .status(BookingStatus.PENDING_APPROVAL)
+                    .startTime(baseTime.plusHours(1))
+                    .endTime(baseTime.plusHours(3))
+                    .build();
+
+            when(bookingRepository.findByIdForUpdate(b1)).thenReturn(Optional.of(pending1));
+
+            BulkBookingOperationResponse res = bookingService.bulkRejectBookings(List.of(b1), staff.getEmail(), "Phòng quá tải");
+
+            assertEquals(1, res.getTotalRequested());
+            assertEquals(1, res.getSuccessCount());
+            assertEquals(0, res.getFailureCount());
+            assertEquals(BookingStatus.REJECTED, res.getSuccessfulBookings().get(0).getStatus());
+            assertEquals("Phòng quá tải", res.getSuccessfulBookings().get(0).getRejectReason());
         }
     }
 
