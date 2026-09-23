@@ -12,7 +12,6 @@ public class UserCreateRequest {
     @Email(message = "Email không đúng định dạng")
     private String email;
 
-    @NotBlank(message = "Mật khẩu không được để trống")
     private String password;
 
     @NotBlank(message = "Họ tên không được để trống")
@@ -20,4 +19,9 @@ public class UserCreateRequest {
 
     @NotNull(message = "Vai trò không được để trống")
     private Role role;
+
+    private String username;
+    private String dob;
+    private String studentId;
+    private String department;
 }

@@ -19,15 +19,18 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    // Chuyển đổi Entity sang DTO
     private UserResponse mapToResponse(User user) {
-        UserResponse response = new UserResponse();
-        response.setId(user.getId());
-        response.setEmail(user.getEmail());
-        response.setFullName(user.getFullName());
-        response.setRole(user.getRole());
-        response.setActive(user.isActive());
-        return response;
+        return UserResponse.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .role(user.getRole())
+                .dob(user.getDob())
+                .studentId(user.getStudentId())
+                .department(user.getDepartment())
+                .active(user.isActive())
+                .build();
     }
 
     // 1. Lấy profile cá nhân
@@ -47,15 +50,30 @@ public class UserService {
     // 3. [ADMIN] Tạo tài khoản mới
     public UserResponse createUser(UserCreateRequest request) {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-            throw new RuntimeException("Email đã tồn tại trong hệ thống"); // Sẽ được GlobalExceptionHandler bắt nếu cấu hình thêm
+            throw new RuntimeException("Email đã tồn tại trong hệ thống");
         }
 
-        User user = new User();
-        user.setEmail(request.getEmail());
-        user.setPassword(passwordEncoder.encode(request.getPassword())); // Mã hóa mật khẩu
-        user.setFullName(request.getFullName());
-        user.setRole(request.getRole());
-        user.setActive(true);
+        // Xử lý tạo mật khẩu tự động nếu Frontend không gửi
+        String rawPassword = request.getPassword();
+        if (rawPassword == null || rawPassword.trim().isEmpty()) {
+            if (request.getDob() != null && !request.getDob().isEmpty()) {
+                rawPassword = request.getDob().replaceAll("[-/]", ""); // Lấy ngày sinh bỏ dấu
+            } else {
+                rawPassword = "123456"; // Mặc định cuối cùng
+            }
+        }
+
+        // Dùng Builder tạo User mới (Đã có thêm dob, studentId, department)
+        User user = User.builder()
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(rawPassword)) // Mã hóa ngay lập tức
+                .fullName(request.getFullName())
+                .role(request.getRole())
+                .dob(request.getDob())
+                .studentId(request.getStudentId())
+                .department(request.getDepartment())
+                .active(true)
+                .build();
 
         User savedUser = userRepository.save(user);
         return mapToResponse(savedUser);
