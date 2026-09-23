@@ -5,6 +5,12 @@
    Màu chủ đạo: Trắng Tinh Khôi + Xanh Dương Pastel Cao Cấp (Porcelain White & Royal/Pastel Blue)
    ======================================================== */
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 :root {
   /* Bảng màu chuẩn giao diện nội bộ */
   --portal-blue-primary: #2563EB;
@@ -458,12 +464,19 @@ button, input, select, textarea {
   box-shadow: 0 2px 6px rgba(29, 114, 254, 0.3);
 }
 
-/* 1.3. Content Canvas */
+/* 1.3. Content Canvas - Tự động co giãn mượt mà */
 .portal-content-canvas {
-  padding: 12px 28px 18px;
-  max-width: 1340px;
+  padding: 16px 28px 32px;
+  max-width: 1600px;
   width: 100%;
-  margin: 0;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.search-spaces-page,
+.space-detail-page {
+  width: 100%;
+  max-width: 100%;
   box-sizing: border-box;
 }
 
@@ -492,20 +505,49 @@ button, input, select, textarea {
   display: grid;
   gap: 16px;
   margin-bottom: 18px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .internal-form-row.four-cols {
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .internal-form-row.two-cols {
-  grid-template-columns: 1fr 1.6fr;
-  gap: 24px;
+  grid-template-columns: minmax(220px, 1fr) minmax(320px, 2fr);
+  gap: 20px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 900px) {
+  .internal-form-row.four-cols {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .internal-form-row.two-cols {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 560px) {
+  .internal-form-row.four-cols {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
 }
 
 .internal-field {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .internal-label {
@@ -520,14 +562,15 @@ button, input, select, textarea {
   width: 100%;
   height: 42px;
   background: #FFFFFF;
-  border: 1.5px solid var(--portal-border);
-  border-radius: var(--portal-radius-sm);
+  border: 1.5px solid #CBD5E1;
+  border-radius: 8px;
   padding: 0 14px;
   font-size: 0.925rem;
   color: #0F172A;
   font-family: inherit;
   outline: none;
-  transition: var(--transition);
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .internal-input:focus,
@@ -711,6 +754,9 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+  width: 100%;
 }
 
 .results-info-group {
@@ -1806,27 +1852,27 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   font-weight: 800;
 }
 
-/* 3-Column Grid matching Image 1 */
+/* Auto-scaling Fluid Grid: Tự động co giãn mượt mà nhưng LUÔN giữ đúng 3 phòng trên 1 dòng */
 .rooms-grid-v1 {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 24px;
+  gap: 20px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-@media (max-width: 1100px) {
-  .rooms-grid-v1 {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 720px) {
+@media (max-width: 768px) {
   .rooms-grid-v1 {
     grid-template-columns: 1fr;
+    gap: 16px;
   }
 }
 
 /* Room Card V1 (Ảnh 1) */
 .room-card-v1 {
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
   background: #FFFFFF;
   border: 1px solid #E2E8F0;
   border-radius: 14px;
@@ -2028,17 +2074,20 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   transform: translateX(-3px);
 }
 
-/* 2-Column layout: Cột trái ảnh rộng hơn (58%), Cột phải form đặt chỗ hẹp gọn (42%) theo yêu cầu */
+/* 2-Column layout tự động co giãn theo tỷ lệ vàng, không tràn viền */
 .space-detail-layout {
   display: grid;
-  grid-template-columns: 58% 42%;
-  gap: 20px;
+  grid-template-columns: minmax(0, 1.35fr) minmax(340px, 1fr);
+  gap: 24px;
   align-items: start;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-@media (max-width: 992px) {
+@media (max-width: 1080px) {
   .space-detail-layout {
     grid-template-columns: 1fr;
+    gap: 20px;
   }
 }
 
@@ -2115,12 +2164,20 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   margin-bottom: 12px;
 }
 
-/* Thông số kỹ thuật dạng Metric Cards cao cấp, to rõ, đẹp mắt */
+/* Thông số kỹ thuật dạng Metric Cards cao cấp: Bố cục 2 trên 2 dưới */
 .specs-compact-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-bottom: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 500px) {
+  .specs-compact-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .spec-compact-item {
@@ -2142,17 +2199,23 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
 }
 
 .spec-compact-icon {
-  font-size: 18px;
+  font-size: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 9px;
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
   background: #FFFFFF;
   border: 1px solid #E2E8F0;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
   flex-shrink: 0;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.spec-compact-item:hover .spec-compact-icon {
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.1);
+  transform: scale(1.05);
 }
 
 /* Tint nhẹ nhàng theo từng thông số: 1. Địa điểm (Đỏ hồng), 2. Sức chứa (Xanh dương), 3. Phê duyệt (Vàng ấm), 4. Mô hình (Tím pastel) */
@@ -2274,7 +2337,10 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
 .form-field-group {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .form-field-group .form-label {
@@ -2286,37 +2352,42 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
 .form-time-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 14px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .form-control-input,
 .form-control-select {
   width: 100%;
-  height: 36px;
+  height: 38px;
   background: #F8FAFD;
-  border: 1.5px solid #E2E8F0;
+  border: 1.5px solid #CBD5E1;
   border-radius: 8px;
-  padding: 0 10px;
-  font-size: 0.85rem;
+  padding: 0 12px;
+  font-size: 0.875rem;
   color: #0F172A;
   outline: none;
   font-family: inherit;
+  box-sizing: border-box;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .form-control-textarea {
   width: 100%;
   background: #F8FAFD;
-  border: 1.5px solid #E2E8F0;
+  border: 1.5px solid #CBD5E1;
   border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 0.85rem;
+  padding: 10px 12px;
+  font-size: 0.875rem;
   color: #0F172A;
   outline: none;
   font-family: inherit;
-  resize: none;
-  min-height: 64px;
-  max-height: 72px;
+  resize: vertical;
+  min-height: 68px;
+  max-height: 100px;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .form-control-input:focus,

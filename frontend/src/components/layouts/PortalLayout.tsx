@@ -52,8 +52,8 @@ export const PortalLayout = () => {
     }
     return [
       { to: STUDENT_BASE, label: uiSettings.stuHomeLabel || 'Trang chủ', icon: uiSettings.stuHomeIcon || '🏠' },
-      { to: '/spaces', label: uiSettings.stuSpaceLabel || 'Tìm & Đặt phòng', icon: uiSettings.stuSpaceIcon || '🔍' },
-      { to: '/my-bookings', label: 'Lịch đặt của tôi', icon: '📅' },
+      { to: '/student/spaces', label: uiSettings.stuSpaceLabel || 'Tìm & Đặt phòng', icon: uiSettings.stuSpaceIcon || '🔍' },
+      { to: '/student/my-bookings', label: 'Lịch đặt của tôi', icon: '📅' },
       { to: '/checkin', label: 'Tự Check-in', icon: '📍' },
       { to: '/waitlist', label: 'Danh sách chờ', icon: '⏳' }
     ];

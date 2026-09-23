@@ -38,7 +38,7 @@ export const RoomCard: React.FC<Props> = ({ space, searchParams }) => {
     if (searchParams?.participantCount) params.set('participantCount', String(searchParams.participantCount));
     
     const queryString = params.toString();
-    navigate(`/spaces/${space.id}${queryString ? `?${queryString}` : ''}`);
+    navigate(`/student/spaces/${space.id}${queryString ? `?${queryString}` : ''}`);
   };
 
   const bookingMode = space.bookingMode || space.spaceType?.bookingMode || (

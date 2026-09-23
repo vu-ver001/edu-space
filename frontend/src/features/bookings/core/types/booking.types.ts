@@ -10,6 +10,7 @@ export type BookingStatus =
 
 export interface Booking {
   id: number;
+  bookingCode?: string;
   studentId: number;
   studentName: string;
   studentEmail: string;
