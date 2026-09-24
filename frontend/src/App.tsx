@@ -78,8 +78,6 @@ export default function App() {
                 <Route path="/staff" element={<StaffOperationsPageKT />} />
 
                 {/* 2. Module Chính sách */}
-                <Route path="/admin/policy" element={<PolicyManagementPage />} />
-                <Route path="/admin/policy/history" element={<PolicyHistoryPage />} />
 
                 {/* 3. Đăng nhập */}
                 <Route path="/login" element={<LoginPage />} />
@@ -90,7 +88,8 @@ export default function App() {
 
                     {/* ADMIN */}
                     <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
-                        <Route path={`${ADMIN_BASE}/policy`} element={<Placeholder title="Chính sách" owner="Anh" />} />
+                        <Route path={`${ADMIN_BASE}/policy`} element={<PolicyManagementPage />} />
+                        <Route path={`${ADMIN_BASE}/policy/history`} element={<PolicyHistoryPage />} />
                         <Route path={`${ADMIN_BASE}/stats`} element={<Placeholder title="Thống kê" owner="Anh" />} />
                         <Route path={`${ADMIN_BASE}/space-types`} element={<SpaceTypeListPageKT />} />
                         <Route path={`${ADMIN_BASE}/space-types/:id`} element={<SpaceTypeDetailPageKT />} />
@@ -105,8 +104,8 @@ export default function App() {
                         <Route path={`${STAFF_BASE}/equipment`} element={<Placeholder title="Thiết bị" owner="Vũ" />} />
                     </Route>
 
-                    {/* STUDENT */}
-                    <Route element={<ProtectedRoute />}>
+                    {/* STUDENT (Chỉ tài khoản Sinh viên mới có quyền truy cập, sai quyền chuyển hướng 403) */}
+                    <Route element={<ProtectedRoute allowedRoles={['STUDENT']} />}>
                         <Route path={STUDENT_BASE} element={<DevDashboard />} />
                         {/* Phân hệ Student (Khánh Vân) có tiền tố /student */}
                         <Route path="/student/spaces" element={<SearchSpacesPage />} />

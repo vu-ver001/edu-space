@@ -48,6 +48,26 @@ export const FilterBar: React.FC<Props> = ({ onSearch, isLoading, availableCount
 
   const [spaceTypes, setSpaceTypes] = useState<SpaceType[]>([]);
   const [facilities, setFacilities] = useState<Facility[]>([]);
+  const formatTimeHHmm = (timeStr?: string, defaultVal: string = '07:00'): string => {
+    if (!timeStr) return defaultVal;
+    const trimmed = String(timeStr).trim();
+    if (/^\d{1,2}$/.test(trimmed)) {
+      const h = parseInt(trimmed, 10);
+      return `${String(h).padStart(2, '0')}:00`;
+    }
+    if (/^\d{1,2}:\d{2}/.test(trimmed)) {
+      const [h, m] = trimmed.split(':');
+      return `${h.padStart(2, '0')}:${m}`;
+    }
+    return defaultVal;
+  };
+
+  const toMinutes = (timeStr: string): number => {
+    if (!timeStr) return 0;
+    const [h, m] = timeStr.split(':').map(Number);
+    return (h || 0) * 60 + (m || 0);
+  };
+
   const [operatingHours, setOperatingHours] = useState<{ openingHour: string; closingHour: string }>({
     openingHour: '07:00',
     closingHour: '22:00'
@@ -57,10 +77,10 @@ export const FilterBar: React.FC<Props> = ({ onSearch, isLoading, availableCount
     spaceService.getSpaceTypes().then(setSpaceTypes).catch(() => {});
     spaceService.getFacilities().then(setFacilities).catch(() => {});
     spaceService.getOperatingHours().then((res) => {
-      if (res && res.openingHour && res.closingHour) {
+      if (res) {
         setOperatingHours({
-          openingHour: res.openingHour,
-          closingHour: res.closingHour
+          openingHour: formatTimeHHmm(res.openingHour, '07:00'),
+          closingHour: formatTimeHHmm(res.closingHour, '22:00')
         });
       }
     }).catch(() => {});
@@ -82,11 +102,16 @@ export const FilterBar: React.FC<Props> = ({ onSearch, isLoading, availableCount
   };
 
   const handleApplyFilter = () => {
-    if (startTime >= endTime) {
+    const startM = toMinutes(startTime);
+    const endM = toMinutes(endTime);
+    const openM = toMinutes(operatingHours.openingHour);
+    const closeM = toMinutes(operatingHours.closingHour);
+
+    if (startM >= endM) {
       setTimeError(`Giờ bắt đầu (${startTime}) phải trước giờ kết thúc (${endTime}). Vui lòng chọn lại khung giờ.`);
       return;
     }
-    if (startTime < operatingHours.openingHour || endTime > operatingHours.closingHour) {
+    if (startM < openM || endM > closeM) {
       setTimeError(`Không gian học tập chỉ mở cửa từ ${operatingHours.openingHour} đến ${operatingHours.closingHour} hàng ngày.`);
       return;
     }
@@ -136,9 +161,12 @@ export const FilterBar: React.FC<Props> = ({ onSearch, isLoading, availableCount
             onChange={(e) => {
               const val = e.target.value;
               setStartTime(val);
-              if (val >= endTime) {
+              const valM = toMinutes(val);
+              const endM = toMinutes(endTime);
+              const openM = toMinutes(operatingHours.openingHour);
+              if (endTime && valM >= endM) {
                 setTimeError(`Giờ bắt đầu (${val}) phải trước giờ kết thúc (${endTime}). Vui lòng chọn lại khung giờ.`);
-              } else if (val < operatingHours.openingHour) {
+              } else if (valM < openM) {
                 setTimeError(`Giờ bắt đầu phải từ ${operatingHours.openingHour} trở đi (giờ mở cửa tòa nhà).`);
               } else {
                 setTimeError(null);
@@ -159,9 +187,12 @@ export const FilterBar: React.FC<Props> = ({ onSearch, isLoading, availableCount
             onChange={(e) => {
               const val = e.target.value;
               setEndTime(val);
-              if (startTime >= val) {
+              const valM = toMinutes(val);
+              const startM = toMinutes(startTime);
+              const closeM = toMinutes(operatingHours.closingHour);
+              if (startTime && startM >= valM) {
                 setTimeError(`Giờ bắt đầu (${startTime}) phải trước giờ kết thúc (${val}). Vui lòng chọn lại khung giờ.`);
-              } else if (val > operatingHours.closingHour) {
+              } else if (valM > closeM) {
                 setTimeError(`Giờ kết thúc không được vượt quá ${operatingHours.closingHour} (giờ đóng cửa tòa nhà).`);
               } else {
                 setTimeError(null);
