@@ -15,6 +15,7 @@ export type BookingStatus =
 
 export interface PendingBooking {
   id: number;
+  bookingCode?: string;
   spaceId: number;
   spaceName: string;
   spaceTypeName?: string;
@@ -48,6 +49,21 @@ export interface StaffBooking extends PendingBooking {
   canCancel?: boolean;
   canCheckIn?: boolean;
   floor?: string;
+}
+
+export interface BulkBookingFailureItem {
+  bookingId: number;
+  bookingCode?: string;
+  errorCode?: string;
+  errorMessage?: string;
+}
+
+export interface BulkBookingOperationResponse {
+  totalRequested: number;
+  successCount: number;
+  failureCount: number;
+  successfulBookings: StaffBooking[];
+  failedBookings: BulkBookingFailureItem[];
 }
 
 export type TimelineEventType = 'BOOKING' | 'MAINTENANCE';

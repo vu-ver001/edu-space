@@ -87,11 +87,7 @@ const formatDateTime = (value?: string) => {
 };
 
 const bookingCode = (booking: StaffBooking) => {
-  const source = new Date(booking.createdAt || booking.startTime);
-  const datePart = Number.isNaN(source.getTime())
-    ? 'BOOKING'
-    : `${source.getFullYear()}${pad(source.getMonth() + 1)}${pad(source.getDate())}`;
-  return `BK-${datePart}-${String(booking.id).padStart(3, '0')}`;
+  return booking.bookingCode || 'Chưa có mã';
 };
 
 const initials = (name?: string) => {
@@ -248,22 +244,26 @@ export const BookingManagementPageKT = () => {
     setActionLoading(true);
     try {
       if (confirmAction.type === 'bulk-approve') {
-        const results = await Promise.allSettled(
-          confirmAction.bookings.map((booking) => staffApi.approveBooking(booking.id)),
+        const response = await staffApi.bulkApproveBookings(
+          confirmAction.bookings.map((booking) => booking.id),
         );
-        const successIds = confirmAction.bookings
-          .filter((_, index) => results[index].status === 'fulfilled')
-          .map((booking) => booking.id);
-        const failedCount = results.length - successIds.length;
-        const firstFailure = results.find((result) => result.status === 'rejected');
+        const successIds = response.successfulBookings.map((booking) => booking.id);
 
         setSelectedPendingIds((current) => {
           const next = new Set(current);
           successIds.forEach((id) => next.delete(id));
           return next;
         });
-        if (failedCount > 0 && firstFailure?.status === 'rejected') {
-          showToast(getBackendMessage(firstFailure.reason), 'error');
+
+        if (response.failureCount > 0) {
+          const firstFailure = response.failedBookings[0];
+          const failedCode = firstFailure?.bookingCode || `#${firstFailure?.bookingId}`;
+          showToast(
+            `Đã duyệt ${response.successCount}/${response.totalRequested} booking. ${failedCode}: ${firstFailure?.errorMessage || 'Không thể duyệt.'}`,
+            'error',
+          );
+        } else {
+          showToast(`Đã duyệt thành công ${response.successCount} booking.`);
         }
       } else if (confirmAction.type === 'approve') {
         await staffApi.approveBooking(confirmAction.booking.id);
@@ -286,29 +286,43 @@ export const BookingManagementPageKT = () => {
     if (targetBookings.length === 0) return;
     setActionLoading(true);
     try {
-      const results = await Promise.allSettled(
-        targetBookings.map((booking) => staffApi.rejectBooking(booking.id, reason)),
+      if (targetBookings.length === 1) {
+        await staffApi.rejectBooking(targetBookings[0].id, reason);
+        setSelectedPendingIds((current) => {
+          const next = new Set(current);
+          next.delete(targetBookings[0].id);
+          return next;
+        });
+        setRejectingBooking(null);
+        setBulkRejectingBookings([]);
+        await loadData();
+        return;
+      }
+
+      const response = await staffApi.bulkRejectBookings(
+        targetBookings.map((booking) => booking.id),
+        reason,
       );
-      const succeeded = targetBookings.filter((_, index) => results[index].status === 'fulfilled');
-      const failed = targetBookings.filter((_, index) => results[index].status === 'rejected');
-      const firstFailure = results.find((result) => result.status === 'rejected');
+      const successIds = new Set(response.successfulBookings.map((booking) => booking.id));
+      const failedIds = new Set(response.failedBookings.map((booking) => booking.bookingId));
+      const failed = targetBookings.filter((booking) => failedIds.has(booking.id));
 
       setSelectedPendingIds((current) => {
         const next = new Set(current);
-        succeeded.forEach((booking) => next.delete(booking.id));
+        successIds.forEach((id) => next.delete(id));
         return next;
       });
       await loadData();
-      if (failed.length > 0) {
-        setBulkRejectingBookings(failed.length > 1 ? failed : []);
-        setRejectingBooking(failed.length === 1 ? failed[0] : null);
-        throw new Error(firstFailure?.status === 'rejected'
-          ? getBackendMessage(firstFailure.reason)
-          : 'Không nhận được phản hồi từ máy chủ.');
+      if (response.failureCount > 0) {
+        setBulkRejectingBookings(failed);
+        const firstFailure = response.failedBookings[0];
+        const failedCode = firstFailure?.bookingCode || `#${firstFailure?.bookingId}`;
+        throw new Error(`${failedCode}: ${firstFailure?.errorMessage || 'Không thể từ chối booking.'}`);
       }
 
       setRejectingBooking(null);
       setBulkRejectingBookings([]);
+      showToast(`Đã từ chối thành công ${response.successCount} booking.`);
     } finally {
       setActionLoading(false);
     }
