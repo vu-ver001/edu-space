@@ -93,11 +93,15 @@ body {
   color: var(--portal-text-main);
   line-height: 1.5;
   min-height: 100vh;
+  margin: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-button, input, select, textarea {
+button,
+input,
+select,
+textarea {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -2109,7 +2113,8 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
 .space-hero-image-box {
   position: relative;
   width: 100%;
-  height: 205px; /* Cân chỉnh vừa vặn hoàn hảo, triệt tiêu thanh cuộn dọc */
+  height: 205px;
+  /* Cân chỉnh vừa vặn hoàn hảo, triệt tiêu thanh cuộn dọc */
   background: #F1F5F9;
 }
 

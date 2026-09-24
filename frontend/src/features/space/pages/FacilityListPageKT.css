@@ -251,8 +251,10 @@
 }
 
 .facility-search-box {
-  flex: 1;
+  flex: 0 1 520px;
+  width: min(100%, 520px);
   min-width: 280px;
+  margin-left: auto;
   position: relative;
 }
 
@@ -686,4 +688,3 @@
     position: static;
   }
 }
-

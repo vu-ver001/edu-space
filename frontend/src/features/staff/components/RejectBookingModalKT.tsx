@@ -4,6 +4,7 @@ import type { PendingBooking } from '../types/staff';
 interface RejectBookingModalKTProps {
   isOpen: boolean;
   booking: PendingBooking | null;
+  bookingCount?: number;
   isLoading?: boolean;
   onClose: () => void;
   onConfirm: (reason: string) => Promise<void>;
@@ -12,6 +13,7 @@ interface RejectBookingModalKTProps {
 export const RejectBookingModalKT: React.FC<RejectBookingModalKTProps> = ({
   isOpen,
   booking,
+  bookingCount = 1,
   isLoading = false,
   onClose,
   onConfirm,
@@ -20,6 +22,8 @@ export const RejectBookingModalKT: React.FC<RejectBookingModalKTProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   if (!isOpen || !booking) return null;
+
+  const isBulk = bookingCount > 1;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,9 +43,13 @@ export const RejectBookingModalKT: React.FC<RejectBookingModalKTProps> = ({
           <div className="staff-modal-title-group">
             <span style={{ fontSize: '24px' }}>🚫</span>
             <div>
-              <h3 className="staff-modal-title">Từ chối yêu cầu đặt phòng #{booking.id}</h3>
+              <h3 className="staff-modal-title">
+                {isBulk ? `Từ chối ${bookingCount} yêu cầu đặt phòng` : `Từ chối yêu cầu đặt phòng #${booking.id}`}
+              </h3>
               <p className="staff-modal-subtitle">
-                {booking.spaceName} • {booking.studentName} ({booking.studentEmail})
+                {isBulk
+                  ? 'Lý do bên dưới sẽ được áp dụng cho tất cả booking đã chọn.'
+                  : `${booking.spaceName} • ${booking.studentName} (${booking.studentEmail})`}
               </p>
             </div>
           </div>
@@ -59,7 +67,7 @@ export const RejectBookingModalKT: React.FC<RejectBookingModalKTProps> = ({
         <form onSubmit={handleSubmit} className="staff-modal-form" noValidate>
           <div className="staff-form-group">
             <label className="staff-form-label">
-              Lý do từ chối (Bắt buộc theo quy tắc R-20) <span style={{ color: '#dc2626' }}>*</span>
+              Lý do từ chối <span style={{ color: '#dc2626' }}>*</span>
             </label>
             <textarea
               className={`staff-textarea ${error ? 'input-error' : ''}`}

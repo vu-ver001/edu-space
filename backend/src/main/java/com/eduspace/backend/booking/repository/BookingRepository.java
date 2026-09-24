@@ -30,6 +30,8 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     long countByStatusAndCreatedAtBetween(BookingStatus status, LocalDateTime from, LocalDateTime to);
 
+    @Query("SELECT MIN(b.createdAt) FROM Booking b")
+    LocalDateTime findEarliestCreatedAt();
     Optional<Booking> findByBookingCode(String bookingCode);
 
     boolean existsByBookingCode(String bookingCode);
@@ -108,6 +110,13 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     List<Booking> findByStudentIdOrderByStartTimeDesc(Long studentId);
 
     List<Booking> findByStudentIdAndStatusOrderByStartTimeDesc(Long studentId, BookingStatus status);
+
+    /**
+     * Danh sách quản lý dành cho Staff/Admin, mới tạo trước.
+     */
+    List<Booking> findAllByOrderByCreatedAtDesc();
+
+    List<Booking> findByStatusOrderByCreatedAtDesc(BookingStatus status);
 
     /**
      * Lấy các booking PENDING_APPROVAL đã quá giờ bắt đầu mà chưa xử lý (để chuyển EXPIRED).

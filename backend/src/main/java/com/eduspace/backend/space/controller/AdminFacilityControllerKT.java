@@ -3,6 +3,7 @@ package com.eduspace.backend.space.controller;
 import com.eduspace.backend.space.dto.request.FacilityCreateRequestKT;
 import com.eduspace.backend.space.dto.request.FacilityUpdateRequestKT;
 import com.eduspace.backend.space.dto.response.FacilityResponseKT;
+import com.eduspace.backend.space.dto.response.SpaceActionResponseKT;
 import com.eduspace.backend.space.service.FacilityService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -29,22 +30,25 @@ public class AdminFacilityControllerKT {
     }
 
     @PostMapping("/api/admin/facilities")
-    public ResponseEntity<FacilityResponseKT> createFacility(@Valid @RequestBody FacilityCreateRequestKT request) {
+    public ResponseEntity<SpaceActionResponseKT<FacilityResponseKT>> createFacility(
+            @Valid @RequestBody FacilityCreateRequestKT request) {
+        FacilityResponseKT created = facilityService.createFacility(request);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(facilityService.createFacility(request));
+                .body(SpaceActionResponseKT.of("Đã tạo tiện ích thành công.", created));
     }
 
     @PutMapping("/api/admin/facilities/{id}")
-    public ResponseEntity<FacilityResponseKT> updateFacility(
+    public ResponseEntity<SpaceActionResponseKT<FacilityResponseKT>> updateFacility(
             @PathVariable Long id,
             @Valid @RequestBody FacilityUpdateRequestKT request
     ) {
-        return ResponseEntity.ok(facilityService.updateFacility(id, request));
+        FacilityResponseKT updated = facilityService.updateFacility(id, request);
+        return ResponseEntity.ok(SpaceActionResponseKT.of("Đã cập nhật tiện ích thành công.", updated));
     }
 
     @DeleteMapping("/api/admin/facilities/{id}")
-    public ResponseEntity<Void> deleteFacility(@PathVariable Long id) {
+    public ResponseEntity<SpaceActionResponseKT<Void>> deleteFacility(@PathVariable Long id) {
         facilityService.deleteFacility(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(SpaceActionResponseKT.message("Đã xóa tiện ích thành công."));
     }
 }

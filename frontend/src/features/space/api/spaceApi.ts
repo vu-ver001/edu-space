@@ -12,6 +12,7 @@ import type {
   SpaceTableCreateRequest,
   SpaceTableUpdateRequest,
 } from '../types/space';
+import type { SpaceActionResponse } from '../types/api';
 
 export const spaceApi = {
   // Lấy danh sách không gian công khai / bộ lọc
@@ -50,24 +51,25 @@ export const spaceApi = {
   },
 
   // Quản lý chỗ ngồi (Seat) - Admin
-  createSeat: async (spaceId: number, data: SeatCreateRequest): Promise<SpaceSeat> => {
-    const res = await api.post<SpaceSeat>(`/api/admin/spaces/${spaceId}/seats`, data);
+  createSeat: async (spaceId: number, data: SeatCreateRequest): Promise<SpaceActionResponse<SpaceSeat>> => {
+    const res = await api.post<SpaceActionResponse<SpaceSeat>>(`/api/admin/spaces/${spaceId}/seats`, data);
     return res.data;
   },
 
-  bulkCreateSeats: async (spaceId: number, data: SeatBulkCreateRequest | string[]): Promise<SpaceSeat[]> => {
+  bulkCreateSeats: async (spaceId: number, data: SeatBulkCreateRequest | string[]): Promise<SpaceActionResponse<SpaceSeat[]>> => {
     const payload = Array.isArray(data) ? { seatCodes: data } : data;
-    const res = await api.post<SpaceSeat[]>(`/api/admin/spaces/${spaceId}/seats/bulk`, payload);
+    const res = await api.post<SpaceActionResponse<SpaceSeat[]>>(`/api/admin/spaces/${spaceId}/seats/bulk`, payload);
     return res.data;
   },
 
-  updateSeat: async (seatId: number, data: SeatUpdateRequest): Promise<SpaceSeat> => {
-    const res = await api.put<SpaceSeat>(`/api/admin/seats/${seatId}`, data);
+  updateSeat: async (seatId: number, data: SeatUpdateRequest): Promise<SpaceActionResponse<SpaceSeat>> => {
+    const res = await api.put<SpaceActionResponse<SpaceSeat>>(`/api/admin/seats/${seatId}`, data);
     return res.data;
   },
 
-  deleteSeat: async (seatId: number): Promise<void> => {
-    await api.delete(`/api/admin/seats/${seatId}`);
+  deleteSeat: async (seatId: number): Promise<SpaceActionResponse<null>> => {
+    const res = await api.delete<SpaceActionResponse<null>>(`/api/admin/seats/${seatId}`);
+    return res.data;
   },
 
   // Danh sách bàn của một không gian PER_TABLE
@@ -77,33 +79,34 @@ export const spaceApi = {
   },
 
   // Quản lý bàn (Table) - Admin
-  createTable: async (spaceId: number, data: SpaceTableCreateRequest): Promise<SpaceTable> => {
-    const res = await api.post<SpaceTable>(`/api/admin/spaces/${spaceId}/tables`, data);
+  createTable: async (spaceId: number, data: SpaceTableCreateRequest): Promise<SpaceActionResponse<SpaceTable>> => {
+    const res = await api.post<SpaceActionResponse<SpaceTable>>(`/api/admin/spaces/${spaceId}/tables`, data);
     return res.data;
   },
 
-  updateTable: async (tableId: number, data: SpaceTableUpdateRequest): Promise<SpaceTable> => {
-    const res = await api.put<SpaceTable>(`/api/admin/tables/${tableId}`, data);
+  updateTable: async (tableId: number, data: SpaceTableUpdateRequest): Promise<SpaceActionResponse<SpaceTable>> => {
+    const res = await api.put<SpaceActionResponse<SpaceTable>>(`/api/admin/tables/${tableId}`, data);
     return res.data;
   },
 
-  deleteTable: async (tableId: number): Promise<void> => {
-    await api.delete(`/api/admin/tables/${tableId}`);
+  deleteTable: async (tableId: number): Promise<SpaceActionResponse<null>> => {
+    const res = await api.delete<SpaceActionResponse<null>>(`/api/admin/tables/${tableId}`);
+    return res.data;
   },
 
   // Admin APIs
-  createSpace: async (data: SpaceCreateRequest): Promise<Space> => {
-    const res = await api.post<Space>('/api/admin/spaces', data);
+  createSpace: async (data: SpaceCreateRequest): Promise<SpaceActionResponse<Space>> => {
+    const res = await api.post<SpaceActionResponse<Space>>('/api/admin/spaces', data);
     return res.data;
   },
 
-  updateSpace: async (id: number, data: SpaceUpdateRequest): Promise<Space> => {
-    const res = await api.put<Space>(`/api/admin/spaces/${id}`, data);
+  updateSpace: async (id: number, data: SpaceUpdateRequest): Promise<SpaceActionResponse<Space>> => {
+    const res = await api.put<SpaceActionResponse<Space>>(`/api/admin/spaces/${id}`, data);
     return res.data;
   },
 
-  deleteSpace: async (id: number): Promise<void> => {
-    await api.delete(`/api/admin/spaces/${id}`);
+  deleteSpace: async (id: number): Promise<SpaceActionResponse<null>> => {
+    const res = await api.delete<SpaceActionResponse<null>>(`/api/admin/spaces/${id}`);
+    return res.data;
   }
 };
-
