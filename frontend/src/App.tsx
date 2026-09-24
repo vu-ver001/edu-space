@@ -108,8 +108,8 @@ export default function App() {
                         <Route path={`${STAFF_BASE}/equipment`} element={<Placeholder title="Thiết bị" owner="Vũ" />} />
                     </Route>
 
-                    {/* STUDENT */}
-                    <Route element={<ProtectedRoute />}>
+                    {/* STUDENT (Chỉ tài khoản Sinh viên mới có quyền truy cập, sai quyền chuyển hướng 403) */}
+                    <Route element={<ProtectedRoute allowedRoles={['STUDENT']} />}>
                         <Route path={STUDENT_BASE} element={<DevDashboard />} />
                         {/* Phân hệ Student (Khánh Vân) có tiền tố /student */}
                         <Route path="/student/spaces" element={<SearchSpacesPage />} />

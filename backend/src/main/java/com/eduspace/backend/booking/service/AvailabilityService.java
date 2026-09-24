@@ -67,6 +67,9 @@ public class AvailabilityService {
     private FacilityRepository facilityRepository;
 
     @Autowired(required = false)
+    private com.eduspace.backend.space.repository.SpaceTableRepository spaceTableRepository;
+
+    @Autowired(required = false)
     private java.time.Clock clock = java.time.Clock.systemDefaultZone();
 
     public void setClock(java.time.Clock clock) {
@@ -597,12 +600,10 @@ public class AvailabilityService {
         LocalTime closeTime = LocalTime.of(22, 0);
         try {
             var policy = policyService.getCurrentPolicy();
-            if (policy.getOpeningHour() != null && !policy.getOpeningHour().isBlank()) {
-                openTime = LocalTime.parse(policy.getOpeningHour());
-            }
-            if (policy.getClosingHour() != null && !policy.getClosingHour().isBlank()) {
-                closeTime = LocalTime.parse(policy.getClosingHour());
-            }
+            String op = normalizeTimeStr(policy.getOpeningHour(), "07:00");
+            String cl = normalizeTimeStr(policy.getClosingHour(), "22:00");
+            openTime = LocalTime.parse(op);
+            closeTime = LocalTime.parse(cl);
         } catch (Exception ignored) {
             int openHour = (int) getPolicyLong("OPENING_HOUR", 7L);
             int closeHour = (int) getPolicyLong("CLOSING_HOUR", 22L);
@@ -659,11 +660,18 @@ public class AvailabilityService {
             return generateDefaultSeatCodes(capacity);
         }
 
-        return overlapping.stream()
-                .flatMap(b -> b.getSelectedSeatsList().stream())
-                .distinct()
-                .sorted()
-                .collect(Collectors.toList());
+        List<String> occupied = new ArrayList<>();
+        for (Booking b : overlapping) {
+            occupied.addAll(b.getSelectedSeatsList());
+            if (b.getTableId() != null && spaceTableRepository != null) {
+                try {
+                    spaceTableRepository.findById(b.getTableId()).ifPresent(t -> {
+                        if (t.getTableCode() != null) occupied.add(t.getTableCode());
+                    });
+                } catch (Exception ignored) {}
+            }
+        }
+        return occupied.stream().distinct().sorted().collect(Collectors.toList());
     }
 
     public static List<String> generateDefaultSeatCodes(int capacity) {
@@ -697,4 +705,47 @@ public class AvailabilityService {
         }
         return null;
     }
+
+    public String normalizeTimeStr(String hourStr, String defaultHour) {
+        if (hourStr == null || hourStr.isBlank()) {
+            return defaultHour;
+        }
+        String trimmed = hourStr.trim();
+        try {
+            if (trimmed.matches("^\\d{1,2}$")) {
+                int h = Integer.parseInt(trimmed);
+                if (h == 24) return "23:59";
+                return String.format("%02d:00", h);
+            }
+            if (trimmed.matches("^\\d{1,2}:\\d{2}$")) {
+                String[] parts = trimmed.split(":");
+                int h = Integer.parseInt(parts[0]);
+                if (h == 24) return "23:59";
+                return String.format("%02d:%s", h, parts[1]);
+            }
+            if (trimmed.matches("^\\d{1,2}:\\d{2}:\\d{2}$")) {
+                String[] parts = trimmed.split(":");
+                int h = Integer.parseInt(parts[0]);
+                if (h == 24) return "23:59";
+                return String.format("%02d:%s", h, parts[1]);
+            }
+        } catch (Exception e) {
+            return defaultHour;
+        }
+        return defaultHour;
+    }
+
+    /**
+     * Lấy thông tin thời gian mở/đóng cửa của toàn bộ tòa nhà/hệ thống và các hạn mức đặt chỗ từ CSDL chính sách (Ngọc Anh).
+     * Chuẩn hóa luôn định dạng HH:mm (ví dụ 07:00, 22:00) để khớp 100% chuẩn HTML5 time input và logic frontend.
+     */
+    public com.eduspace.backend.policy.dto.response.PolicyResponse getOperatingHours() {
+        var policy = policyService.getCurrentPolicy();
+        if (policy != null) {
+            policy.setOpeningHour(normalizeTimeStr(policy.getOpeningHour(), "07:00"));
+            policy.setClosingHour(normalizeTimeStr(policy.getClosingHour(), "22:00"));
+        }
+        return policy;
+    }
 }
+
