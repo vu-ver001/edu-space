@@ -164,7 +164,7 @@ SET @table_01 := (SELECT id FROM space_tables WHERE space_id = @space_table AND 
 SET @table_02 := (SELECT id FROM space_tables WHERE space_id = @space_table AND table_code = 'T02' LIMIT 1);
 
 -- --------------------------------------------------------------------------
--- 6. Liên kết tiện ích và hình ảnh
+-- 6. Liên kết tiện ích
 -- --------------------------------------------------------------------------
 INSERT IGNORE INTO space_facilities (space_id, facility_id) VALUES
 (@space_whole, @facility_wifi),
@@ -174,39 +174,6 @@ INSERT IGNORE INTO space_facilities (space_id, facility_id) VALUES
 (@space_table, @facility_wifi),
 (@space_table, @facility_camera),
 (@space_table, @facility_board);
-
-INSERT INTO space_images
-    (space_id, image_url, is_primary, sort_order, created_at, updated_at)
-SELECT @space_whole,
-       'https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=1200&q=80',
-       1, 0, NOW(), NOW()
-WHERE NOT EXISTS (
-    SELECT 1 FROM space_images
-    WHERE space_id = @space_whole
-      AND image_url LIKE 'https://images.unsplash.com/photo-1497366811353-6870744d04b2%'
-);
-
-INSERT INTO space_images
-    (space_id, image_url, is_primary, sort_order, created_at, updated_at)
-SELECT @space_seat,
-       'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&w=1200&q=80',
-       1, 0, NOW(), NOW()
-WHERE NOT EXISTS (
-    SELECT 1 FROM space_images
-    WHERE space_id = @space_seat
-      AND image_url LIKE 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f%'
-);
-
-INSERT INTO space_images
-    (space_id, image_url, is_primary, sort_order, created_at, updated_at)
-SELECT @space_table,
-       'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1200&q=80',
-       1, 0, NOW(), NOW()
-WHERE NOT EXISTS (
-    SELECT 1 FROM space_images
-    WHERE space_id = @space_table
-      AND image_url LIKE 'https://images.unsplash.com/photo-1497366754035-f200968a6e72%'
-);
 
 -- --------------------------------------------------------------------------
 -- 7. Chính sách booking mà backend hiện tại đang đọc
@@ -428,8 +395,6 @@ UNION ALL
 SELECT 'space_tables', COUNT(*) FROM space_tables WHERE space_id = @space_table AND table_code LIKE 'T%'
 UNION ALL
 SELECT 'space_facilities', COUNT(*) FROM space_facilities WHERE space_id IN (@space_whole, @space_seat, @space_table)
-UNION ALL
-SELECT 'space_images', COUNT(*) FROM space_images WHERE space_id IN (@space_whole, @space_seat, @space_table)
 UNION ALL
 SELECT 'booking_policies', COUNT(*) FROM booking_policies WHERE policy_key IN
     ('DAILY_BOOKING_QUOTA', 'MAX_DURATION_MINUTES', 'RATE_LIMIT_HOURLY',

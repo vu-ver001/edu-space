@@ -78,6 +78,18 @@ export interface SpaceImage {
   updatedAt?: string;
 }
 
+/** Ảnh đang được chỉnh sửa trong form quản lý không gian. */
+export interface SpaceFormImage {
+  id: string;
+  type: 'file' | 'url' | 'existing';
+  spaceImageId?: number;
+  file?: File;
+  url?: string;
+  previewUrl: string;
+  isPrimary: boolean;
+  sortOrder: number;
+}
+
 export interface Space {
   id: number;
   name: string;
@@ -131,5 +143,4 @@ export interface SpaceUpdateRequest {
   facilityIds?: number[];
   imageUrl?: string;
 }
-
 

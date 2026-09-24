@@ -1,0 +1,234 @@
+.booking-bulk-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1450;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.56);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.booking-bulk-modal {
+  width: min(820px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow: hidden;
+  border: 1px solid #dbe3ed;
+  border-radius: 18px;
+  background: #fff;
+  color: #17233e;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.26);
+  display: flex;
+  flex-direction: column;
+}
+
+.booking-bulk-modal-header {
+  padding: 22px 28px 17px;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 34px;
+  align-items: start;
+  gap: 15px;
+}
+
+.booking-bulk-modal-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #1677ea;
+  color: #fff;
+  box-shadow: 0 5px 14px rgba(22, 119, 234, 0.25);
+}
+
+.booking-bulk-modal.reject .booking-bulk-modal-icon {
+  background: #e63748;
+  box-shadow: 0 5px 14px rgba(230, 55, 72, 0.22);
+}
+
+.booking-bulk-modal-header h2 {
+  margin: 2px 0 0;
+  color: #111c35;
+  font-size: 22px;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+
+.booking-bulk-modal-header p {
+  margin: 8px 0 0;
+  color: #62708a;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.booking-bulk-modal-header > button {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #4b5870;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.booking-bulk-modal-header > button:hover { background: #f1f5f9; }
+.booking-bulk-modal-header > button:disabled { opacity: 0.5; cursor: wait; }
+
+.booking-bulk-modal-body {
+  min-height: 0;
+  padding: 8px 28px 20px;
+  overflow-y: auto;
+}
+
+.booking-bulk-table-wrap {
+  max-height: 285px;
+  overflow: auto;
+  border: 1px solid #dbe3ed;
+  border-radius: 12px;
+}
+
+.booking-bulk-table {
+  width: 100%;
+  min-width: 650px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 13px;
+}
+
+.booking-bulk-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 12px 15px;
+  border-bottom: 1px solid #dce4ee;
+  border-right: 1px solid #e8edf3;
+  background: #f7f9fc;
+  color: #34415d;
+  text-align: left;
+  font-weight: 700;
+}
+
+.booking-bulk-table td {
+  padding: 11px 15px;
+  border-bottom: 1px solid #e8edf3;
+  border-right: 1px solid #eef2f6;
+  color: #394761;
+  vertical-align: middle;
+}
+
+.booking-bulk-table th:last-child,
+.booking-bulk-table td:last-child { border-right: 0; }
+.booking-bulk-table tbody tr:last-child td { border-bottom: 0; }
+.booking-bulk-table th:nth-child(1) { width: 21%; }
+.booking-bulk-table th:nth-child(2) { width: 26%; }
+.booking-bulk-table th:nth-child(3) { width: 25%; }
+.booking-bulk-table th:nth-child(4) { width: 28%; }
+.booking-bulk-table td strong,
+.booking-bulk-table td small,
+.booking-bulk-table td span { display: block; }
+.booking-bulk-table td strong { color: #1c2943; }
+.booking-bulk-table td small { margin-bottom: 2px; color: #7a879e; font-size: 11.5px; }
+
+.booking-bulk-reason {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.booking-bulk-reason > span { color: #27344c; font-size: 13px; font-weight: 700; }
+.booking-bulk-reason em { color: #dc2638; font-style: normal; }
+.booking-bulk-reason textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 82px;
+  padding: 11px 13px;
+  resize: vertical;
+  border: 1px solid #ef9aa3;
+  border-radius: 9px;
+  outline: 0;
+  background: #fffafa;
+  color: #26334c;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.booking-bulk-reason textarea:focus { border-color: #ec5260; box-shadow: 0 0 0 3px rgba(236, 82, 96, 0.11); }
+.booking-bulk-reason textarea.invalid { border-color: #dc2638; }
+.booking-bulk-reason > small { align-self: flex-end; color: #8490a5; font-size: 11px; }
+
+.booking-bulk-modal-error {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid #fecaca;
+  border-radius: 9px;
+  background: #fff5f5;
+  color: #b4232d;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.booking-bulk-modal-note {
+  margin-top: 16px;
+  padding: 13px 16px;
+  border: 1px solid #d9eaff;
+  border-radius: 11px;
+  background: #eef6ff;
+  color: #36587f;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 11px;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.booking-bulk-modal.reject .booking-bulk-modal-note {
+  border-color: #fee2e2;
+  background: #fff7f7;
+  color: #8b3a44;
+}
+
+.booking-bulk-modal-note svg { margin-top: 2px; color: #1677e8; }
+.booking-bulk-modal.reject .booking-bulk-modal-note svg { color: #e63748; }
+.booking-bulk-modal-note ul { margin: 0; padding-left: 18px; }
+.booking-bulk-modal-note li + li { margin-top: 3px; }
+
+.booking-bulk-modal-footer {
+  padding: 15px 28px 19px;
+  border-top: 1px solid #e9eef5;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.booking-bulk-modal-footer button {
+  min-width: 126px;
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.booking-bulk-modal-footer .cancel { border: 1px solid #cfd8e5; background: #fff; color: #4c5b73; }
+.booking-bulk-modal-footer .confirm { border: 1px solid #126bd6; background: #1677ea; color: #fff; box-shadow: 0 5px 12px rgba(18, 107, 214, 0.2); }
+.booking-bulk-modal.reject .booking-bulk-modal-footer .confirm { border-color: #df2637; background: #e63748; box-shadow: 0 5px 12px rgba(223, 38, 55, 0.18); }
+.booking-bulk-modal-footer button:hover:not(:disabled) { filter: brightness(0.97); }
+.booking-bulk-modal-footer button:disabled { opacity: 0.55; cursor: wait; }
+
+@media (max-width: 640px) {
+  .booking-bulk-modal-backdrop { padding: 10px; align-items: flex-end; }
+  .booking-bulk-modal { max-height: calc(100vh - 20px); border-radius: 15px 15px 0 0; }
+  .booking-bulk-modal-header { padding: 17px 16px 13px; grid-template-columns: 38px minmax(0, 1fr) 30px; gap: 10px; }
+  .booking-bulk-modal-icon { width: 36px; height: 36px; }
+  .booking-bulk-modal-header h2 { font-size: 18px; }
+  .booking-bulk-modal-header p { font-size: 12.5px; }
+  .booking-bulk-modal-body { padding: 6px 16px 16px; }
+  .booking-bulk-modal-footer { padding: 12px 16px 15px; }
+  .booking-bulk-modal-footer button { min-width: 0; flex: 1; }
+}

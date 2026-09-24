@@ -3,29 +3,23 @@ package com.eduspace.backend.space.service;
 import com.eduspace.backend.common.exception.AppException;
 import com.eduspace.backend.space.dto.request.SpaceImageCreateRequestKT;
 import com.eduspace.backend.space.dto.request.SpaceImageReorderRequestKT;
+import com.eduspace.backend.space.dto.response.SpaceImageContentKT;
 import com.eduspace.backend.space.dto.response.SpaceImageResponseKT;
 import com.eduspace.backend.space.entity.Space;
 import com.eduspace.backend.space.entity.SpaceImage;
 import com.eduspace.backend.space.repository.SpaceImageRepository;
 import com.eduspace.backend.space.repository.SpaceRepository;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SpaceImageService {
@@ -38,8 +32,6 @@ public class SpaceImageService {
             "image/png",
             "image/webp"
     );
-    private static final String UPLOAD_DIR = "uploads/spaces";
-
     private final SpaceImageRepository spaceImageRepository;
     private final SpaceRepository spaceRepository;
 
@@ -122,18 +114,47 @@ public class SpaceImageService {
             );
         }
 
-        String storedPath = saveFileLocally(file, contentType);
         boolean shouldBePrimary = resolvePrimaryFlagOnAdd(spaceId, isPrimary);
 
-        SpaceImage image = SpaceImage.builder()
-                .space(space)
-                .imageUrl(storedPath)
-                .isPrimary(shouldBePrimary)
-                .sortOrder(sortOrder != null ? sortOrder : 0)
-                .build();
+        try {
+            SpaceImage image = SpaceImage.builder()
+                    .space(space)
+                    .imageUrl("PENDING_DATABASE_IMAGE")
+                    .imageData(file.getBytes())
+                    .contentType(contentType.toLowerCase())
+                    .originalFileName(file.getOriginalFilename())
+                    .isPrimary(shouldBePrimary)
+                    .sortOrder(sortOrder != null ? sortOrder : 0)
+                    .build();
 
-        SpaceImage saved = spaceImageRepository.save(image);
-        return SpaceImageResponseKT.fromEntity(saved);
+            SpaceImage saved = spaceImageRepository.saveAndFlush(image);
+            saved.setImageUrl("/api/spaces/images/" + saved.getId() + "/content");
+            return SpaceImageResponseKT.fromEntity(spaceImageRepository.save(saved));
+        } catch (IOException e) {
+            throw new AppException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "IMAGE_DATABASE_STORAGE_ERROR",
+                    "Không thể lưu dữ liệu ảnh vào cơ sở dữ liệu"
+            );
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public SpaceImageContentKT getImageContent(Long imageId) {
+        SpaceImage image = findImageOrThrow(imageId);
+        if (image.getImageData() == null || image.getImageData().length == 0) {
+            throw new AppException(
+                    HttpStatus.NOT_FOUND,
+                    "SPACE_IMAGE_CONTENT_NOT_FOUND",
+                    "Ảnh này không có dữ liệu file trong cơ sở dữ liệu"
+            );
+        }
+
+        return new SpaceImageContentKT(
+                image.getImageData(),
+                image.getContentType(),
+                image.getOriginalFileName()
+        );
     }
 
     @Transactional
@@ -228,39 +249,4 @@ public class SpaceImageService {
                 ));
     }
 
-    private String saveFileLocally(MultipartFile file, String contentType) {
-        try {
-            Path uploadPath = Paths.get(UPLOAD_DIR);
-            if (!Files.exists(uploadPath)) {
-                Files.createDirectories(uploadPath);
-            }
-
-            String extension = resolveFileExtension(file.getOriginalFilename(), contentType);
-            String fileName = UUID.randomUUID() + extension;
-            Path targetLocation = uploadPath.resolve(fileName);
-
-            Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
-            return "/uploads/spaces/" + fileName;
-        } catch (IOException e) {
-            log.error("Lỗi khi lưu file upload ảnh: {}", e.getMessage(), e);
-            throw new AppException(
-                    HttpStatus.INTERNAL_SERVER_ERROR,
-                    "FILE_STORAGE_ERROR",
-                    "Không thể lưu trữ file ảnh lên hệ thống"
-            );
-        }
-    }
-
-    private String resolveFileExtension(String originalFilename, String contentType) {
-        if (originalFilename != null && originalFilename.contains(".")) {
-            return originalFilename.substring(originalFilename.lastIndexOf("."));
-        }
-        if ("image/png".equalsIgnoreCase(contentType)) {
-            return ".png";
-        }
-        if ("image/webp".equalsIgnoreCase(contentType)) {
-            return ".webp";
-        }
-        return ".jpg";
-    }
 }
