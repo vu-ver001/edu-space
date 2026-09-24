@@ -3,6 +3,7 @@ package com.eduspace.backend.space.controller;
 import com.eduspace.backend.space.dto.request.SpaceTypeCreateRequestKT;
 import com.eduspace.backend.space.dto.request.SpaceTypeUpdateRequestKT;
 import com.eduspace.backend.space.dto.response.SpaceTypeResponseKT;
+import com.eduspace.backend.space.dto.response.SpaceActionResponseKT;
 import com.eduspace.backend.space.service.SpaceTypeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -29,22 +30,26 @@ public class AdminSpaceTypeControllerKT {
     }
 
     @PostMapping("/api/admin/space-types")
-    public ResponseEntity<SpaceTypeResponseKT> createSpaceType(@Valid @RequestBody SpaceTypeCreateRequestKT request) {
+    public ResponseEntity<SpaceActionResponseKT<SpaceTypeResponseKT>> createSpaceType(
+            @Valid @RequestBody SpaceTypeCreateRequestKT request) {
+        SpaceTypeResponseKT created = spaceTypeService.createSpaceType(request);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(spaceTypeService.createSpaceType(request));
+                .body(SpaceActionResponseKT.of("Đã tạo loại không gian thành công.", created));
     }
 
     @PutMapping("/api/admin/space-types/{id}")
-    public ResponseEntity<SpaceTypeResponseKT> updateSpaceType(
+    public ResponseEntity<SpaceActionResponseKT<SpaceTypeResponseKT>> updateSpaceType(
             @PathVariable Long id,
             @Valid @RequestBody SpaceTypeUpdateRequestKT request
     ) {
-        return ResponseEntity.ok(spaceTypeService.updateSpaceType(id, request));
+        SpaceTypeResponseKT updated = spaceTypeService.updateSpaceType(id, request);
+        return ResponseEntity.ok(SpaceActionResponseKT.of(
+                "Đã cập nhật loại không gian thành công.", updated));
     }
 
     @DeleteMapping("/api/admin/space-types/{id}")
-    public ResponseEntity<Void> deleteSpaceType(@PathVariable Long id) {
+    public ResponseEntity<SpaceActionResponseKT<Void>> deleteSpaceType(@PathVariable Long id) {
         spaceTypeService.deleteSpaceType(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(SpaceActionResponseKT.message("Đã xóa loại không gian thành công."));
     }
 }

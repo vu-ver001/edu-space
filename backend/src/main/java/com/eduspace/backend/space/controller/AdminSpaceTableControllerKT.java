@@ -3,6 +3,7 @@ package com.eduspace.backend.space.controller;
 import com.eduspace.backend.space.dto.request.SpaceTableCreateRequestKT;
 import com.eduspace.backend.space.dto.request.SpaceTableUpdateRequestKT;
 import com.eduspace.backend.space.dto.response.SpaceTableResponseKT;
+import com.eduspace.backend.space.dto.response.SpaceActionResponseKT;
 import com.eduspace.backend.space.service.SpaceTableService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -41,12 +42,13 @@ public class AdminSpaceTableControllerKT {
      * POST /api/admin/spaces/{spaceId}/tables
      */
     @PostMapping("/api/admin/spaces/{spaceId}/tables")
-    public ResponseEntity<SpaceTableResponseKT> createTable(
+    public ResponseEntity<SpaceActionResponseKT<SpaceTableResponseKT>> createTable(
             @PathVariable Long spaceId,
             @Valid @RequestBody SpaceTableCreateRequestKT request
     ) {
+        SpaceTableResponseKT created = spaceTableService.createTable(spaceId, request);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(spaceTableService.createTable(spaceId, request));
+                .body(SpaceActionResponseKT.of("Đã tạo bàn thành công.", created));
     }
 
     /**
@@ -54,20 +56,21 @@ public class AdminSpaceTableControllerKT {
      * PUT /api/admin/tables/{tableId}
      */
     @PutMapping("/api/admin/tables/{tableId}")
-    public ResponseEntity<SpaceTableResponseKT> updateTable(
+    public ResponseEntity<SpaceActionResponseKT<SpaceTableResponseKT>> updateTable(
             @PathVariable Long tableId,
             @Valid @RequestBody SpaceTableUpdateRequestKT request
     ) {
-        return ResponseEntity.ok(spaceTableService.updateTable(tableId, request));
+        SpaceTableResponseKT updated = spaceTableService.updateTable(tableId, request);
+        return ResponseEntity.ok(SpaceActionResponseKT.of("Đã cập nhật bàn thành công.", updated));
     }
 
     /**
-     * Xóa mềm một bàn (trả về 204 No Content)
+     * Xóa mềm một bàn và trả thông báo cho client.
      * DELETE /api/admin/tables/{tableId}
      */
     @DeleteMapping("/api/admin/tables/{tableId}")
-    public ResponseEntity<Void> deleteTable(@PathVariable Long tableId) {
+    public ResponseEntity<SpaceActionResponseKT<Void>> deleteTable(@PathVariable Long tableId) {
         spaceTableService.deleteTable(tableId);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(SpaceActionResponseKT.message("Đã xóa bàn thành công."));
     }
 }

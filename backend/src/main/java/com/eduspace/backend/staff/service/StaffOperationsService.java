@@ -4,6 +4,10 @@ import com.eduspace.backend.auth.entity.User;
 import com.eduspace.backend.auth.repository.UserRepository;
 import com.eduspace.backend.auth.security.SecurityUtils;
 import com.eduspace.backend.booking.dto.response.BookingResponse;
+import com.eduspace.backend.booking.entity.Booking;
+import com.eduspace.backend.booking.entity.BookingStatus;
+import com.eduspace.backend.booking.repository.BookingRepository;
+import com.eduspace.backend.booking.service.AvailabilityService;
 import com.eduspace.backend.booking.service.BookingService;
 import com.eduspace.backend.checkin.service.CheckInService;
 import com.eduspace.backend.common.exception.AppException;
@@ -34,11 +38,32 @@ import java.util.stream.Collectors;
 public class StaffOperationsService {
 
     private final BookingService bookingService;
+    private final BookingRepository bookingRepository;
+    private final AvailabilityService availabilityService;
     private final CheckInService checkInService;
     private final MaintenanceBlockRepository maintenanceBlockRepository;
     private final SpaceRepository spaceRepository;
     private final StaffAuditService staffAuditService;
     private final UserRepository userRepository;
+
+    /**
+     * Danh sách booking phục vụ màn hình quản lý của Staff/Admin.
+     * Đồng bộ pending quá hạn trước khi đọc và ánh xạ qua BookingService
+     * để giữ nguyên contract nghiệp vụ dùng chung.
+     */
+    @Transactional
+    public List<BookingResponse> getBookingsForStaff(BookingStatus status) {
+        LocalDateTime now = LocalDateTime.now();
+        availabilityService.expirePendingApproval(now);
+
+        List<Booking> bookings = status == null
+                ? bookingRepository.findAllByOrderByCreatedAtDesc()
+                : bookingRepository.findByStatusOrderByCreatedAtDesc(status);
+
+        return bookings.stream()
+                .map(booking -> bookingService.toBookingResponse(booking, now))
+                .collect(Collectors.toList());
+    }
 
     /**
      * Chức năng 1: Xem Space Timeline theo khoảng thời gian.
@@ -48,7 +73,7 @@ public class StaffOperationsService {
     public StaffTimelineResponseKT getSpaceTimeline(Long spaceId, LocalDateTime from, LocalDateTime to) {
         Space space = spaceRepository.findByIdAndDeletedAtIsNull(spaceId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "SPACE_NOT_FOUND",
-                        "Không tìm thấy không gian với ID: " + spaceId));
+                        "Không tìm thấy không gian yêu cầu."));
 
         if (from == null || to == null) {
             throw new AppException(HttpStatus.BAD_REQUEST, "INVALID_TIMELINE_RANGE",
@@ -154,9 +179,9 @@ public class StaffOperationsService {
      */
     @Transactional
     public BookingResponse approveBooking(Long bookingId) {
-        User staff = resolveCurrentUser();
-        String staffEmail = staff != null ? staff.getEmail() : "staff@eduspace.vn";
-        Long staffId = staff != null ? staff.getId() : 2L;
+        User staff = requireCurrentUser();
+        String staffEmail = staff.getEmail();
+        Long staffId = staff.getId();
 
         BookingResponse response = bookingService.approveBooking(bookingId, staffEmail);
 
@@ -176,12 +201,12 @@ public class StaffOperationsService {
     public BookingResponse rejectBooking(Long bookingId, BookingRejectRequestKT request) {
         if (request == null || request.getReason() == null || request.getReason().trim().isEmpty()) {
             throw new AppException(HttpStatus.BAD_REQUEST, "REJECT_REASON_REQUIRED",
-                    "Lý do từ chối không được để trống theo quy tắc R-20");
+                    "Vui lòng nhập lý do từ chối.");
         }
 
-        User staff = resolveCurrentUser();
-        String staffEmail = staff != null ? staff.getEmail() : "staff@eduspace.vn";
-        Long staffId = staff != null ? staff.getId() : 2L;
+        User staff = requireCurrentUser();
+        String staffEmail = staff.getEmail();
+        Long staffId = staff.getId();
 
         BookingResponse response = bookingService.rejectBooking(bookingId, staffEmail, request.getReason().trim());
 
@@ -199,9 +224,9 @@ public class StaffOperationsService {
      */
     @Transactional
     public BookingResponse staffAssistedCheckIn(Long bookingId) {
-        User staff = resolveCurrentUser();
-        String staffEmail = staff != null ? staff.getEmail() : "staff@eduspace.vn";
-        Long staffId = staff != null ? staff.getId() : 2L;
+        User staff = requireCurrentUser();
+        String staffEmail = staff.getEmail();
+        Long staffId = staff.getId();
 
         BookingResponse response = checkInService.checkIn(bookingId);
 
@@ -213,12 +238,21 @@ public class StaffOperationsService {
         return response;
     }
 
-    private User resolveCurrentUser() {
+    private User requireCurrentUser() {
         String email = SecurityUtils.getCurrentUserEmail();
         if (email == null || "anonymousUser".equalsIgnoreCase(email)) {
-            return null;
+            throw new AppException(
+                    HttpStatus.UNAUTHORIZED,
+                    "UNAUTHORIZED",
+                    "Vui lòng đăng nhập để thực hiện thao tác này."
+            );
         }
-        return userRepository.findByEmail(email).orElse(null);
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new AppException(
+                        HttpStatus.UNAUTHORIZED,
+                        "USER_NOT_FOUND",
+                        "Không tìm thấy tài khoản đang đăng nhập."
+                ));
     }
 
     private PendingBookingResponseKT toPendingResponse(BookingResponse b) {

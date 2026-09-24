@@ -10,7 +10,8 @@ export type BookingStatus =
   | 'COMPLETED'
   | 'CANCELLED'
   | 'REJECTED'
-  | 'EXPIRED';
+  | 'EXPIRED'
+  | 'NO_SHOW';
 
 export interface PendingBooking {
   id: number;
@@ -27,6 +28,26 @@ export interface PendingBooking {
   purpose?: string;
   status: BookingStatus;
   createdAt: string;
+  bookingMode?: string;
+  tableId?: number;
+  tableCode?: string;
+  selectedSeats?: string[];
+  statusDisplayName?: string;
+  requiresApproval?: boolean;
+}
+
+export interface StaffBooking extends PendingBooking {
+  statusDisplayName?: string;
+  isOccupying?: boolean;
+  rejectReason?: string;
+  rejectedAt?: string;
+  expireReason?: string;
+  expiredAt?: string;
+  checkedInAt?: string;
+  checkedInBy?: number;
+  canCancel?: boolean;
+  canCheckIn?: boolean;
+  floor?: string;
 }
 
 export type TimelineEventType = 'BOOKING' | 'MAINTENANCE';

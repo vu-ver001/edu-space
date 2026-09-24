@@ -13,6 +13,7 @@ import com.eduspace.backend.staff.dto.request.MaintenanceCreateRequestKT;
 import com.eduspace.backend.staff.dto.request.MaintenanceUpdateRequestKT;
 import com.eduspace.backend.staff.dto.response.MaintenanceResponseKT;
 import com.eduspace.backend.staff.entity.StaffAuditAction;
+import com.eduspace.backend.staff.exception.MaintenanceBookingConflictExceptionKT;
 import com.eduspace.backend.staff.repository.MaintenanceBlockRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,7 +48,7 @@ public class MaintenanceService {
     public MaintenanceResponseKT createMaintenance(Long spaceId, MaintenanceCreateRequestKT request) {
         Space space = spaceRepository.findByIdAndDeletedAtIsNull(spaceId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "SPACE_NOT_FOUND",
-                        "Không tìm thấy không gian với ID: " + spaceId));
+                        "Không tìm thấy không gian yêu cầu."));
 
         validateTimeRange(request.getStartTime(), request.getEndTime());
 
@@ -57,9 +58,9 @@ public class MaintenanceService {
         // 2. Kiểm tra trùng lặp với khoảng bảo trì khác đang active
         checkMaintenanceOverlap(spaceId, null, request.getStartTime(), request.getEndTime());
 
-        User currentUser = resolveCurrentUser();
-        Long actorId = currentUser != null ? currentUser.getId() : 0L;
-        String actorEmail = currentUser != null ? currentUser.getEmail() : "staff@eduspace.vn";
+        User currentUser = requireCurrentUser();
+        Long actorId = currentUser.getId();
+        String actorEmail = currentUser.getEmail();
 
         MaintenanceBlock block = MaintenanceBlock.builder()
                 .space(space)
@@ -88,7 +89,7 @@ public class MaintenanceService {
     public MaintenanceResponseKT updateMaintenance(Long maintenanceId, MaintenanceUpdateRequestKT request) {
         MaintenanceBlock block = maintenanceBlockRepository.findByIdAndDeletedAtIsNull(maintenanceId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "MAINTENANCE_NOT_FOUND",
-                        "Không tìm thấy khoảng bảo trì với ID: " + maintenanceId));
+                        "Không tìm thấy khoảng bảo trì yêu cầu."));
 
         validateTimeRange(request.getStartTime(), request.getEndTime());
 
@@ -100,9 +101,9 @@ public class MaintenanceService {
         // 2. Kiểm tra trùng lặp với các khoảng bảo trì khác (loại trừ chính nó)
         checkMaintenanceOverlap(spaceId, maintenanceId, request.getStartTime(), request.getEndTime());
 
-        User currentUser = resolveCurrentUser();
-        Long actorId = currentUser != null ? currentUser.getId() : 0L;
-        String actorEmail = currentUser != null ? currentUser.getEmail() : "staff@eduspace.vn";
+        User currentUser = requireCurrentUser();
+        Long actorId = currentUser.getId();
+        String actorEmail = currentUser.getEmail();
 
         block.setStartTime(request.getStartTime());
         block.setEndTime(request.getEndTime());
@@ -125,11 +126,11 @@ public class MaintenanceService {
     public void deleteMaintenance(Long maintenanceId) {
         MaintenanceBlock block = maintenanceBlockRepository.findByIdAndDeletedAtIsNull(maintenanceId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "MAINTENANCE_NOT_FOUND",
-                        "Không tìm thấy khoảng bảo trì với ID: " + maintenanceId));
+                        "Không tìm thấy khoảng bảo trì yêu cầu."));
 
-        User currentUser = resolveCurrentUser();
-        Long actorId = currentUser != null ? currentUser.getId() : 0L;
-        String actorEmail = currentUser != null ? currentUser.getEmail() : "staff@eduspace.vn";
+        User currentUser = requireCurrentUser();
+        Long actorId = currentUser.getId();
+        String actorEmail = currentUser.getEmail();
 
         block.setDeletedAt(LocalDateTime.now());
         maintenanceBlockRepository.save(block);
@@ -145,7 +146,7 @@ public class MaintenanceService {
     public List<MaintenanceResponseKT> getMaintenanceBySpace(Long spaceId) {
         spaceRepository.findByIdAndDeletedAtIsNull(spaceId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "SPACE_NOT_FOUND",
-                        "Không tìm thấy không gian với ID: " + spaceId));
+                        "Không tìm thấy không gian yêu cầu."));
 
         return maintenanceBlockRepository.findBySpaceIdAndDeletedAtIsNullOrderByStartTimeAsc(spaceId).stream()
                 .map(this::toResponse)
@@ -156,7 +157,7 @@ public class MaintenanceService {
     public MaintenanceResponseKT getMaintenanceById(Long maintenanceId) {
         MaintenanceBlock block = maintenanceBlockRepository.findByIdAndDeletedAtIsNull(maintenanceId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "MAINTENANCE_NOT_FOUND",
-                        "Không tìm thấy khoảng bảo trì với ID: " + maintenanceId));
+                        "Không tìm thấy khoảng bảo trì yêu cầu."));
         return toResponse(block);
     }
 
@@ -174,9 +175,7 @@ public class MaintenanceService {
     private void checkOccupyingBookingConflict(Long spaceId, LocalDateTime startTime, LocalDateTime endTime) {
         List<BookingResponse> occupyingBookings = bookingService.getSpaceTimeline(spaceId, startTime, endTime);
         if (!occupyingBookings.isEmpty()) {
-            throw new AppException(HttpStatus.CONFLICT, "SPACE_HAS_OCCUPYING_BOOKING",
-                    "Không thể tạo bảo trì vì không gian đang có " + occupyingBookings.size() +
-                            " lượt đặt chỗ chiếm chỗ trong khoảng thời gian này.");
+            throw new MaintenanceBookingConflictExceptionKT(occupyingBookings);
         }
     }
 
@@ -193,20 +192,29 @@ public class MaintenanceService {
         }
     }
 
-    private User resolveCurrentUser() {
+    private User requireCurrentUser() {
         String email = SecurityUtils.getCurrentUserEmail();
         if (email == null || "anonymousUser".equalsIgnoreCase(email)) {
-            return null;
+            throw new AppException(
+                    HttpStatus.UNAUTHORIZED,
+                    "UNAUTHORIZED",
+                    "Vui lòng đăng nhập để thực hiện thao tác này."
+            );
         }
-        return userRepository.findByEmail(email).orElse(null);
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new AppException(
+                        HttpStatus.UNAUTHORIZED,
+                        "USER_NOT_FOUND",
+                        "Không tìm thấy tài khoản đang đăng nhập."
+                ));
     }
 
     private MaintenanceResponseKT toResponse(MaintenanceBlock block) {
-        String creatorEmail = "staff@eduspace.vn";
+        String creatorEmail = "Không xác định";
         if (block.getCreatedBy() != null && block.getCreatedBy() > 0) {
             creatorEmail = userRepository.findById(block.getCreatedBy())
                     .map(User::getEmail)
-                    .orElse("staff@eduspace.vn");
+                    .orElse("Không xác định");
         }
         return toResponse(block, creatorEmail);
     }

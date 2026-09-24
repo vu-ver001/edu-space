@@ -6,6 +6,7 @@ import type { SpaceType } from '../types/spaceType';
 import { spaceApi } from '../api/spaceApi';
 import { spaceTypeApi } from '../api/spaceTypeApi';
 import { spaceImageApi } from '../api/spaceImageApi';
+import { readSpaceApiError } from '../api/spaceApiError';
 import { SpaceStatsCardsKT } from '../components/SpaceStatsCardsKT';
 import { SpaceFilterBarKT } from '../components/SpaceFilterBarKT';
 import { SpaceTableKT } from '../components/SpaceTableKT';
@@ -76,10 +77,10 @@ export const SpaceListPageKT: React.FC = () => {
       setSpaces(sorted);
       setSpaceTypes(typesRes);
       setFacilities(facilitiesRes);
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || 'Không thể tải danh sách không gian';
-      setError(msg);
-      showToast(msg, 'error');
+    } catch (error: unknown) {
+      const apiError = readSpaceApiError(error, 'Không thể tải danh sách không gian');
+      setError(apiError.message);
+      showToast(apiError.message, 'error');
     } finally {
       setIsLoading(false);
     }
@@ -103,14 +104,15 @@ export const SpaceListPageKT: React.FC = () => {
   // Filtered spaces
   const filteredSpaces = useMemo(() => {
     return spaces.filter((sp) => {
-      // 1. Search query (name, building, floor)
+      // 1. Search query (space code, name, building, floor, description)
       if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
+        const q = searchQuery.trim().toLowerCase();
+        const matchCode = sp.spaceCode.toLowerCase().includes(q);
         const matchName = sp.name.toLowerCase().includes(q);
         const matchBuilding = sp.building.toLowerCase().includes(q);
         const matchFloor = sp.floor.toLowerCase().includes(q);
         const matchDesc = sp.description?.toLowerCase().includes(q) || false;
-        if (!matchName && !matchBuilding && !matchFloor && !matchDesc) return false;
+        if (!matchCode && !matchName && !matchBuilding && !matchFloor && !matchDesc) return false;
       }
 
       // 2. Filter by Booking Mode (Hình thức đặt)
@@ -183,7 +185,8 @@ export const SpaceListPageKT: React.FC = () => {
     setFormSubmitting(true);
     try {
       if (formMode === 'create') {
-        const created = await spaceApi.createSpace(data as SpaceCreateRequest);
+        const response = await spaceApi.createSpace(data as SpaceCreateRequest);
+        const created = response.data;
         // Đưa không gian mới tạo lên ngay đầu danh sách
         setSpaces((prev) => [created, ...prev.filter((s) => s.id !== created.id)]);
         setCurrentPage(1);
@@ -219,9 +222,9 @@ export const SpaceListPageKT: React.FC = () => {
             sortOrder: 0,
           }).catch(() => {});
         }
-        showToast(`Đã tạo không gian "${created.name}" thành công`);
+        showToast(response.message);
       } else if (editingSpace) {
-        const updated = await spaceApi.updateSpace(editingSpace.id, data as SpaceUpdateRequest);
+        const response = await spaceApi.updateSpace(editingSpace.id, data as SpaceUpdateRequest);
 
         // Xử lý ảnh thêm mới trong chế độ chỉnh sửa
         if (images && images.length > 0) {
@@ -255,7 +258,7 @@ export const SpaceListPageKT: React.FC = () => {
             sortOrder: 0,
           }).catch(() => {});
         }
-        showToast(`Đã cập nhật không gian "${updated.name}"`);
+        showToast(response.message);
       }
       setFormModalOpen(false);
       fetchData();
@@ -273,20 +276,25 @@ export const SpaceListPageKT: React.FC = () => {
     setDeleteLoading(true);
     setDeleteError(null);
     try {
-      await spaceApi.deleteSpace(deletingSpace.id);
-      showToast(`Đã xóa không gian "${deletingSpace.name}"`);
+      const response = await spaceApi.deleteSpace(deletingSpace.id);
+      showToast(response.message);
       setDeleteConfirmOpen(false);
       setDeletingSpace(null);
       setDeleteError(null);
       fetchData();
-    } catch (err: any) {
-      const rawMsg = err?.response?.data?.message || err?.message || '';
-      let msg = 'Không thể xóa không gian.';
-      if (rawMsg) {
-        msg = rawMsg;
+    } catch (error: unknown) {
+      const apiError = readSpaceApiError(error, 'Không thể xóa không gian.');
+
+      if (apiError.code === 'SPACE_NOT_FOUND') {
+        setDeleteConfirmOpen(false);
+        setDeletingSpace(null);
+        showToast(apiError.message, 'error');
+        fetchData();
+        return;
       }
-      setDeleteError(msg);
-      showToast(msg, 'error');
+
+      setDeleteError(apiError.message);
+      showToast(apiError.message, 'error');
     } finally {
       setDeleteLoading(false);
     }

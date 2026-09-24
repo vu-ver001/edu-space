@@ -46,60 +46,34 @@ export const SpaceTableKT: React.FC<Props> = ({
     const lower = typeName.toLowerCase();
     const mode = item.spaceType?.bookingMode || item.bookingMode;
 
-    if (lower.includes('thảo luận') || lower.includes('thao luan')) {
-      return (
-        <span className="space-type-badge-pill badge-type-discussion">
-          <Users size={13} className="space-type-icon" />
-          {typeName}
+    const badge = (className: string, Icon: React.ElementType) => (
+      <Tooltip content={typeName} maxWidth={320}>
+        <span className={`space-type-badge-pill ${className}`}>
+          <Icon size={13} className="space-type-icon" />
+          <span>{typeName}</span>
         </span>
-      );
+      </Tooltip>
+    );
+
+    if (lower.includes('thảo luận') || lower.includes('thao luan')) {
+      return badge('badge-type-discussion', Users);
     }
     if (lower.includes('học nhóm') || lower.includes('hoc nhom')) {
-      return (
-        <span className="space-type-badge-pill badge-type-group">
-          <User size={13} className="space-type-icon" />
-          {typeName}
-        </span>
-      );
+      return badge('badge-type-group', User);
     }
     if (lower.includes('tự học') || lower.includes('tu hoc')) {
-      return (
-        <span className="space-type-badge-pill badge-type-self-study">
-          <BookOpen size={13} className="space-type-icon" />
-          {typeName}
-        </span>
-      );
+      return badge('badge-type-self-study', BookOpen);
     }
     if (lower.includes('bàn học') || lower.includes('ban hoc') || mode === 'PER_TABLE') {
-      return (
-        <span className="space-type-badge-pill badge-type-desk">
-          <Armchair size={13} className="space-type-icon" />
-          {typeName}
-        </span>
-      );
+      return badge('badge-type-desk', Armchair);
     }
     if (lower.includes('seminar') || lower.includes('hội thảo') || lower.includes('thuyết trình')) {
-      return (
-        <span className="space-type-badge-pill badge-type-seminar">
-          <Presentation size={13} className="space-type-icon" />
-          {typeName}
-        </span>
-      );
+      return badge('badge-type-seminar', Presentation);
     }
     if (mode === 'PER_SEAT') {
-      return (
-        <span className="space-type-badge-pill badge-type-desk">
-          <Armchair size={13} className="space-type-icon" />
-          {typeName}
-        </span>
-      );
+      return badge('badge-type-desk', Armchair);
     }
-    return (
-      <span className="space-type-badge-pill badge-type-group">
-        <DoorOpen size={13} className="space-type-icon" />
-        {typeName}
-      </span>
-    );
+    return badge('badge-type-group', DoorOpen);
   };
 
   // Badge trạng thái theo chuẩn (Hoạt động, Bảo trì, Ngưng hoạt động)
@@ -140,15 +114,15 @@ export const SpaceTableKT: React.FC<Props> = ({
       <table className="custom-spaces-table-v2">
         <thead>
           <tr>
-            <th style={{ width: '45px' }} className="col-center col-compact">#</th>
-            <th style={{ width: '75px' }} className="col-compact">Hình ảnh</th>
-            <th style={{ width: '105px' }} className="col-compact">Mã không gian</th>
-            <th style={{ minWidth: '180px' }}>Tên không gian</th>
-            <th style={{ minWidth: '160px' }}>Loại không gian</th>
-            <th style={{ minWidth: '130px' }}>Tòa nhà</th>
-            <th style={{ width: '65px' }} className="col-center col-compact">Sức chứa</th>
-            <th style={{ width: '115px' }} className="col-center col-compact">Trạng thái</th>
-            <th style={{ width: '105px' }} className="col-center col-compact">Thao tác</th>
+            <th style={{ width: '38px' }} className="col-center col-compact">#</th>
+            <th style={{ width: '84px' }} className="col-compact">Hình ảnh</th>
+            <th style={{ width: '100px' }} className="col-compact">Mã không gian</th>
+            <th style={{ width: '140px' }}>Tên không gian</th>
+            <th style={{ width: '130px' }}>Loại không gian</th>
+            <th style={{ width: '115px' }}>Tòa nhà</th>
+            <th style={{ width: '60px' }} className="col-center col-compact">Sức chứa</th>
+            <th style={{ width: '105px' }} className="col-center col-compact">Trạng thái</th>
+            <th style={{ width: '128px' }} className="col-center col-compact">Thao tác</th>
           </tr>
         </thead>
         <tbody>

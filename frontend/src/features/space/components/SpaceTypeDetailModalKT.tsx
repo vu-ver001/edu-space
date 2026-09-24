@@ -42,7 +42,6 @@ export const SpaceTypeDetailModalKT: React.FC<SpaceTypeDetailModalKTProps> = ({
             <span className="astp-modal-icon">👁️</span>
             <div>
               <h3 className="astp-modal-title">Chi tiết loại không gian: {spaceType.name}</h3>
-              <p className="astp-modal-subtitle">Mã định danh hệ thống #{spaceType.id}</p>
             </div>
           </div>
           <button className="astp-modal-close-btn" type="button" onClick={onClose}>
@@ -108,7 +107,7 @@ export const SpaceTypeDetailModalKT: React.FC<SpaceTypeDetailModalKTProps> = ({
                 <table className="astp-inline-table">
                   <thead>
                     <tr>
-                      <th>ID</th>
+                      <th>Mã không gian</th>
                       <th>Tên không gian</th>
                       <th>Tòa nhà</th>
                       <th>Sức chứa</th>
@@ -118,7 +117,7 @@ export const SpaceTypeDetailModalKT: React.FC<SpaceTypeDetailModalKTProps> = ({
                   <tbody>
                     {associatedSpaces.map((sp) => (
                       <tr key={sp.id}>
-                        <td>#{sp.id}</td>
+                        <td>{sp.spaceCode || '—'}</td>
                         <td style={{ fontWeight: 600, color: '#1e293b' }}>{sp.name}</td>
                         <td>{sp.building || 'Chưa cập nhật'}</td>
                         <td>{sp.capacity} người</td>

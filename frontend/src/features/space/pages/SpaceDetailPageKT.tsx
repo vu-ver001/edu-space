@@ -39,6 +39,7 @@ import type { MaintenanceBlock } from '../../staff/types/staff';
 import { spaceApi } from '../api/spaceApi';
 import { spaceTypeApi } from '../api/spaceTypeApi';
 import { spaceImageApi } from '../api/spaceImageApi';
+import { readSpaceApiError } from '../api/spaceApiError';
 import { maintenanceApi } from '../../staff/api/maintenanceApi';
 import { SpaceFormModalKT } from '../components/SpaceFormModalKT';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
@@ -173,21 +174,21 @@ export const SpaceDetailPageKT: React.FC = () => {
     setIsTableSubmitting(true);
     try {
       if (tableModalMode === 'create') {
-        await spaceApi.createTable(space.id, {
+        const response = await spaceApi.createTable(space.id, {
           tableCode: tableCodeInput.trim(),
           capacity: tableCapacityInput || 0,
           status: tableStatusInput,
           description: tableDescInput.trim() || undefined,
         });
-        showToast(`Đã thêm bàn ${tableCodeInput.trim()} thành công`);
+        showToast(response.message);
       } else if (editingTable) {
-        await spaceApi.updateTable(editingTable.id, {
+        const response = await spaceApi.updateTable(editingTable.id, {
           tableCode: tableCodeInput.trim(),
           capacity: tableCapacityInput || 0,
           status: tableStatusInput,
           description: tableDescInput.trim() || undefined,
         });
-        showToast(`Đã cập nhật bàn ${tableCodeInput.trim()} thành công`);
+        showToast(response.message);
       }
       setIsTableModalOpen(false);
       const [updatedTables, updatedSpace] = await Promise.all([
@@ -213,8 +214,8 @@ export const SpaceDetailPageKT: React.FC = () => {
     }
     setIsTableDeleting(true);
     try {
-      await spaceApi.deleteTable(deletingTable.id);
-      showToast(`Đã xóa bàn ${deletingTable.tableCode}`);
+      const response = await spaceApi.deleteTable(deletingTable.id);
+      showToast(response.message);
       setDeletingTable(null);
       const [updatedTables, updatedSpace] = await Promise.all([
         spaceApi.getTablesBySpace(space.id),
@@ -222,9 +223,14 @@ export const SpaceDetailPageKT: React.FC = () => {
       ]);
       setTables(updatedTables || []);
       setSpace(updatedSpace);
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || 'Không thể xóa bàn. Vui lòng thử lại.';
-      showToast(msg, 'error');
+    } catch (error: unknown) {
+      const apiError = readSpaceApiError(error, 'Không thể xóa bàn. Vui lòng thử lại.');
+      if (apiError.code === 'TABLE_NOT_FOUND') {
+        setDeletingTable(null);
+        const updatedTables = await spaceApi.getTablesBySpace(space.id).catch(() => []);
+        setTables(updatedTables);
+      }
+      showToast(apiError.message, 'error');
     } finally {
       setIsTableDeleting(false);
     }
@@ -364,8 +370,8 @@ export const SpaceDetailPageKT: React.FC = () => {
 
       setIsSeatSubmitting(true);
       try {
-        const createdSeats = await spaceApi.bulkCreateSeats(space.id, bulkGeneratedCodes);
-        showToast(`Đã thêm thành công ${createdSeats.length} chỗ ngồi vào phòng!`);
+        const response = await spaceApi.bulkCreateSeats(space.id, bulkGeneratedCodes);
+        showToast(response.message);
         setIsSeatModalOpen(false);
         const [updatedSeats, updatedSpace] = await Promise.all([
           spaceApi.getSeatsBySpace(space.id),
@@ -388,19 +394,19 @@ export const SpaceDetailPageKT: React.FC = () => {
     setIsSeatSubmitting(true);
     try {
       if (seatModalMode === 'create') {
-        await spaceApi.createSeat(space.id, {
+        const response = await spaceApi.createSeat(space.id, {
           seatCode: seatCodeInput.trim(),
           status: seatStatusInput,
           description: seatDescInput.trim() || undefined,
         });
-        showToast(`Đã thêm chỗ ${seatCodeInput.trim()} thành công`);
+        showToast(response.message);
       } else if (editingSeat) {
-        await spaceApi.updateSeat(editingSeat.id, {
+        const response = await spaceApi.updateSeat(editingSeat.id, {
           seatCode: seatCodeInput.trim(),
           status: seatStatusInput,
           description: seatDescInput.trim() || undefined,
         });
-        showToast(`Đã cập nhật chỗ ${seatCodeInput.trim()} thành công`);
+        showToast(response.message);
       }
       setIsSeatModalOpen(false);
       const [updatedSeats, updatedSpace] = await Promise.all([
@@ -426,8 +432,8 @@ export const SpaceDetailPageKT: React.FC = () => {
     }
     setIsSeatDeleting(true);
     try {
-      await spaceApi.deleteSeat(deletingSeat.id);
-      showToast(`Đã xóa chỗ ngồi ${deletingSeat.seatCode}`);
+      const response = await spaceApi.deleteSeat(deletingSeat.id);
+      showToast(response.message);
       setDeletingSeat(null);
       const [updatedSeats, updatedSpace] = await Promise.all([
         spaceApi.getSeatsBySpace(space.id),
@@ -435,9 +441,14 @@ export const SpaceDetailPageKT: React.FC = () => {
       ]);
       setSeats(updatedSeats || []);
       setSpace(updatedSpace);
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || 'Không thể xóa chỗ ngồi. Vui lòng thử lại.';
-      showToast(msg, 'error');
+    } catch (error: unknown) {
+      const apiError = readSpaceApiError(error, 'Không thể xóa chỗ ngồi. Vui lòng thử lại.');
+      if (apiError.code === 'SEAT_NOT_FOUND') {
+        setDeletingSeat(null);
+        const updatedSeats = await spaceApi.getSeatsBySpace(space.id).catch(() => []);
+        setSeats(updatedSeats);
+      }
+      showToast(apiError.message, 'error');
     } finally {
       setIsSeatDeleting(false);
     }
@@ -765,10 +776,10 @@ export const SpaceDetailPageKT: React.FC = () => {
     if (!space) return;
     setIsSubmitting(true);
     try {
-      const updated = await spaceApi.updateSpace(space.id, data);
-      setSpace(updated);
+      const response = await spaceApi.updateSpace(space.id, data);
+      setSpace(response.data);
       setIsEditOpen(false);
-      showToast(`Đã cập nhật không gian "${updated.name}" thành công`);
+      showToast(response.message);
       fetchDetail();
     } catch (err: any) {
       // Lỗi được modal (SpaceFormModalKT) hiển thị trực tiếp trên form, không cần hiện thêm toast ở góc
@@ -783,16 +794,22 @@ export const SpaceDetailPageKT: React.FC = () => {
     setIsDeleting(true);
     setDeleteError(null);
     try {
-      await spaceApi.deleteSpace(space.id);
-      showToast(`Đã xóa không gian "${space.name}"`);
+      const response = await spaceApi.deleteSpace(space.id);
+      showToast(response.message);
       setIsDeleteOpen(false);
       setTimeout(() => {
         navigate('/admin/spaces');
       }, 700);
-    } catch (err: any) {
-      const rawMsg = err?.response?.data?.message || err?.message || 'Không thể xóa không gian.';
-      setDeleteError(rawMsg);
-      showToast(rawMsg, 'error');
+    } catch (error: unknown) {
+      const apiError = readSpaceApiError(error, 'Không thể xóa không gian.');
+      if (apiError.code === 'SPACE_NOT_FOUND') {
+        setIsDeleteOpen(false);
+        showToast(apiError.message, 'error');
+        navigate('/admin/spaces');
+        return;
+      }
+      setDeleteError(apiError.message);
+      showToast(apiError.message, 'error');
     } finally {
       setIsDeleting(false);
     }
@@ -1054,12 +1071,6 @@ export const SpaceDetailPageKT: React.FC = () => {
                   <div className="spec-value-box monospace-code" style={{ fontWeight: 700, color: '#1d4ed8' }}>
                     {space.spaceCode || '—'}
                   </div>
-                </div>
-
-                {/* ID định danh không gian */}
-                <div className="info-spec-item">
-                  <span className="spec-label-text">Mã định danh (ID)</span>
-                  <div className="spec-value-box monospace-code">#{space.id}</div>
                 </div>
 
                 {/* Tên không gian */}

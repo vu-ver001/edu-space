@@ -94,7 +94,7 @@ export const SpaceDetailModalKT: React.FC<Props> = ({
                 {renderStatus()}
               </div>
               <p className="astp-modal-subtitle">
-                Mã định danh: #{space.id} • Vị trí: {space.building} - {space.floor.startsWith('Tầng') ? space.floor : `Tầng ${space.floor}`}
+                Vị trí: {space.building} - {space.floor.startsWith('Tầng') ? space.floor : `Tầng ${space.floor}`}
               </p>
             </div>
           </div>

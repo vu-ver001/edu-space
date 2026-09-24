@@ -66,14 +66,14 @@ export const SpaceTypeTableKT: React.FC<Props> = ({
       <table className="custom-space-types-table">
         <thead>
           <tr>
-            <th style={{ width: '45px' }} className="col-center">#</th>
-            <th style={{ minWidth: '180px' }}>Tên loại không gian</th>
-            <th style={{ width: '140px', minWidth: '130px' }}>Hình thức đặt</th>
-            <th className="col-center col-approval">Yêu cầu duyệt</th>
-            <th style={{ minWidth: '240px' }}>Mô tả</th>
-            <th className="col-center col-space-count">Số không gian</th>
-            <th style={{ width: '105px', minWidth: '95px' }}>Ngày tạo</th>
-            <th style={{ width: '110px' }} className="col-center">Thao tác</th>
+            <th style={{ width: '38px' }} className="col-center">#</th>
+            <th style={{ width: '150px' }}>Tên loại không gian</th>
+            <th style={{ width: '125px' }}>Hình thức đặt</th>
+            <th style={{ width: '90px' }} className="col-center col-approval">Yêu cầu duyệt</th>
+            <th style={{ width: '190px' }}>Mô tả</th>
+            <th style={{ width: '80px' }} className="col-center col-space-count">Số không gian</th>
+            <th style={{ width: '90px' }}>Ngày tạo</th>
+            <th style={{ width: '128px' }} className="col-center">Thao tác</th>
           </tr>
         </thead>
         <tbody>
