@@ -14,6 +14,7 @@ import { SpaceTypeDetailPageKT, SpaceTypeListPageKT, SpaceListPageKT, SpaceDetai
 import { BookingManagementPageKT, StaffOperationsPageKT } from "./features/staff";
 import PolicyManagementPage from './features/admin/policy/pages/PolicyManagementPage';
 import PolicyHistoryPage from './features/admin/policy/pages/PolicyHistoryPage';
+import { StatisticsDashboardPage } from './features/admin/statistics';
 import { SearchSpacesPage, SpaceDetailPage, MyBookingsPage } from './features/bookings/core';
 import { UserManagementPage } from './features/admin/auth/UserManagementPage.tsx';
 
@@ -78,10 +79,6 @@ export default function App() {
                     <Route path="/staff/operations" element={<StaffOperationsPageKT />} />
                 </Route>
 
-                {/* 2. Module Chính sách */}
-                <Route path="/admin/policy" element={<PolicyManagementPage />} />
-                <Route path="/admin/policy/history" element={<PolicyHistoryPage />} />
-
                 {/* 3. Đăng nhập */}
                 <Route path="/login" element={<LoginPage />} />
 
@@ -91,8 +88,12 @@ export default function App() {
 
                     {/* ADMIN */}
                     <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
-                        <Route path={`${ADMIN_BASE}/policy`} element={<Placeholder title="Chính sách" owner="Anh" />} />
-                        <Route path={`${ADMIN_BASE}/stats`} element={<Placeholder title="Thống kê" owner="Anh" />} />
+                        <Route path={`${ADMIN_BASE}/stats`} element={<StatisticsDashboardPage />} />
+                        <Route path={`${ADMIN_BASE}/policy`} element={<PolicyManagementPage />} />
+                        <Route path={`${ADMIN_BASE}/policy/history`} element={<PolicyHistoryPage />} />
+                        <Route path={`${ADMIN_BASE}/spaces`} element={<SpaceListPageKT />} />
+                        <Route path={`${ADMIN_BASE}/spaces/:id`} element={<SpaceDetailPageKT />} />
+                        <Route path={`${ADMIN_BASE}/facilities`} element={<FacilityListPageKT />} />
                         <Route path={`${ADMIN_BASE}/space-types`} element={<SpaceTypeListPageKT />} />
                         <Route path={`${ADMIN_BASE}/space-types/:id`} element={<SpaceTypeDetailPageKT />} />
                         <Route path={`${ADMIN_BASE}/settings-general`} element={<GeneralSettingsPage />} />

@@ -32,6 +32,8 @@ public interface SpaceRepository extends JpaRepository<Space, Long> {
 
     long countByStatusAndDeletedAtIsNull(SpaceStatus status);
 
+    List<Space> findAllByStatusAndDeletedAtIsNull(SpaceStatus status);
+
     default long countByStatus(SpaceStatus status) {
         return countByStatusAndDeletedAtIsNull(status);
     }
