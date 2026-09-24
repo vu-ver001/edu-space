@@ -3,6 +3,7 @@ package com.eduspace.backend.space.controller;
 import com.eduspace.backend.space.dto.request.SpaceCreateRequestKT;
 import com.eduspace.backend.space.dto.request.SpaceUpdateRequestKT;
 import com.eduspace.backend.space.dto.response.SpaceResponseKT;
+import com.eduspace.backend.space.dto.response.SpaceActionResponseKT;
 import com.eduspace.backend.space.service.SpaceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -30,22 +31,25 @@ public class AdminSpaceControllerKT {
     }
 
     @PostMapping
-    public ResponseEntity<SpaceResponseKT> createSpace(@Valid @RequestBody SpaceCreateRequestKT request) {
+    public ResponseEntity<SpaceActionResponseKT<SpaceResponseKT>> createSpace(
+            @Valid @RequestBody SpaceCreateRequestKT request) {
+        SpaceResponseKT created = spaceService.createSpace(request);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(spaceService.createSpace(request));
+                .body(SpaceActionResponseKT.of("Đã tạo không gian thành công.", created));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<SpaceResponseKT> updateSpace(
+    public ResponseEntity<SpaceActionResponseKT<SpaceResponseKT>> updateSpace(
             @PathVariable Long id,
             @Valid @RequestBody SpaceUpdateRequestKT request
     ) {
-        return ResponseEntity.ok(spaceService.updateSpace(id, request));
+        SpaceResponseKT updated = spaceService.updateSpace(id, request);
+        return ResponseEntity.ok(SpaceActionResponseKT.of("Đã cập nhật không gian thành công.", updated));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteSpace(@PathVariable Long id) {
+    public ResponseEntity<SpaceActionResponseKT<Void>> deleteSpace(@PathVariable Long id) {
         spaceService.deleteSpace(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(SpaceActionResponseKT.message("Đã xóa không gian thành công."));
     }
 }

@@ -13,12 +13,12 @@ import {
   CheckCircle2,
   XCircle,
   Package,
-  Hash,
   Calendar,
   Clock,
 } from 'lucide-react';
 import type { Facility, FacilityCreateRequest, FacilityUpdateRequest } from '../types/space';
 import { facilityApi } from '../api/facilityApi';
+import { readSpaceApiError } from '../api/spaceApiError';
 import { FacilityFormModalKT } from '../components/FacilityFormModalKT';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
 import { Tooltip } from '../../../components/common/Tooltip';
@@ -65,9 +65,9 @@ export const FacilityListPageKT: React.FC = () => {
         const found = (data || []).find((f) => f.id === selectedFacility.id);
         setSelectedFacility(found || null);
       }
-    } catch (err: any) {
-      console.error('Lỗi khi tải danh sách tiện ích:', err);
-      showToast(err?.response?.data?.message || 'Không thể tải danh mục tiện ích', 'error');
+    } catch (error: unknown) {
+      console.error('Lỗi khi tải danh sách tiện ích:', error);
+      showToast(readSpaceApiError(error, 'Không thể tải danh mục tiện ích').message, 'error');
     } finally {
       setLoading(false);
     }
@@ -123,11 +123,11 @@ export const FacilityListPageKT: React.FC = () => {
     setFormSubmitting(true);
     try {
       if (formMode === 'create') {
-        const created = await facilityApi.createFacility(data as FacilityCreateRequest);
-        showToast(`Đã tạo tiện ích "${created.name}" thành công`);
+        const response = await facilityApi.createFacility(data as FacilityCreateRequest);
+        showToast(response.message);
       } else if (editingFacility) {
-        const updated = await facilityApi.updateFacility(editingFacility.id, data as FacilityUpdateRequest);
-        showToast(`Đã cập nhật tiện ích "${updated.name}"`);
+        const response = await facilityApi.updateFacility(editingFacility.id, data as FacilityUpdateRequest);
+        showToast(response.message);
       }
       setFormModalOpen(false);
       fetchFacilities();
@@ -144,17 +144,31 @@ export const FacilityListPageKT: React.FC = () => {
     setDeleteLoading(true);
     setDeleteError(null);
     try {
-      await facilityApi.deleteFacility(deletingFacility.id);
-      showToast(`Đã xóa tiện ích "${deletingFacility.name}"`);
+      const response = await facilityApi.deleteFacility(deletingFacility.id);
+      showToast(response.message);
       setDeleteConfirmOpen(false);
       if (selectedFacility?.id === deletingFacility.id) {
         setSelectedFacility(null);
       }
       setDeletingFacility(null);
       fetchFacilities();
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || 'Không thể xóa tiện ích. Vui lòng thử lại.';
-      setDeleteError(msg);
+    } catch (error: unknown) {
+      const apiError = readSpaceApiError(error, 'Không thể xóa tiện ích. Vui lòng thử lại.');
+
+      if (apiError.code === 'FACILITY_NOT_FOUND') {
+        setDeleteConfirmOpen(false);
+        setDeletingFacility(null);
+        showToast(apiError.message, 'error');
+        fetchFacilities();
+        return;
+      }
+
+      if (apiError.code === 'FACILITY_IN_USE') {
+        setDeleteError(apiError.message);
+        return;
+      }
+
+      setDeleteError(apiError.message);
     } finally {
       setDeleteLoading(false);
     }
@@ -428,14 +442,6 @@ export const FacilityListPageKT: React.FC = () => {
 
                 {/* Key-Value Specifications */}
                 <div className="facility-detail-specs">
-                  <div className="facility-spec-row">
-                    <div className="facility-spec-label">
-                      <Hash size={15} className="facility-spec-icon" />
-                      <span>ID tiện ích</span>
-                    </div>
-                    <span className="facility-spec-pill">#{selectedFacility.id}</span>
-                  </div>
-
                   <div className="facility-spec-row">
                     <div className="facility-spec-label">
                       <Building2 size={15} className="facility-spec-icon" />

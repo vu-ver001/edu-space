@@ -46,7 +46,7 @@ export const SpaceFilterBarKT: React.FC<Props> = ({
       <div className="space-filters-cluster-group">
         <div className="space-filter-search-fluid">
           <SearchInput
-            placeholder="Tìm tên, tòa, tầng..."
+            placeholder="Tìm mã, tên, tòa, tầng..."
             value={searchTerm}
             onChange={onSearchChange}
             height={36}
@@ -129,4 +129,3 @@ export const SpaceFilterBarKT: React.FC<Props> = ({
     </div>
   );
 };
-

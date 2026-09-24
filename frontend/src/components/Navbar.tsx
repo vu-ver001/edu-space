@@ -51,8 +51,8 @@ export const Navbar: React.FC = () => {
   };
 
   const navItems = [
-    { to: '/spaces', label: 'Tìm Không Gian', icon: '🔍', badge: 'M03' },
-    { to: '/my-bookings', label: 'Lịch Đặt Của Tôi', icon: '📅', badge: 'M04' }
+    { to: '/student/spaces', label: 'Tìm Không Gian', icon: '🔍', badge: 'M03' },
+    { to: '/student/my-bookings', label: 'Lịch Đặt Của Tôi', icon: '📅', badge: 'M04' }
   ];
 
   return (
@@ -70,7 +70,7 @@ export const Navbar: React.FC = () => {
         {/* Navigation Links */}
         <nav className="navbar-links">
           {navItems.map((item) => {
-            const isActive = location.pathname === item.to;
+            const isActive = location.pathname === item.to || location.pathname.startsWith(item.to + '/');
             return (
               <Link
                 key={item.to}

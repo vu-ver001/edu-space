@@ -1,6 +1,7 @@
 package com.eduspace.backend.staff.controller;
 
 import com.eduspace.backend.booking.dto.response.BookingResponse;
+import com.eduspace.backend.booking.entity.BookingStatus;
 import com.eduspace.backend.staff.dto.request.BookingRejectRequestKT;
 import com.eduspace.backend.staff.dto.response.PendingBookingResponseKT;
 import com.eduspace.backend.staff.dto.response.StaffAuditLogResponseKT;
@@ -25,6 +26,16 @@ public class StaffOperationsControllerKT {
 
     private final StaffOperationsService staffOperationsService;
     private final StaffAuditService staffAuditService;
+
+    /**
+     * Danh sách booking dành cho màn hình quản lý Staff.
+     * GET /api/staff/bookings?status={optional}
+     */
+    @GetMapping("/bookings")
+    public ResponseEntity<List<BookingResponse>> getBookings(
+            @RequestParam(required = false) BookingStatus status) {
+        return ResponseEntity.ok(staffOperationsService.getBookingsForStaff(status));
+    }
 
     /**
      * Chức năng 1: Xem Space Timeline kết hợp cả Booking và Maintenance events.

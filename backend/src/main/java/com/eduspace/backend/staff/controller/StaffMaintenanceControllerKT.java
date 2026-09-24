@@ -1,8 +1,11 @@
 package com.eduspace.backend.staff.controller;
 
+import com.eduspace.backend.common.exception.ApiError;
 import com.eduspace.backend.staff.dto.request.MaintenanceCreateRequestKT;
 import com.eduspace.backend.staff.dto.request.MaintenanceUpdateRequestKT;
 import com.eduspace.backend.staff.dto.response.MaintenanceResponseKT;
+import com.eduspace.backend.staff.dto.response.StaffActionResponseKT;
+import com.eduspace.backend.staff.exception.MaintenanceBookingConflictExceptionKT;
 import com.eduspace.backend.staff.service.MaintenanceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +15,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.ArrayList;
 
 @RestController
 @RequestMapping("/api/staff")
@@ -21,16 +25,28 @@ public class StaffMaintenanceControllerKT {
 
     private final MaintenanceService maintenanceService;
 
+    @ExceptionHandler(MaintenanceBookingConflictExceptionKT.class)
+    public ResponseEntity<ApiError> handleMaintenanceBookingConflict(
+            MaintenanceBookingConflictExceptionKT exception) {
+        return ResponseEntity.status(exception.getStatus())
+                .body(new ApiError(
+                        exception.getCode(),
+                        exception.getMessage(),
+                        new ArrayList<>(exception.getConflictingBookings())
+                ));
+    }
+
     /**
      * Tạo khoảng bảo trì không gian (Staff/Admin).
      * POST /api/staff/spaces/{spaceId}/maintenance
      */
     @PostMapping("/spaces/{spaceId}/maintenance")
-    public ResponseEntity<MaintenanceResponseKT> createMaintenance(
+    public ResponseEntity<StaffActionResponseKT<MaintenanceResponseKT>> createMaintenance(
             @PathVariable Long spaceId,
             @Valid @RequestBody MaintenanceCreateRequestKT request) {
+        MaintenanceResponseKT created = maintenanceService.createMaintenance(spaceId, request);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(maintenanceService.createMaintenance(spaceId, request));
+                .body(StaffActionResponseKT.of("Đã tạo khoảng bảo trì thành công.", created));
     }
 
     /**
@@ -38,10 +54,12 @@ public class StaffMaintenanceControllerKT {
      * PUT /api/staff/maintenance/{maintenanceId}
      */
     @PutMapping("/maintenance/{maintenanceId}")
-    public ResponseEntity<MaintenanceResponseKT> updateMaintenance(
+    public ResponseEntity<StaffActionResponseKT<MaintenanceResponseKT>> updateMaintenance(
             @PathVariable Long maintenanceId,
             @Valid @RequestBody MaintenanceUpdateRequestKT request) {
-        return ResponseEntity.ok(maintenanceService.updateMaintenance(maintenanceId, request));
+        MaintenanceResponseKT updated = maintenanceService.updateMaintenance(maintenanceId, request);
+        return ResponseEntity.ok(StaffActionResponseKT.of(
+                "Đã cập nhật khoảng bảo trì thành công.", updated));
     }
 
     /**
@@ -49,9 +67,9 @@ public class StaffMaintenanceControllerKT {
      * DELETE /api/staff/maintenance/{maintenanceId}
      */
     @DeleteMapping("/maintenance/{maintenanceId}")
-    public ResponseEntity<Void> deleteMaintenance(@PathVariable Long maintenanceId) {
+    public ResponseEntity<StaffActionResponseKT<Void>> deleteMaintenance(@PathVariable Long maintenanceId) {
         maintenanceService.deleteMaintenance(maintenanceId);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(StaffActionResponseKT.message("Đã hủy khoảng bảo trì thành công."));
     }
 
     /**

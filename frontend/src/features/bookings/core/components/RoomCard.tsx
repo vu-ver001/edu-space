@@ -38,7 +38,7 @@ export const RoomCard: React.FC<Props> = ({ space, searchParams }) => {
     if (searchParams?.participantCount) params.set('participantCount', String(searchParams.participantCount));
     
     const queryString = params.toString();
-    navigate(`/spaces/${space.id}${queryString ? `?${queryString}` : ''}`);
+    navigate(`/student/spaces/${space.id}${queryString ? `?${queryString}` : ''}`);
   };
 
   const bookingMode = space.bookingMode || space.spaceType?.bookingMode || (
@@ -62,7 +62,15 @@ export const RoomCard: React.FC<Props> = ({ space, searchParams }) => {
           loading="lazy" 
         />
         <div className="room-card-badge-pinned">
-          {requiresApproval ? (
+          {space.status === 'MAINTENANCE' ? (
+            <span className="badge-status-pill" style={{ background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECDD3' }}>
+              <span className="badge-dot" style={{ background: '#DC2626' }} /> Đang bảo trì
+            </span>
+          ) : space.status === 'INACTIVE' ? (
+            <span className="badge-status-pill" style={{ background: '#F8FAFC', color: '#64748B', border: '1px solid #E2E8F0' }}>
+              <span className="badge-dot" style={{ background: '#94A3B8' }} /> Tạm khóa
+            </span>
+          ) : requiresApproval ? (
             <span className="badge-status-pill badge-approval">
               <span className="badge-dot dot-amber" /> Cần phê duyệt
             </span>

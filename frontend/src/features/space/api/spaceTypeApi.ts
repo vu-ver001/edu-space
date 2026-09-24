@@ -1,6 +1,7 @@
 import api from '../../../services/api';
 import type { SpaceType, SpaceTypeCreateRequest, SpaceTypeUpdateRequest } from '../types/spaceType';
 import type { Space } from '../types/space';
+import type { SpaceActionResponse } from '../types/api';
 
 const getAllSpaceTypes = async (): Promise<SpaceType[]> => {
   try {
@@ -17,18 +18,19 @@ const getSpaceTypeById = async (id: number): Promise<SpaceType> => {
   return res.data;
 };
 
-const createSpaceType = async (data: SpaceTypeCreateRequest): Promise<SpaceType> => {
-  const res = await api.post<SpaceType>('/api/admin/space-types', data);
+const createSpaceType = async (data: SpaceTypeCreateRequest): Promise<SpaceActionResponse<SpaceType>> => {
+  const res = await api.post<SpaceActionResponse<SpaceType>>('/api/admin/space-types', data);
   return res.data;
 };
 
-const updateSpaceType = async (id: number, data: SpaceTypeUpdateRequest): Promise<SpaceType> => {
-  const res = await api.put<SpaceType>(`/api/admin/space-types/${id}`, data);
+const updateSpaceType = async (id: number, data: SpaceTypeUpdateRequest): Promise<SpaceActionResponse<SpaceType>> => {
+  const res = await api.put<SpaceActionResponse<SpaceType>>(`/api/admin/space-types/${id}`, data);
   return res.data;
 };
 
-const deleteSpaceType = async (id: number): Promise<void> => {
-  await api.delete(`/api/admin/space-types/${id}`);
+const deleteSpaceType = async (id: number): Promise<SpaceActionResponse<null>> => {
+  const res = await api.delete<SpaceActionResponse<null>>(`/api/admin/space-types/${id}`);
+  return res.data;
 };
 
 const getAllSpaces = async (): Promise<Space[]> => {

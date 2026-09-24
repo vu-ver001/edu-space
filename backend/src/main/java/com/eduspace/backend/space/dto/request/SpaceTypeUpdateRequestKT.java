@@ -10,14 +10,14 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 public class SpaceTypeUpdateRequestKT {
-    @NotBlank(message = "Tên loại phòng không được để trống")
+    @NotBlank(message = "Tên loại không gian không được để trống")
     private String name;
 
     private String description;
 
-    @NotNull(message = "Kiểu đặt phòng không được để trống")
+    @NotNull(message = "Hình thức đặt chỗ không được để trống")
     private BookingMode bookingMode;
 
-    @NotNull(message = "Trường requiresApproval không được để trống")
+    @NotNull(message = "Vui lòng chọn loại không gian có cần duyệt hay không")
     private Boolean requiresApproval;
 }
