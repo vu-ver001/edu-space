@@ -1,5 +1,6 @@
 import api from '../../../services/api';
 import type { Facility, FacilityCreateRequest, FacilityUpdateRequest } from '../types/space';
+import type { SpaceActionResponse } from '../types/api';
 
 export const facilityApi = {
   // Lấy toàn bộ danh mục tiện ích (kèm số lượng không gian đang dùng)
@@ -15,19 +16,20 @@ export const facilityApi = {
   },
 
   // Tạo tiện ích mới
-  createFacility: async (data: FacilityCreateRequest): Promise<Facility> => {
-    const res = await api.post<Facility>('/api/admin/facilities', data);
+  createFacility: async (data: FacilityCreateRequest): Promise<SpaceActionResponse<Facility>> => {
+    const res = await api.post<SpaceActionResponse<Facility>>('/api/admin/facilities', data);
     return res.data;
   },
 
   // Cập nhật tiện ích
-  updateFacility: async (id: number, data: FacilityUpdateRequest): Promise<Facility> => {
-    const res = await api.put<Facility>(`/api/admin/facilities/${id}`, data);
+  updateFacility: async (id: number, data: FacilityUpdateRequest): Promise<SpaceActionResponse<Facility>> => {
+    const res = await api.put<SpaceActionResponse<Facility>>(`/api/admin/facilities/${id}`, data);
     return res.data;
   },
 
   // Xóa mềm tiện ích
-  deleteFacility: async (id: number): Promise<void> => {
-    await api.delete(`/api/admin/facilities/${id}`);
+  deleteFacility: async (id: number): Promise<SpaceActionResponse<null>> => {
+    const res = await api.delete<SpaceActionResponse<null>>(`/api/admin/facilities/${id}`);
+    return res.data;
   },
 };

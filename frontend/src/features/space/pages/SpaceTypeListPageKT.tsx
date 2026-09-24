@@ -5,6 +5,7 @@ import type { SpaceType, SpaceTypeCreateRequest, SpaceTypeUpdateRequest } from '
 import type { Space } from '../types/space';
 import { spaceTypeApi } from '../api/spaceTypeApi';
 import { spaceApi } from '../api/spaceApi';
+import { readSpaceApiError } from '../api/spaceApiError';
 import { SpaceTypeStatsCardsKT } from '../components/SpaceTypeStatsCardsKT';
 import { SpaceTypeFilterBarKT } from '../components/SpaceTypeFilterBarKT';
 import { SpaceTypeTableKT } from '../components/SpaceTypeTableKT';
@@ -59,10 +60,10 @@ export const SpaceTypeListPageKT: React.FC = () => {
       ]);
       setSpaceTypes(typesRes);
       setSpaces(spacesRes);
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || 'Không thể tải danh sách loại không gian';
-      setError(msg);
-      showToast(msg, 'error');
+    } catch (error: unknown) {
+      const apiError = readSpaceApiError(error, 'Không thể tải danh sách loại không gian');
+      setError(apiError.message);
+      showToast(apiError.message, 'error');
     } finally {
       setIsLoading(false);
     }
@@ -86,24 +87,33 @@ export const SpaceTypeListPageKT: React.FC = () => {
 
   // Filtered space types
   const filteredSpaceTypes = useMemo(() => {
-    return spaceTypes.filter((st) => {
-      // Search
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matchName = st.name.toLowerCase().includes(q);
-        const matchDesc = st.description?.toLowerCase().includes(q) || false;
-        if (!matchName && !matchDesc) return false;
-      }
-      // Mode
-      if (filterMode !== 'ALL' && st.bookingMode !== filterMode) {
-        return false;
-      }
-      // Approval
-      if (filterApproval === 'YES' && !st.requiresApproval) return false;
-      if (filterApproval === 'NO' && st.requiresApproval) return false;
+    return spaceTypes
+      .filter((st) => {
+        // Search
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase();
+          const matchName = st.name.toLowerCase().includes(q);
+          const matchDesc = st.description?.toLowerCase().includes(q) || false;
+          if (!matchName && !matchDesc) return false;
+        }
+        // Mode
+        if (filterMode !== 'ALL' && st.bookingMode !== filterMode) {
+          return false;
+        }
+        // Approval
+        if (filterApproval === 'YES' && !st.requiresApproval) return false;
+        if (filterApproval === 'NO' && st.requiresApproval) return false;
 
-      return true;
-    });
+        return true;
+      })
+      .sort((a, b) => {
+        const aCreatedAt = a.createdAt ? Date.parse(a.createdAt) : Number.NaN;
+        const bCreatedAt = b.createdAt ? Date.parse(b.createdAt) : Number.NaN;
+        const aTime = Number.isNaN(aCreatedAt) ? 0 : aCreatedAt;
+        const bTime = Number.isNaN(bCreatedAt) ? 0 : bCreatedAt;
+
+        return bTime - aTime || b.id - a.id;
+      });
   }, [spaceTypes, searchQuery, filterMode, filterApproval]);
 
   // Paginated space types
@@ -153,11 +163,12 @@ export const SpaceTypeListPageKT: React.FC = () => {
     setFormSubmitting(true);
     try {
       if (formMode === 'create') {
-        const created = await spaceTypeApi.create(data as SpaceTypeCreateRequest);
-        showToast(`Đã tạo loại không gian "${created.name}"`);
+        const response = await spaceTypeApi.create(data as SpaceTypeCreateRequest);
+        setCurrentPage(1);
+        showToast(response.message);
       } else if (editingType) {
-        const updated = await spaceTypeApi.update(editingType.id, data as SpaceTypeUpdateRequest);
-        showToast(`Đã cập nhật loại không gian "${updated.name}"`);
+        const response = await spaceTypeApi.update(editingType.id, data as SpaceTypeUpdateRequest);
+        showToast(response.message);
       }
       setFormModalOpen(false);
       fetchData();
@@ -174,16 +185,33 @@ export const SpaceTypeListPageKT: React.FC = () => {
     setDeleteLoading(true);
     setDeleteError(null);
     try {
-      await spaceTypeApi.delete(deletingType.id);
-      showToast(`Đã xóa loại không gian "${deletingType.name}"`);
+      const response = await spaceTypeApi.delete(deletingType.id);
+      showToast(response.message);
       setDeleteConfirmOpen(false);
       setDeletingType(null);
       setDeleteError(null);
       fetchData();
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || 'Không thể xóa loại không gian.';
-      setDeleteError(msg);
-      showToast(msg, 'error');
+    } catch (error: unknown) {
+      const apiError = readSpaceApiError(error, 'Không thể xóa loại không gian.');
+
+      if (apiError.code === 'SPACE_TYPE_NOT_FOUND') {
+        setDeleteConfirmOpen(false);
+        setDeletingType(null);
+        showToast(apiError.message, 'error');
+        fetchData();
+        return;
+      }
+
+      const codesThatKeepDialogOpen: string[] = [
+        'SPACE_TYPE_IN_USE',
+        'SPACE_TYPE_HAS_ACTIVE_SEATS',
+        'SPACE_TYPE_HAS_ACTIVE_TABLES',
+      ];
+
+      setDeleteError(apiError.message);
+      if (!codesThatKeepDialogOpen.includes(apiError.code)) {
+        showToast(apiError.message, 'error');
+      }
     } finally {
       setDeleteLoading(false);
     }
@@ -191,7 +219,7 @@ export const SpaceTypeListPageKT: React.FC = () => {
 
 
   return (
-    <div className="kt-page-wrapper">
+    <div className="kt-page-wrapper space-type-list-page">
       {/* Main Page Content */}
       <main className="kt-main-content">
         {/* Sub Navigation Bar */}

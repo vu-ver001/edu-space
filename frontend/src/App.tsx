@@ -12,7 +12,7 @@ import StudentCheckInPage from './features/bookings/checkin/pages/StudentCheckIn
 import { SearchSpacesPage, SpaceDetailPage, MyBookingsPage } from './features/bookings/core';
 
 import { SpaceTypeDetailPageKT, SpaceTypeListPageKT, SpaceListPageKT, SpaceDetailPageKT, FacilityListPageKT } from "./features/space";
-import { StaffOperationsPageKT } from "./features/staff";
+import { BookingManagementPageKT, StaffOperationsPageKT } from "./features/staff";
 import PolicyManagementPage from './features/admin/policy/pages/PolicyManagementPage';
 import PolicyHistoryPage from './features/admin/policy/pages/PolicyHistoryPage';
 
@@ -47,17 +47,16 @@ export default function App() {
             <Routes>
                 {/* 1. Các trang Quản lý Không gian, Tiện ích & Vận hành của Kim Tuyến */}
                 {/* Truy cập trực tiếp qua URL, hiển thị nguyên bản toàn màn hình, không bọc menu */}
-                <Route path="/admin/space-types" element={<SpaceTypeListPageKT />} />
-                <Route path="/admin/space-types/:id" element={<SpaceTypeDetailPageKT />} />
-                <Route path="/space-types" element={<SpaceTypeListPageKT />} />
-                <Route path="/space-types/:id" element={<SpaceTypeDetailPageKT />} />
-                <Route path="/admin/spaces" element={<SpaceListPageKT />} />
-                <Route path="/admin/spaces/:id" element={<SpaceDetailPageKT />} />
-                <Route path="/spaces-management" element={<SpaceListPageKT />} />
-                <Route path="/spaces-management/:id" element={<SpaceDetailPageKT />} />
-                <Route path="/admin/facilities" element={<FacilityListPageKT />} />
-                <Route path="/facilities" element={<FacilityListPageKT />} />
-                <Route path="/staff" element={<StaffOperationsPageKT />} />
+                <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
+                    <Route path="/admin/space-types" element={<SpaceTypeListPageKT />} />
+                    <Route path="/admin/space-types/:id" element={<SpaceTypeDetailPageKT />} />
+                    <Route path="/admin/spaces" element={<SpaceListPageKT />} />
+                    <Route path="/admin/spaces/:id" element={<SpaceDetailPageKT />} />
+                    <Route path="/admin/facilities" element={<FacilityListPageKT />} />
+                    <Route path="/staff" element={<BookingManagementPageKT />} />
+                    <Route path="/staff/bookings" element={<BookingManagementPageKT />} />
+                    <Route path="/staff/operations" element={<StaffOperationsPageKT />} />
+                </Route>
 
                 {/* 2. Module Chính sách của Ngọc Anh */}
                 <Route path="/admin/policy" element={<PolicyManagementPage />} />

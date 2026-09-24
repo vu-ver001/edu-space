@@ -22,6 +22,7 @@ import type { SpaceType, SpaceTypeUpdateRequest } from '../types/spaceType';
 import type { Space } from '../types/space';
 import { spaceTypeApi } from '../api/spaceTypeApi';
 import { spaceApi } from '../api/spaceApi';
+import { readSpaceApiError } from '../api/spaceApiError';
 import { SpaceTypeFormModalKT } from '../components/SpaceTypeFormModalKT';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
 import './SpaceTypeDetailPageKT.css';
@@ -87,8 +88,8 @@ export const SpaceTypeDetailPageKT: React.FC = () => {
         (s) => (s.spaceType?.id ?? s.spaceTypeId) === typeId
       );
       setAssociatedSpaces(matchedSpaces);
-    } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || 'Không tìm thấy loại không gian');
+    } catch (error: unknown) {
+      setError(readSpaceApiError(error, 'Không tìm thấy loại không gian').message);
     } finally {
       setLoading(false);
     }
@@ -112,10 +113,10 @@ export const SpaceTypeDetailPageKT: React.FC = () => {
     if (!spaceType) return;
     setIsSubmitting(true);
     try {
-      const updated = await spaceTypeApi.update(spaceType.id, data as SpaceTypeUpdateRequest);
-      setSpaceType(updated);
+      const response = await spaceTypeApi.update(spaceType.id, data as SpaceTypeUpdateRequest);
+      setSpaceType(response.data);
       setIsEditOpen(false);
-      showToast(`Đã cập nhật loại không gian "${updated.name}"`);
+      showToast(response.message);
     } catch (err: any) {
       // Lỗi được modal (SpaceTypeFormModalKT) hiển thị trực tiếp trên form, không cần hiện thêm toast ở góc
       throw err;
@@ -129,17 +130,24 @@ export const SpaceTypeDetailPageKT: React.FC = () => {
     setIsDeleting(true);
     setDeleteError(null);
     try {
-      await spaceTypeApi.delete(spaceType.id);
-      showToast(`Đã xóa loại không gian "${spaceType.name}"`);
+      const response = await spaceTypeApi.delete(spaceType.id);
+      showToast(response.message);
       setIsDeleteOpen(false);
       setDeleteError(null);
       setTimeout(() => {
         navigate('/admin/space-types');
       }, 700);
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || 'Không thể xóa loại không gian.';
-      setDeleteError(msg);
-      showToast(msg, 'error');
+    } catch (error: unknown) {
+      const apiError = readSpaceApiError(error, 'Không thể xóa loại không gian.');
+
+      if (apiError.code === 'SPACE_TYPE_NOT_FOUND') {
+        setIsDeleteOpen(false);
+        showToast(apiError.message, 'error');
+        navigate('/admin/space-types');
+        return;
+      }
+
+      setDeleteError(apiError.message);
     } finally {
       setIsDeleting(false);
     }
@@ -394,19 +402,13 @@ export const SpaceTypeDetailPageKT: React.FC = () => {
               </h3>
 
               <div className="info-specs-list">
-                {/* 1. Mã định danh loại không gian */}
-                <div className="info-spec-item">
-                  <span className="spec-label-text">Mã định danh (ID)</span>
-                  <div className="spec-value-box monospace-code">#{spaceType.id}</div>
-                </div>
-
-                {/* 2. Tên loại không gian */}
+                {/* Tên loại không gian */}
                 <div className="info-spec-item">
                   <span className="spec-label-text">Tên loại không gian</span>
                   <div className="spec-value-box">{spaceType.name}</div>
                 </div>
 
-                {/* 3. Chế độ đặt chỗ */}
+                {/* Chế độ đặt chỗ */}
                 <div className="info-spec-item">
                   <span className="spec-label-text">Chế độ đặt chỗ</span>
                   <div>
@@ -416,7 +418,7 @@ export const SpaceTypeDetailPageKT: React.FC = () => {
                   </div>
                 </div>
 
-                {/* 4. Cần duyệt */}
+                {/* Cần duyệt */}
                 <div className="info-spec-item">
                   <span className="spec-label-text">Quy trình duyệt</span>
                   <div>
@@ -428,7 +430,7 @@ export const SpaceTypeDetailPageKT: React.FC = () => {
                   </div>
                 </div>
 
-                {/* 5. Mô tả */}
+                {/* Mô tả */}
                 <div className="info-spec-item">
                   <span className="spec-label-text">Mô tả</span>
                   <div className="spec-value-box" style={{ fontWeight: 400 }}>
@@ -436,13 +438,13 @@ export const SpaceTypeDetailPageKT: React.FC = () => {
                   </div>
                 </div>
 
-                {/* 6. Ngày tạo */}
+                {/* Ngày tạo */}
                 <div className="info-spec-item">
                   <span className="spec-label-text">Ngày tạo</span>
                   <div className="spec-value-box">{formatDateTime(spaceType.createdAt)}</div>
                 </div>
 
-                {/* 7. Ngày cập nhật */}
+                {/* Ngày cập nhật */}
                 <div className="info-spec-item">
                   <span className="spec-label-text">Ngày cập nhật</span>
                   <div className="spec-value-box">

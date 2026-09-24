@@ -7,7 +7,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/uploads': {
-        target: 'http://localhost:8080',
+        target: 'http://localhost:8081',
         changeOrigin: true,
       },
     },

@@ -51,11 +51,11 @@ public class SpaceTypeService {
     public SpaceTypeResponseKT createSpaceType(SpaceTypeCreateRequestKT request) {
         String name = request.getName() != null ? request.getName().trim() : "";
         if (name.isEmpty()) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Tên loại phòng không được để trống.");
+            throw new AppException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Tên loại không gian không được để trống.");
         }
 
         if (spaceTypeRepository.existsByNameIgnoreCase(name)) {
-            throw new AppException(HttpStatus.CONFLICT, "SPACE_TYPE_NAME_EXISTS", "Tên loại phòng '" + name + "' đã tồn tại.");
+            throw new AppException(HttpStatus.CONFLICT, "SPACE_TYPE_NAME_EXISTS", "Tên loại không gian '" + name + "' đã tồn tại.");
         }
 
         SpaceType spaceType = SpaceType.builder()
@@ -79,12 +79,12 @@ public class SpaceTypeService {
 
         String newName = request.getName() != null ? request.getName().trim() : "";
         if (newName.isEmpty()) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Tên loại phòng không được để trống.");
+            throw new AppException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Tên loại không gian không được để trống.");
         }
 
         if (!newName.equalsIgnoreCase(spaceType.getName())) {
             if (spaceTypeRepository.existsByNameIgnoreCase(newName)) {
-                throw new AppException(HttpStatus.CONFLICT, "SPACE_TYPE_NAME_EXISTS", "Tên loại phòng '" + newName + "' đã tồn tại.");
+                throw new AppException(HttpStatus.CONFLICT, "SPACE_TYPE_NAME_EXISTS", "Tên loại không gian '" + newName + "' đã tồn tại.");
             }
             spaceType.setName(newName);
         }

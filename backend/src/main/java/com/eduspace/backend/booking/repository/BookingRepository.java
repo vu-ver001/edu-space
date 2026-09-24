@@ -104,6 +104,13 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     List<Booking> findByStudentIdAndStatusOrderByStartTimeDesc(Long studentId, BookingStatus status);
 
     /**
+     * Danh sách quản lý dành cho Staff/Admin, mới tạo trước.
+     */
+    List<Booking> findAllByOrderByCreatedAtDesc();
+
+    List<Booking> findByStatusOrderByCreatedAtDesc(BookingStatus status);
+
+    /**
      * Lấy các booking PENDING_APPROVAL đã quá giờ bắt đầu mà chưa xử lý (để chuyển EXPIRED).
      */
     @Query("SELECT b FROM Booking b WHERE b.status = :status AND b.startTime <= :now ORDER BY b.id")
