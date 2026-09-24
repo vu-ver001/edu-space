@@ -48,10 +48,22 @@ export const FilterBar: React.FC<Props> = ({ onSearch, isLoading, availableCount
 
   const [spaceTypes, setSpaceTypes] = useState<SpaceType[]>([]);
   const [facilities, setFacilities] = useState<Facility[]>([]);
+  const [operatingHours, setOperatingHours] = useState<{ openingHour: string; closingHour: string }>({
+    openingHour: '07:00',
+    closingHour: '22:00'
+  });
 
   useEffect(() => {
     spaceService.getSpaceTypes().then(setSpaceTypes).catch(() => {});
     spaceService.getFacilities().then(setFacilities).catch(() => {});
+    spaceService.getOperatingHours().then((res) => {
+      if (res && res.openingHour && res.closingHour) {
+        setOperatingHours({
+          openingHour: res.openingHour,
+          closingHour: res.closingHour
+        });
+      }
+    }).catch(() => {});
   }, []);
 
   const handleFacilityToggle = (facilityId: number) => {
@@ -74,6 +86,10 @@ export const FilterBar: React.FC<Props> = ({ onSearch, isLoading, availableCount
       setTimeError(`Giờ bắt đầu (${startTime}) phải trước giờ kết thúc (${endTime}). Vui lòng chọn lại khung giờ.`);
       return;
     }
+    if (startTime < operatingHours.openingHour || endTime > operatingHours.closingHour) {
+      setTimeError(`Không gian học tập chỉ mở cửa từ ${operatingHours.openingHour} đến ${operatingHours.closingHour} hàng ngày.`);
+      return;
+    }
     setTimeError(null);
     onSearch({
       date,
@@ -87,7 +103,13 @@ export const FilterBar: React.FC<Props> = ({ onSearch, isLoading, availableCount
 
   return (
     <div className="internal-search-card">
-      <h3 className="internal-search-title">Tìm không gian học tập</h3>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+        <h3 className="internal-search-title" style={{ margin: 0 }}>Tìm không gian học tập</h3>
+        <span style={{ fontSize: '12px', fontWeight: 600, color: '#1D4ED8', background: '#EFF6FF', border: '1px solid #BFDBFE', padding: '4px 10px', borderRadius: '16px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#2563EB', display: 'inline-block' }} />
+          Giờ mở cửa toàn tòa: {operatingHours.openingHour} – {operatingHours.closingHour}
+        </span>
+      </div>
 
       {/* Row 1: Ngày, Giờ bắt đầu, Giờ kết thúc, Số người */}
       <div className="internal-form-row four-cols">
@@ -107,6 +129,8 @@ export const FilterBar: React.FC<Props> = ({ onSearch, isLoading, availableCount
           <input
             type="time"
             step="60"
+            min={operatingHours.openingHour}
+            max={operatingHours.closingHour}
             className={`internal-input internal-time-input ${timeError ? 'input-error' : ''}`}
             value={startTime}
             onChange={(e) => {
@@ -114,6 +138,8 @@ export const FilterBar: React.FC<Props> = ({ onSearch, isLoading, availableCount
               setStartTime(val);
               if (val >= endTime) {
                 setTimeError(`Giờ bắt đầu (${val}) phải trước giờ kết thúc (${endTime}). Vui lòng chọn lại khung giờ.`);
+              } else if (val < operatingHours.openingHour) {
+                setTimeError(`Giờ bắt đầu phải từ ${operatingHours.openingHour} trở đi (giờ mở cửa tòa nhà).`);
               } else {
                 setTimeError(null);
               }
@@ -126,6 +152,8 @@ export const FilterBar: React.FC<Props> = ({ onSearch, isLoading, availableCount
           <input
             type="time"
             step="60"
+            min={operatingHours.openingHour}
+            max={operatingHours.closingHour}
             className={`internal-input internal-time-input ${timeError ? 'input-error' : ''}`}
             value={endTime}
             onChange={(e) => {
@@ -133,12 +161,15 @@ export const FilterBar: React.FC<Props> = ({ onSearch, isLoading, availableCount
               setEndTime(val);
               if (startTime >= val) {
                 setTimeError(`Giờ bắt đầu (${startTime}) phải trước giờ kết thúc (${val}). Vui lòng chọn lại khung giờ.`);
+              } else if (val > operatingHours.closingHour) {
+                setTimeError(`Giờ kết thúc không được vượt quá ${operatingHours.closingHour} (giờ đóng cửa tòa nhà).`);
               } else {
                 setTimeError(null);
               }
             }}
           />
         </div>
+
 
         <div className="internal-field">
           <label className="internal-label">Số người</label>

@@ -55,6 +55,10 @@ export const SpaceDetailPage: React.FC = () => {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
+  const [operatingHours, setOperatingHours] = useState<{ openingHour: string; closingHour: string }>({
+    openingHour: '07:00',
+    closingHour: '22:00'
+  });
 
   const bookingMode = space?.bookingMode || space?.spaceType?.bookingMode || (
     space?.spaceTypeName?.toLowerCase().includes('bàn') ? 'PER_TABLE' :
@@ -79,6 +83,15 @@ export const SpaceDetailPage: React.FC = () => {
         setError(err?.response?.data?.message || 'Không thể tải thông tin phòng học.');
       })
       .finally(() => setLoading(false));
+
+    spaceService.getOperatingHours().then((res) => {
+      if (res && res.openingHour && res.closingHour) {
+        setOperatingHours({
+          openingHour: res.openingHour,
+          closingHour: res.closingHour
+        });
+      }
+    }).catch(() => {});
   }, [id]);
 
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -100,9 +113,15 @@ export const SpaceDetailPage: React.FC = () => {
       return;
     }
 
+    if (startTime < operatingHours.openingHour || endTime > operatingHours.closingHour) {
+      setBookingError(`Tòa nhà chỉ mở cửa phục vụ trong khung giờ từ ${operatingHours.openingHour} đến ${operatingHours.closingHour}. Vui lòng chọn lại.`);
+      return;
+    }
+
     // Bắt buộc nhập lý do sử dụng nếu phòng cần duyệt trước theo CSDL
     if (requiresApproval && (!purpose || !purpose.trim())) {
       setBookingError('Vui lòng nhập mục đích sử dụng (bắt buộc đối với không gian cần nhân viên duyệt).');
+
       return;
     }
 
@@ -398,6 +417,8 @@ export const SpaceDetailPage: React.FC = () => {
                   <input
                     type="time"
                     step="60"
+                    min={operatingHours.openingHour}
+                    max={operatingHours.closingHour}
                     className="form-control-input internal-time-input"
                     value={startTime}
                     onChange={(e) => setStartTime(e.target.value)}
@@ -410,6 +431,8 @@ export const SpaceDetailPage: React.FC = () => {
                   <input
                     type="time"
                     step="60"
+                    min={operatingHours.openingHour}
+                    max={operatingHours.closingHour}
                     className="form-control-input internal-time-input"
                     value={endTime}
                     onChange={(e) => setEndTime(e.target.value)}
@@ -417,6 +440,13 @@ export const SpaceDetailPage: React.FC = () => {
                   />
                 </div>
               </div>
+
+              {/* Gợi ý giờ hoạt động cả tòa */}
+              <div style={{ marginTop: '-4px', marginBottom: '14px', fontSize: '12px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ color: '#2563EB' }}>⏰</span>
+                <span><strong>Giờ mở cửa toàn tòa:</strong> {operatingHours.openingHour} – {operatingHours.closingHour} (Tối đa 3 giờ/lượt đặt)</span>
+              </div>
+
 
               {/* Số người tham gia */}
               <div className="form-field-group">

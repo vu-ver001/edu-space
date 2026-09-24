@@ -697,4 +697,12 @@ public class AvailabilityService {
         }
         return null;
     }
+
+    /**
+     * Lấy thông tin thời gian mở/đóng cửa của toàn bộ tòa nhà/hệ thống và các hạn mức đặt chỗ từ CSDL chính sách (Ngọc Anh).
+     */
+    public com.eduspace.backend.policy.dto.response.PolicyResponse getOperatingHours() {
+        return policyService.getCurrentPolicy();
+    }
 }
+

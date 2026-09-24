@@ -77,5 +77,18 @@ export const spaceService = {
   getTablesBySpace: async (spaceId: number): Promise<SpaceTable[]> => {
     const res = await api.get<SpaceTable[]>(`/api/spaces/${spaceId}/tables`);
     return res.data;
+  },
+
+  // Khung giờ mở cửa & đóng cửa của tòa nhà và các chính sách hạn mức (Đồng bộ từ CSDL)
+  getOperatingHours: async (): Promise<{
+    openingHour: string;
+    closingHour: string;
+    maxDurationMinutes?: number;
+    maxBookingsPerDay?: number;
+    checkInGraceMinutes?: number;
+  }> => {
+    const res = await api.get('/api/spaces/operating-hours');
+    return res.data;
   }
 };
+
