@@ -38,6 +38,7 @@ export interface PendingBooking {
 }
 
 export interface StaffBooking extends PendingBooking {
+  message?: string;
   statusDisplayName?: string;
   isOccupying?: boolean;
   rejectReason?: string;
@@ -59,6 +60,7 @@ export interface BulkBookingFailureItem {
 }
 
 export interface BulkBookingOperationResponse {
+  message: string;
   totalRequested: number;
   successCount: number;
   failureCount: number;

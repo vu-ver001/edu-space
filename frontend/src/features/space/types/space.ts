@@ -128,7 +128,6 @@ export interface SpaceCreateRequest {
   status: 'AVAILABLE' | 'MAINTENANCE' | 'INACTIVE';
   description?: string;
   facilityIds?: number[];
-  imageUrl?: string;
 }
 
 export interface SpaceUpdateRequest {
@@ -141,6 +140,4 @@ export interface SpaceUpdateRequest {
   status: 'AVAILABLE' | 'MAINTENANCE' | 'INACTIVE';
   description?: string;
   facilityIds?: number[];
-  imageUrl?: string;
 }
-

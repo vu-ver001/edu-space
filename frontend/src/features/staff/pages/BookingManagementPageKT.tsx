@@ -288,17 +288,13 @@ export const BookingManagementPageKT = () => {
         });
 
         if (response.failureCount > 0) {
-          const firstFailure = response.failedBookings[0];
-          const failedCode = firstFailure?.bookingCode || `#${firstFailure?.bookingId}`;
-          showToast(
-            `Đã duyệt ${response.successCount}/${response.totalRequested} booking. ${failedCode}: ${firstFailure?.errorMessage || 'Không thể duyệt.'}`,
-            'error',
-          );
+          showToast(response.message || 'Không thể duyệt toàn bộ booking đã chọn.', 'error');
         } else {
-          showToast(`Đã duyệt thành công ${response.successCount} booking.`);
+          showToast(response.message || `Đã duyệt thành công ${response.successCount} booking.`);
         }
       } else if (confirmAction.type === 'approve') {
-        await staffApi.approveBooking(confirmAction.booking.id);
+        const response = await staffApi.approveBooking(confirmAction.booking.id);
+        showToast(response.message || 'Duyệt đặt phòng thành công');
       } else {
         await staffApi.staffAssistedCheckIn(confirmAction.booking.id);
       }
@@ -319,7 +315,7 @@ export const BookingManagementPageKT = () => {
     setActionLoading(true);
     try {
       if (targetBookings.length === 1) {
-        await staffApi.rejectBooking(targetBookings[0].id, reason);
+        const response = await staffApi.rejectBooking(targetBookings[0].id, reason);
         setSelectedPendingIds((current) => {
           const next = new Set(current);
           next.delete(targetBookings[0].id);
@@ -328,6 +324,7 @@ export const BookingManagementPageKT = () => {
         setRejectingBooking(null);
         setBulkRejectingBookings([]);
         await loadData();
+        showToast(response.message || 'Từ chối đặt phòng thành công');
         return;
       }
 
@@ -347,14 +344,12 @@ export const BookingManagementPageKT = () => {
       await loadData();
       if (response.failureCount > 0) {
         setBulkRejectingBookings(failed);
-        const firstFailure = response.failedBookings[0];
-        const failedCode = firstFailure?.bookingCode || `#${firstFailure?.bookingId}`;
-        throw new Error(`${failedCode}: ${firstFailure?.errorMessage || 'Không thể từ chối booking.'}`);
+        throw new Error(response.message || 'Không thể từ chối toàn bộ booking đã chọn.');
       }
 
       setRejectingBooking(null);
       setBulkRejectingBookings([]);
-      showToast(`Đã từ chối thành công ${response.successCount} booking.`);
+      showToast(response.message || `Đã từ chối thành công ${response.successCount} booking.`);
     } finally {
       setActionLoading(false);
     }
@@ -401,18 +396,11 @@ export const BookingManagementPageKT = () => {
     <div className="booking-management-page">
       <header className="booking-page-header">
         <div className="booking-page-title">
-          <span className="booking-title-icon"><CalendarCheck2 size={26} /></span>
           <div>
             <h1>Quản lý booking</h1>
             <p>Duyệt, từ chối và hỗ trợ check-in cho các yêu cầu đặt chỗ</p>
           </div>
         </div>
-        <time className="booking-live-time">
-          {new Intl.DateTimeFormat('vi-VN', {
-            weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric',
-            hour: '2-digit', minute: '2-digit', hour12: false,
-          }).format(now)}
-        </time>
       </header>
 
       <section className="booking-stat-grid" aria-label="Thống kê booking">
@@ -695,7 +683,6 @@ export const BookingManagementPageKT = () => {
               <div className="booking-detail-header">
                 <div><strong>{bookingCode(selectedBooking)}</strong></div>
                 <div className="booking-detail-heading-actions">
-                  <StatusBadge status={selectedBooking.status} size="sm" />
                   <button
                     type="button"
                     className="booking-detail-close"
