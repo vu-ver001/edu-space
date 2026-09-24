@@ -1,7 +1,6 @@
 package com.eduspace.backend.space.controller;
 
 import com.eduspace.backend.space.dto.response.SeatResponseKT;
-import com.eduspace.backend.space.dto.response.SpaceImageContentKT;
 import com.eduspace.backend.space.dto.response.SpaceImageResponseKT;
 import com.eduspace.backend.space.dto.response.SpaceResponseKT;
 import com.eduspace.backend.space.dto.response.SpaceTableResponseKT;
@@ -12,13 +11,10 @@ import com.eduspace.backend.space.service.SpaceImageService;
 import com.eduspace.backend.space.service.SpaceService;
 import com.eduspace.backend.space.service.SpaceTableService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.CacheControl;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 @RestController
 @RequestMapping("/api/spaces")
@@ -89,20 +85,4 @@ public class SpaceControllerKT {
         return ResponseEntity.ok(spaceImageService.getImagesBySpace(spaceId));
     }
 
-    /**
-     * Đọc file ảnh được lưu trực tiếp trong bảng space_images.
-     * GET /api/spaces/images/{imageId}/content
-     */
-    @GetMapping("/images/{imageId}/content")
-    public ResponseEntity<byte[]> getImageContent(@PathVariable Long imageId) {
-        SpaceImageContentKT image = spaceImageService.getImageContent(imageId);
-        MediaType mediaType = image.getContentType() != null
-                ? MediaType.parseMediaType(image.getContentType())
-                : MediaType.APPLICATION_OCTET_STREAM;
-
-        return ResponseEntity.ok()
-                .contentType(mediaType)
-                .cacheControl(CacheControl.maxAge(1, TimeUnit.HOURS).cachePublic())
-                .body(image.getData());
-    }
 }

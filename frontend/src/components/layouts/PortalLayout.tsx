@@ -45,7 +45,6 @@ export const PortalLayout = () => {
       return [
         { to: STAFF_BASE, label: uiSettings.staffHomeLabel || 'Trang chủ', icon: uiSettings.staffHomeIcon || '🏠' },
         { to: `${STAFF_BASE}/approvals`, label: uiSettings.staffApproveLabel || 'Duyệt đặt chỗ', icon: uiSettings.staffApproveIcon || '✅' },
-        { to: `${STAFF_BASE}/maintenance`, label: 'Tạo bảo trì', icon: '🛠️' },
         { to: `${STAFF_BASE}/checkin`, label: 'Hỗ trợ Check-in', icon: '📍' }
       ];
     }

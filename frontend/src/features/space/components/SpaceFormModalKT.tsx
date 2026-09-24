@@ -66,6 +66,7 @@ export const SpaceFormModalKT: React.FC<Props> = ({
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const imagesRef = useRef<SpaceFormImage[]>([]);
 
   useEffect(() => {
     if (isOpen) {
@@ -124,12 +125,16 @@ export const SpaceFormModalKT: React.FC<Props> = ({
       setImageError(null);
       setImageInputMethod('file');
     }
-  }, [isOpen, mode, space, spaceTypes]);
+  }, [isOpen, mode, space]);
 
-  // Clean up object URLs when closing modal
+  useEffect(() => {
+    imagesRef.current = images;
+  }, [images]);
+
+  // Thu hồi các URL xem trước của file khi component bị gỡ khỏi trang.
   useEffect(() => {
     return () => {
-      images.forEach((item) => {
+      imagesRef.current.forEach((item) => {
         if (item.type === 'file' && item.previewUrl) {
           try {
             URL.revokeObjectURL(item.previewUrl);
@@ -277,28 +282,34 @@ export const SpaceFormModalKT: React.FC<Props> = ({
     e.preventDefault();
     setValidationError(null);
     setFieldErrors({});
+    setImageError(null);
+
+    const errors: Record<string, string> = {};
+    if (!spaceCode.trim()) errors.spaceCode = 'Mã không gian không được để trống.';
+    if (!name.trim()) errors.name = 'Tên không gian không được để trống.';
+    if (spaceTypeId <= 0) errors.spaceTypeId = 'Vui lòng chọn loại không gian.';
+    if (!building.trim()) errors.building = 'Tòa nhà không được để trống.';
+    if (!floor.trim()) errors.floor = 'Tầng không được để trống.';
+    if (!capacity || Number(capacity) < 1) errors.capacity = 'Sức chứa phải lớn hơn 0.';
+    if (images.length === 0) errors.images = 'Vui lòng thêm ít nhất 1 hình ảnh cho không gian.';
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      if (errors.images) setImageError(errors.images);
+      return;
+    }
 
     try {
-      const primaryItem = images.find((item) => item.isPrimary) || images[0];
-      const primaryUrl = primaryItem
-        ? (primaryItem.url && primaryItem.url.trim()
-            ? primaryItem.url.trim()
-            : primaryItem.type === 'file'
-            ? 'FILE_UPLOAD'
-            : primaryItem.previewUrl || 'EXISTING_IMAGE')
-        : '';
-
       const payload: SpaceCreateRequest = {
         name: name.trim(),
         spaceCode: spaceCode.trim().toUpperCase(),
-        spaceTypeId: spaceTypeId || (undefined as any),
+        spaceTypeId,
         building: building.trim(),
         floor: floor.trim(),
         capacity: Number(capacity) || 0,
         status,
         description: description.trim() ? description.trim() : undefined,
         facilityIds: selectedFacilityIds,
-        imageUrl: primaryUrl ? primaryUrl : (undefined as any),
       };
       await onSubmit(payload, images);
     } catch (err: any) {
@@ -314,9 +325,6 @@ export const SpaceFormModalKT: React.FC<Props> = ({
         });
       }
 
-      if (newFieldErrors.imageUrl) {
-        newFieldErrors.images = newFieldErrors.imageUrl;
-      }
       if (msg.includes('Mã không gian') || msg.includes('SPACE_CODE')) {
         newFieldErrors.spaceCode = newFieldErrors.spaceCode || msg;
       }
@@ -335,9 +343,8 @@ export const SpaceFormModalKT: React.FC<Props> = ({
       if (msg.includes('Sức chứa') || msg.includes('CAPACITY')) {
         newFieldErrors.capacity = newFieldErrors.capacity || msg;
       }
-      if (msg.includes('ảnh') || msg.includes('IMAGE') || msg.includes('imageUrl')) {
+      if (msg.includes('ảnh') || msg.includes('IMAGE')) {
         newFieldErrors.images = newFieldErrors.images || msg;
-        newFieldErrors.imageUrl = newFieldErrors.imageUrl || msg;
       }
 
       // Lỗi của từng trường đã hiển thị ngay dưới ô nhập.
