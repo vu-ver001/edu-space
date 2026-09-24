@@ -88,25 +88,12 @@ export default function App() {
 
                     {/* ADMIN */}
                     <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
-<<<<<<< HEAD
-                        <Route path="/admin/space-types" element={<SpaceTypeListPageKT />} />
-                        <Route path="/admin/space-types/:id" element={<SpaceTypeDetailPageKT />} />
-                        <Route path="/admin/spaces" element={<SpaceListPageKT />} />
-                        <Route path="/admin/spaces/:id" element={<SpaceDetailPageKT />} />
-                        <Route path="/admin/facilities" element={<FacilityListPageKT />} />
-                        <Route path="/staff" element={<BookingManagementPageKT />} />
-                        <Route path="/staff/bookings" element={<BookingManagementPageKT />} />
-                        <Route path="/staff/operations" element={<StaffOperationsPageKT />} />
-                        <Route path={`${ADMIN_BASE}/policy`} element={<Placeholder title="Chính sách" owner="Anh" />} />
-                        <Route path={`${ADMIN_BASE}/stats`} element={<Placeholder title="Thống kê" owner="Anh" />} />
-=======
                         <Route path={`${ADMIN_BASE}/stats`} element={<StatisticsDashboardPage />} />
                         <Route path={`${ADMIN_BASE}/policy`} element={<PolicyManagementPage />} />
                         <Route path={`${ADMIN_BASE}/policy/history`} element={<PolicyHistoryPage />} />
                         <Route path={`${ADMIN_BASE}/spaces`} element={<SpaceListPageKT />} />
                         <Route path={`${ADMIN_BASE}/spaces/:id`} element={<SpaceDetailPageKT />} />
                         <Route path={`${ADMIN_BASE}/facilities`} element={<FacilityListPageKT />} />
->>>>>>> f39a47473959490286d52dfb7d20ca0e39080484
                         <Route path={`${ADMIN_BASE}/space-types`} element={<SpaceTypeListPageKT />} />
                         <Route path={`${ADMIN_BASE}/space-types/:id`} element={<SpaceTypeDetailPageKT />} />
                         <Route path={`${ADMIN_BASE}/settings-general`} element={<GeneralSettingsPage />} />
@@ -117,6 +104,8 @@ export default function App() {
                     {/* STAFF */}
                     <Route element={<ProtectedRoute allowedRoles={['STAFF', 'ADMIN']} />}>
                         <Route path={STAFF_BASE} element={<StaffOperationsPageKT />} />
+                        <Route path={`${STAFF_BASE}/bookings`} element={<BookingManagementPageKT />} />
+                        <Route path={`${STAFF_BASE}/operations`} element={<StaffOperationsPageKT />} />
                         <Route path={`${STAFF_BASE}/timeline`} element={<TimelinePage />} />
                         <Route path={`${STAFF_BASE}/audit-logs`} element={<AuditLogPage />} />
                         <Route path={`${STAFF_BASE}/qr`} element={<Placeholder title="Check-in QR" owner="Vũ" />} />
