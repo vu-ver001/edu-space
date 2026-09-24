@@ -30,6 +30,12 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     long countByStatusAndCreatedAtBetween(BookingStatus status, LocalDateTime from, LocalDateTime to);
 
+    Optional<Booking> findByBookingCode(String bookingCode);
+
+    boolean existsByBookingCode(String bookingCode);
+
+    long countBySpaceIdAndCreatedAtBetween(Long spaceId, LocalDateTime from, LocalDateTime to);
+
 
     /**
      * Tìm các booking đang chiếm chỗ của một phòng giao nhau với khoảng thời gian [startTime, endTime].

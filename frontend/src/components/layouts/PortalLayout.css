@@ -1,0 +1,70 @@
+/* CONTAINER & RESET */
+.portal-container { display: flex; min-height: 100vh; background: #f8fafc; font-family: 'Inter', sans-serif; }
+
+/* SIDEBAR MỚI: Flex dọc, đẩy profile xuống đáy, overflow visible để bật popup */
+.portal-sidebar-wide { width: 260px; min-width: 260px; background: #1e293b; color: white; display: flex; flex-direction: column; justify-content: space-between; transition: width 0.3s ease, min-width 0.3s ease; overflow: visible; z-index: 10; }
+.portal-sidebar-wide.collapsed { width: 72px; min-width: 72px; }
+
+/* KHU VỰC TRÊN CỦA SIDEBAR (Chứa Logo + Menu, có thể cuộn nếu menu dài) */
+.sidebar-top-section { display: flex; flex-direction: column; flex: 1; overflow-y: auto; overflow-x: hidden; }
+
+/* BRAND BOX & TOGGLE */
+.sidebar-brand-box { height: 60px; padding: 0 16px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #334155; box-sizing: border-box; white-space: nowrap; }
+.collapsed .sidebar-brand-box { padding: 0; justify-content: center; }
+.sidebar-toggle-btn { background: none; border: none; color: #cbd5e1; cursor: pointer; padding: 6px; display: flex; align-items: center; justify-content: center; border-radius: 6px; transition: 0.2s; flex-shrink: 0; }
+.sidebar-toggle-btn:hover { background: #334155; color: white; }
+.brand-link { display: flex; align-items: center; gap: 10px; text-decoration: none; color: white; }
+.brand-name { font-size: 1.15rem; font-weight: bold; color: #ffffff; }
+.collapsed .brand-link { display: none; }
+
+/* MENU NAVIGATION */
+.sidebar-wide-nav { padding: 16px 12px; display: flex; flex-direction: column; gap: 4px; overflow-x: hidden; }
+.collapsed .sidebar-wide-nav { padding: 16px 8px; align-items: center; }
+.sidebar-wide-item { display: flex; align-items: center; gap: 12px; padding: 10px 16px; color: #cbd5e1; font-size: 0.95rem; text-decoration: none; border-radius: 8px; transition: 0.2s; white-space: nowrap; box-sizing: border-box; width: 100%; }
+.sidebar-wide-item:hover, .sidebar-wide-item.active { background: #3b82f6; color: white; }
+.collapsed .sidebar-wide-item { width: 44px; height: 44px; padding: 0; justify-content: center; }
+.nav-item-icon { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 24px; height: 24px; }
+.nav-item-icon svg { width: 20px; height: 20px; }
+.nav-item-text { transition: opacity 0.2s; opacity: 1; }
+.collapsed .nav-item-text { opacity: 0; display: none; }
+
+/* DYNAMIC ICON STYLES */
+.dynamic-svg-wrapper { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
+.dynamic-svg-wrapper svg { width: 20px; height: 20px; fill: currentColor; }
+.dynamic-font-icon { font-size: 20px; color: currentColor; }
+.dynamic-img-icon { width: 20px; height: 20px; object-fit: contain; filter: grayscale(100%) brightness(200%); }
+.dynamic-emoji-icon { font-size: 18px; line-height: 1; }
+
+/* ------------------------------------------------ */
+/* CSS MỚI: KHU VỰC PROFILE DƯỚI ĐÁY SIDEBAR      */
+/* ------------------------------------------------ */
+.sidebar-bottom-profile { padding: 16px; border-top: 1px solid #334155; display: flex; align-items: center; gap: 12px; cursor: pointer; position: relative; transition: background 0.2s; }
+.sidebar-bottom-profile:hover { background: #334155; }
+.collapsed .sidebar-bottom-profile { justify-content: center; padding: 16px 0; }
+
+.profile-avatar-circle { width: 36px; height: 36px; border-radius: 50%; background: #3b82f6; color: white; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.profile-avatar-circle svg { width: 20px; height: 20px; }
+
+.profile-info-box { display: flex; flex-direction: column; flex: 1; min-width: 0; transition: opacity 0.2s; }
+.collapsed .profile-info-box { opacity: 0; display: none; }
+
+.profile-name { font-weight: 600; font-size: 0.9rem; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.profile-role { font-size: 0.75rem; color: #94a3b8; margin-top: 2px;}
+
+/* POPUP DROPDOWN (Bật sang phải, đè lên Workspace) */
+.profile-dropdown-menu { position: absolute; bottom: 16px; left: 270px; background: white; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); width: 240px; z-index: 100; overflow: hidden; border: 1px solid #e2e8f0; cursor: default; }
+.collapsed .profile-dropdown-menu { left: 85px; }
+
+.dropdown-profile-header { background: #f8fafc; padding: 16px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #e2e8f0;}
+.dropdown-large-avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.dropdown-large-avatar svg { width: 20px; height: 20px; }
+.dropdown-actions { padding: 8px 0; background: white; }
+.dropdown-action-btn { width: 100%; text-align: left; padding: 10px 16px; background: none; border: none; font-size: 0.9rem; color: #334155; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: 0.2s; }
+.dropdown-action-btn:hover { background: #f1f5f9; color: #2563eb;}
+.dropdown-action-btn svg { width: 16px; height: 16px; }
+
+/* ------------------------------------------------ */
+/* MAIN WORKSPACE (Xóa padding của header cũ)       */
+/* ------------------------------------------------ */
+.portal-main-area { flex: 1; display: flex; flex-direction: column; min-width: 0; background: #f8fafc; }
+.portal-content-canvas { padding: 32px; flex: 1; overflow-y: auto; }

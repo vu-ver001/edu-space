@@ -102,6 +102,7 @@ public class AvailabilityService {
     public static class SpaceCatalogItem {
         private Long id;
         private String name;
+        private String spaceCode;
         private Long spaceTypeId;
         private String spaceTypeName;
         private String bookingMode;
@@ -120,7 +121,7 @@ public class AvailabilityService {
 
     static {
         SPACE_CATALOG.put(1L, SpaceCatalogItem.builder()
-                .id(1L).name("Phòng G-101").spaceTypeId(1L).spaceTypeName("Phòng học nhóm tiêu chuẩn")
+                .id(1L).name("Phòng G-101").spaceCode("G-101").spaceTypeId(1L).spaceTypeName("Phòng học nhóm tiêu chuẩn")
                 .bookingMode("WHOLE_SPACE")
                 .requiresApproval(true).building("Tòa A").floor("1").capacity(6).status("AVAILABLE")
                 .imageUrl("https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&auto=format&fit=crop")
@@ -128,7 +129,7 @@ public class AvailabilityService {
                 .facilities(List.of("Bảng trắng & Bút dạ", "Ổ cắm điện đa năng", "Điều hòa không khí 2 chiều")).build());
 
         SPACE_CATALOG.put(2L, SpaceCatalogItem.builder()
-                .id(2L).name("Phòng G-102").spaceTypeId(1L).spaceTypeName("Phòng học nhóm tiêu chuẩn")
+                .id(2L).name("Phòng G-102").spaceCode("G-102").spaceTypeId(1L).spaceTypeName("Phòng học nhóm tiêu chuẩn")
                 .bookingMode("WHOLE_SPACE")
                 .requiresApproval(true).building("Tòa A").floor("1").capacity(8).status("AVAILABLE")
                 .imageUrl("https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&auto=format&fit=crop")
@@ -136,7 +137,7 @@ public class AvailabilityService {
                 .facilities(List.of("Bảng trắng & Bút dạ", "Màn hình TV thông minh 65 inch", "Ổ cắm điện đa năng", "Điều hòa không khí 2 chiều")).build());
 
         SPACE_CATALOG.put(3L, SpaceCatalogItem.builder()
-                .id(3L).name("Phòng P-201").spaceTypeId(2L).spaceTypeName("Phòng thuyết trình & Hội thảo")
+                .id(3L).name("Phòng P-201").spaceCode("P-201").spaceTypeId(2L).spaceTypeName("Phòng thuyết trình & Hội thảo")
                 .bookingMode("WHOLE_SPACE")
                 .requiresApproval(true).building("Tòa A").floor("2").capacity(20).status("AVAILABLE")
                 .imageUrl("https://images.unsplash.com/photo-1431540015161-0bf868a2d407?w=800&auto=format&fit=crop")
@@ -144,7 +145,7 @@ public class AvailabilityService {
                 .facilities(List.of("Bảng trắng & Bút dạ", "Máy chiếu Full HD", "Màn hình TV thông minh 65 inch", "Ổ cắm điện đa năng", "Điều hòa không khí 2 chiều")).build());
 
         SPACE_CATALOG.put(4L, SpaceCatalogItem.builder()
-                .id(4L).name("Khu tự học S-201").spaceTypeId(3L).spaceTypeName("Khu tự học chung (Mở)")
+                .id(4L).name("Khu tự học S-201").spaceCode("S-201").spaceTypeId(3L).spaceTypeName("Khu tự học chung (Mở)")
                 .bookingMode("PER_SEAT")
                 .requiresApproval(false).building("Tòa B").floor("2").capacity(10).status("AVAILABLE")
                 .imageUrl("https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=800&auto=format&fit=crop")
@@ -152,7 +153,7 @@ public class AvailabilityService {
                 .facilities(List.of("Ổ cắm điện đa năng", "Điều hòa không khí 2 chiều")).build());
 
         SPACE_CATALOG.put(5L, SpaceCatalogItem.builder()
-                .id(5L).name("Study Booth B-01").spaceTypeId(4L).spaceTypeName("Study Booth cá nhân")
+                .id(5L).name("Study Booth B-01").spaceCode("B-01").spaceTypeId(4L).spaceTypeName("Study Booth cá nhân")
                 .bookingMode("WHOLE_SPACE")
                 .requiresApproval(true).building("Tòa B").floor("3").capacity(2).status("AVAILABLE")
                 .imageUrl("https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=800&auto=format&fit=crop")
@@ -160,7 +161,7 @@ public class AvailabilityService {
                 .facilities(List.of("Ổ cắm điện đa năng", "Điều hòa không khí 2 chiều")).build());
 
         SPACE_CATALOG.put(6L, SpaceCatalogItem.builder()
-                .id(6L).name("Phòng G-103 (Bảo trì)").spaceTypeId(1L).spaceTypeName("Phòng học nhóm tiêu chuẩn")
+                .id(6L).name("Phòng G-103 (Bảo trì)").spaceCode("G-103").spaceTypeId(1L).spaceTypeName("Phòng học nhóm tiêu chuẩn")
                 .bookingMode("WHOLE_SPACE")
                 .requiresApproval(true).building("Tòa A").floor("1").capacity(6).status("MAINTENANCE")
                 .imageUrl("https://images.unsplash.com/photo-1517502884422-41eaead166d4?w=800&auto=format&fit=crop")
@@ -168,7 +169,7 @@ public class AvailabilityService {
                 .facilities(List.of("Bảng trắng & Bút dạ")).build());
 
         SPACE_CATALOG.put(7L, SpaceCatalogItem.builder()
-                .id(7L).name("Phòng D-201").spaceTypeId(5L).spaceTypeName("Phòng thảo luận theo bàn")
+                .id(7L).name("Phòng D-201").spaceCode("D-201").spaceTypeId(5L).spaceTypeName("Phòng thảo luận theo bàn")
                 .bookingMode("PER_TABLE")
                 .requiresApproval(true).building("Tòa D").floor("2").capacity(24).status("AVAILABLE")
                 .imageUrl("https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&auto=format&fit=crop")
@@ -224,6 +225,7 @@ public class AvailabilityService {
         return SpaceCatalogItem.builder()
                 .id(space.getId())
                 .name(space.getName())
+                .spaceCode(space.getSpaceCode())
                 .spaceTypeId(typeId)
                 .spaceTypeName(typeName)
                 .bookingMode(bookingMode)

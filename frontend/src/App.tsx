@@ -2,21 +2,41 @@ import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import api from './services/api';
 import { ProtectedRoute } from './components/ProtectedRoute';
-import { PortalLayout } from './components/PortalLayout';
+import { PortalLayout } from './components/layouts/PortalLayout.tsx';
 
 // Import các trang chính thức của dự án
 import LoginPage from './features/auth/pages/LoginPage';
 import Placeholder from './pages/Placeholder';
 import CheckInDemoPage from './features/bookings/checkin/pages/CheckInDemoPage';
+import { GeneralSettingsPage } from "./features/admin/settings-general/pages/GeneralSettingsPage.tsx";
 import StudentCheckInPage from './features/bookings/checkin/pages/StudentCheckInPage';
-import { SearchSpacesPage, SpaceDetailPage, MyBookingsPage } from './features/bookings/core';
-
 import { SpaceTypeDetailPageKT, SpaceTypeListPageKT, SpaceListPageKT, SpaceDetailPageKT, FacilityListPageKT } from "./features/space";
 import { BookingManagementPageKT, StaffOperationsPageKT } from "./features/staff";
 import PolicyManagementPage from './features/admin/policy/pages/PolicyManagementPage';
 import PolicyHistoryPage from './features/admin/policy/pages/PolicyHistoryPage';
+import { SearchSpacesPage, SpaceDetailPage, MyBookingsPage } from './features/bookings/core';
+import { UserManagementPage } from './features/admin/auth/UserManagementPage.tsx';
 
-// Giữ lại trang check Health của team làm màn hình chào mừng tạm thời (Tân làm)
+const ADMIN_BASE = import.meta.env.VITE_ROUTE_ADMIN || '/admin';
+const STAFF_BASE = import.meta.env.VITE_ROUTE_STAFF || '/staff';
+const STUDENT_BASE = import.meta.env.VITE_ROUTE_STUDENT || '/home';
+
+// TỰ ĐỘNG CHUYỂN HƯỚNG TỪ "/" SANG ĐÚNG TRANG CỦA ROLE
+const RootRedirect = () => {
+    const userStr = localStorage.getItem('eduspace_user') || localStorage.getItem('user');
+    if (!userStr) return <Navigate to="/login" replace />;
+
+    try {
+        const user = JSON.parse(userStr);
+        if (user.role === 'ADMIN') return <Navigate to={`${ADMIN_BASE}/stats`} replace />;
+        if (user.role === 'STAFF') return <Navigate to={STAFF_BASE} replace />;
+        return <Navigate to="/student/spaces" replace />;
+    } catch {
+        return <Navigate to="/login" replace />;
+    }
+};
+
+// Dev Dashboard
 const DevDashboard = () => {
     const [health, setHealth] = useState<{ status: string } | null>(null);
     const [error, setError] = useState<string>('');
@@ -45,6 +65,7 @@ export default function App() {
     return (
         <BrowserRouter>
             <Routes>
+<<<<<<< HEAD
                 {/* 1. Các trang Quản lý Không gian, Tiện ích & Vận hành của Kim Tuyến */}
                 {/* Truy cập trực tiếp qua URL, hiển thị nguyên bản toàn màn hình, không bọc menu */}
                 <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
@@ -57,42 +78,70 @@ export default function App() {
                     <Route path="/staff/bookings" element={<BookingManagementPageKT />} />
                     <Route path="/staff/operations" element={<StaffOperationsPageKT />} />
                 </Route>
+=======
+                {/* 1. Quản lý Không gian, Tiện ích & Vận hành */}
+                <Route path="/admin/space-types" element={<SpaceTypeListPageKT />} />
+                <Route path="/admin/space-types/:id" element={<SpaceTypeDetailPageKT />} />
+                <Route path="/space-types" element={<SpaceTypeListPageKT />} />
+                <Route path="/space-types/:id" element={<SpaceTypeDetailPageKT />} />
+                <Route path="/admin/spaces" element={<SpaceListPageKT />} />
+                <Route path="/admin/spaces/:id" element={<SpaceDetailPageKT />} />
+                <Route path="/spaces-management" element={<SpaceListPageKT />} />
+                <Route path="/spaces-management/:id" element={<SpaceDetailPageKT />} />
+                <Route path="/admin/facilities" element={<FacilityListPageKT />} />
+                <Route path="/facilities" element={<FacilityListPageKT />} />
+                <Route path="/staff" element={<StaffOperationsPageKT />} />
+>>>>>>> 97ea929719a964922d98f019fe803536f3d04613
 
-                {/* 2. Module Chính sách của Ngọc Anh */}
+                {/* 2. Module Chính sách */}
                 <Route path="/admin/policy" element={<PolicyManagementPage />} />
                 <Route path="/admin/policy/history" element={<PolicyHistoryPage />} />
 
-                {/* 3. Phần Đăng nhập & Khung chung của team (giữ nguyên không sửa mất code) */}
+                {/* 3. Đăng nhập */}
                 <Route path="/login" element={<LoginPage />} />
 
                 <Route element={<PortalLayout />}>
+                    {/* ROOT ROUTE */}
+                    <Route path="/" element={<RootRedirect />} />
+
+                    {/* ADMIN */}
                     <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
-                        <Route path="/admin/stats" element={<Placeholder title="Thống kê" owner="Anh" />} />
+                        <Route path={`${ADMIN_BASE}/policy`} element={<Placeholder title="Chính sách" owner="Anh" />} />
+                        <Route path={`${ADMIN_BASE}/stats`} element={<Placeholder title="Thống kê" owner="Anh" />} />
+                        <Route path={`${ADMIN_BASE}/space-types`} element={<SpaceTypeListPageKT />} />
+                        <Route path={`${ADMIN_BASE}/space-types/:id`} element={<SpaceTypeDetailPageKT />} />
+                        <Route path={`${ADMIN_BASE}/settings-general`} element={<GeneralSettingsPage />} />
+                        <Route path={`${ADMIN_BASE}/users`} element={<UserManagementPage />} />
                     </Route>
 
+                    {/* STAFF */}
                     <Route element={<ProtectedRoute allowedRoles={['STAFF', 'ADMIN']} />}>
-                        <Route path="/checkin-demo" element={<CheckInDemoPage />} />
-                        <Route path="/qr" element={<Placeholder title="Check-in QR" owner="Vũ" />} />
-                        <Route path="/equipment" element={<Placeholder title="Thiết bị" owner="Vũ" />} />
+                        <Route path={STAFF_BASE} element={<StaffOperationsPageKT />} />
+                        <Route path={`${STAFF_BASE}/checkin-demo`} element={<CheckInDemoPage />} />
+                        <Route path={`${STAFF_BASE}/qr`} element={<Placeholder title="Check-in QR" owner="Vũ" />} />
+                        <Route path={`${STAFF_BASE}/equipment`} element={<Placeholder title="Thiết bị" owner="Vũ" />} />
                     </Route>
 
+                    {/* STUDENT */}
                     <Route element={<ProtectedRoute />}>
-                        <Route path="/spaces" element={<SearchSpacesPage />} />
-                        <Route path="/spaces/:id" element={<SpaceDetailPage />} />
-                        <Route path="/my-bookings" element={<MyBookingsPage />} />
-
+                        <Route path={STUDENT_BASE} element={<DevDashboard />} />
+                        {/* Phân hệ Student (Khánh Vân) có tiền tố /student */}
+                        <Route path="/student/spaces" element={<SearchSpacesPage />} />
+                        <Route path="/student/spaces/:id" element={<SpaceDetailPage />} />
+                        <Route path="/student/my-bookings" element={<MyBookingsPage />} />
+                        {/* Hỗ trợ chuyển hướng tự động cho đường dẫn cũ */}
+                        <Route path="/spaces" element={<Navigate to="/student/spaces" replace />} />
+                        <Route path="/spaces/:id" element={<Navigate to="/student/spaces" replace />} />
+                        <Route path="/my-bookings" element={<Navigate to="/student/my-bookings" replace />} />
                         <Route path="/checkin" element={<StudentCheckInPage />} />
-                        
-                        {/* Thêm alias cho space-types nếu sinh viên cần xem */}
                         <Route path="/space-types" element={<SpaceTypeListPageKT />} />
                         <Route path="/space-types/:id" element={<SpaceTypeDetailPageKT />} />
-                        <Route path="/" element={<DevDashboard />} />
                     </Route>
                 </Route>
 
-                {/* Bắt lỗi đường dẫn không tồn tại */}
+                {/* 404 */}
                 <Route path="/403" element={<div style={{ padding: 20 }}><h3>403 - Không có quyền truy cập</h3></div>} />
-                <Route path="*" element={<Navigate to="/admin/spaces" replace />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
         </BrowserRouter>
     );

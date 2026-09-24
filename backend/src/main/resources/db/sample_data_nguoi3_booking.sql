@@ -50,7 +50,7 @@ DELETE FROM booking_audit_logs;
 DELETE FROM bookings;
 
 INSERT INTO bookings (
-    id, student_id, space_id, table_id, selected_seats, 
+    id, booking_code, student_id, space_id, table_id, selected_seats, 
     start_time, end_time, participant_count, purpose, status, 
     rejected_by, rejected_at, reject_reason, 
     expired_at, expire_reason, 
@@ -58,7 +58,7 @@ INSERT INTO bookings (
     created_at, updated_at
 ) VALUES
     -- [1] WHOLE_SPACE: Đã xác nhận (CONFIRMED) - Space 1 (Phòng G-101)
-    (1, 3, 1, NULL, NULL, 
+    (1, 'BK-260918-0001', 3, 1, NULL, NULL, 
      '2026-09-21 13:00:00', '2026-09-21 15:00:00', 4, 'Học nhóm ôn thi Giữa kỳ môn Kiến trúc phần mềm', 'CONFIRMED', 
      NULL, NULL, NULL, 
      NULL, NULL, 
@@ -66,7 +66,7 @@ INSERT INTO bookings (
      '2026-09-18 09:00:00', '2026-09-18 09:00:00'),
 
     -- [2] WHOLE_SPACE: Chờ Staff duyệt (PENDING_APPROVAL) - Space 3 (Phòng P-201, sức chứa 20)
-    (2, 3, 3, NULL, NULL, 
+    (2, 'BK-260918-0002', 3, 3, NULL, NULL, 
      '2026-09-22 09:00:00', '2026-09-22 12:00:00', 15, 'Tổ chức Workshop CLB Tin học sinh viên EduSpace', 'PENDING_APPROVAL', 
      NULL, NULL, NULL, 
      NULL, NULL, 
@@ -74,7 +74,7 @@ INSERT INTO bookings (
      '2026-09-18 10:15:00', '2026-09-18 10:15:00'),
 
     -- [3] WHOLE_SPACE: Đã Check-in (CHECKED_IN) - Space 2 (Phòng G-102)
-    (3, 3, 2, NULL, NULL, 
+    (3, 'BK-260917-0001', 3, 2, NULL, NULL, 
      '2026-09-18 14:00:00', '2026-09-18 16:30:00', 6, 'Làm đồ án chuyên ngành nhóm 5', 'CHECKED_IN', 
      NULL, NULL, NULL, 
      NULL, NULL, 
@@ -82,7 +82,7 @@ INSERT INTO bookings (
      '2026-09-17 16:00:00', '2026-09-18 13:52:10'),
 
     -- [4] PER_SEAT: Đã xác nhận (CONFIRMED) - Space 4 (Khu tự học S-201, đặt ghế S01,S02)
-    (4, 3, 4, NULL, 'S01,S02', 
+    (4, 'BK-260918-0003', 3, 4, NULL, 'S01,S02', 
      '2026-09-20 08:00:00', '2026-09-20 11:00:00', 2, 'Tự học đôi môn Lập trình Web', 'CONFIRMED', 
      NULL, NULL, NULL, 
      NULL, NULL, 
@@ -90,7 +90,7 @@ INSERT INTO bookings (
      '2026-09-18 11:00:00', '2026-09-18 11:00:00'),
 
     -- [5] PER_SEAT: Chờ Staff duyệt (PENDING_APPROVAL) - Space 4 (Khu tự học S-201, ghế S05)
-    (5, 3, 4, NULL, 'S05', 
+    (5, 'BK-260918-0004', 3, 4, NULL, 'S05', 
      '2026-09-21 08:00:00', '2026-09-21 10:30:00', 1, 'Đọc tài liệu nghiên cứu khoa học', 'PENDING_APPROVAL', 
      NULL, NULL, NULL, 
      NULL, NULL, 
@@ -98,7 +98,7 @@ INSERT INTO bookings (
      '2026-09-18 14:20:00', '2026-09-18 14:20:00'),
 
     -- [6] PER_TABLE: Đã xác nhận (CONFIRMED) - Space 7 (Phòng D-201, Bàn T01 capacity 6)
-    (6, 3, 7, 1, NULL, 
+    (6, 'BK-260918-0005', 3, 7, 1, NULL, 
      '2026-09-20 14:00:00', '2026-09-20 16:30:00', 4, 'Thảo luận nhóm đồ án tại bàn T01', 'CONFIRMED', 
      NULL, NULL, NULL, 
      NULL, NULL, 
@@ -106,7 +106,7 @@ INSERT INTO bookings (
      '2026-09-18 08:30:00', '2026-09-18 08:30:00'),
 
     -- [7] PER_TABLE: Chờ Staff duyệt (PENDING_APPROVAL) - Space 7 (Phòng D-201, Bàn T02 capacity 6)
-    (7, 3, 7, 2, NULL, 
+    (7, 'BK-260918-0006', 3, 7, 2, NULL, 
      '2026-09-22 13:00:00', '2026-09-22 15:30:00', 5, 'Họp nhóm bàn giao mã nguồn', 'PENDING_APPROVAL', 
      NULL, NULL, NULL, 
      NULL, NULL, 
@@ -114,7 +114,7 @@ INSERT INTO bookings (
      '2026-09-18 15:00:00', '2026-09-18 15:00:00'),
 
     -- [8] WHOLE_SPACE: Bị Staff từ chối (REJECTED) - Space 3 (Phòng P-201)
-    (8, 3, 3, NULL, NULL, 
+    (8, 'BK-260918-0007', 3, 3, NULL, NULL, 
      '2026-09-19 18:00:00', '2026-09-19 21:00:00', 18, 'Giao lưu văn nghệ buổi tối', 'REJECTED', 
      2, '2026-09-18 11:30:00', 'Không đủ điều kiện tổ chức hoạt động ngoài giờ và không có giảng viên bảo lãnh', 
      NULL, NULL, 
@@ -122,7 +122,7 @@ INSERT INTO bookings (
      '2026-09-18 09:30:00', '2026-09-18 11:30:00'),
 
     -- [9] WHOLE_SPACE: Sinh viên tự hủy (CANCELLED) - Space 1 (Phòng G-101)
-    (9, 3, 1, NULL, NULL, 
+    (9, 'BK-260918-0008', 3, 1, NULL, NULL, 
      '2026-09-23 09:00:00', '2026-09-23 11:00:00', 3, 'Họp nhóm (đã hủy do bận lịch thi)', 'CANCELLED', 
      NULL, NULL, NULL, 
      NULL, NULL, 
@@ -130,7 +130,7 @@ INSERT INTO bookings (
      '2026-09-18 10:00:00', '2026-09-18 12:10:00'),
 
     -- [10] WHOLE_SPACE: Hết hạn duyệt (EXPIRED) - Space 2 (Phòng G-102)
-    (10, 3, 2, NULL, NULL, 
+    (10, 'BK-260916-0001', 3, 2, NULL, NULL, 
      '2026-09-17 08:00:00', '2026-09-17 10:00:00', 4, 'Học nhóm sáng', 'EXPIRED', 
      NULL, NULL, NULL, 
      '2026-09-17 08:00:00', 'Quá giờ bắt đầu mà Staff chưa kịp duyệt đơn', 
@@ -138,7 +138,7 @@ INSERT INTO bookings (
      '2026-09-16 15:00:00', '2026-09-17 08:00:00'),
 
     -- [11] WHOLE_SPACE: Vắng mặt không đến (NO_SHOW) - Space 1 (Phòng G-101)
-    (11, 3, 1, NULL, NULL, 
+    (11, 'BK-260916-0002', 3, 1, NULL, NULL, 
      '2026-09-17 14:00:00', '2026-09-17 16:00:00', 3, 'Thảo luận môn học', 'NO_SHOW', 
      NULL, NULL, NULL, 
      NULL, 'Quá hạn check-in 15 phút mà không điểm danh', 
@@ -146,7 +146,7 @@ INSERT INTO bookings (
      '2026-09-16 16:00:00', '2026-09-17 14:16:00'),
 
     -- [12] WHOLE_SPACE: Đã hoàn thành (COMPLETED) - Space 1 (Phòng G-101)
-    (12, 3, 1, NULL, NULL, 
+    (12, 'BK-260915-0001', 3, 1, NULL, NULL, 
      '2026-09-16 09:00:00', '2026-09-16 11:00:00', 5, 'Thuyết trình thử đồ án môn học', 'COMPLETED', 
      NULL, NULL, NULL, 
      NULL, NULL, 

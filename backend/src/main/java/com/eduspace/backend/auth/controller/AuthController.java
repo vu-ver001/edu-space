@@ -31,17 +31,20 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest loginRequest) {
+        // loginRequest.getEmail() thực tế đang chứa giá trị người dùng gõ vào (có thể là email hoặc username)
+        String loginId = loginRequest.getEmail();
+
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                        loginRequest.getEmail(),
+                        loginId,
                         loginRequest.getPassword()
                 )
         );
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        // Lấy thông tin User từ DB
-        User user = userRepository.findByEmail(loginRequest.getEmail())
+        // ĐỔI TỪ findByEmail SANG findByEmailOrUsername ĐỂ HỖ TRỢ CẢ 2 HÌNH THỨC
+        User user = userRepository.findByEmailOrUsername(loginId, loginId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
 
         if (!user.isActive()) {
@@ -50,14 +53,13 @@ public class AuthController {
 
         String token = tokenProvider.generateToken(authentication);
 
-        // Trả về AuthResponse có đầy đủ thông tin
         AuthResponse response = AuthResponse.builder()
                 .token(token)
                 .tokenType("Bearer")
                 .id(user.getId())
                 .email(user.getEmail())
                 .fullName(user.getFullName())
-                .role(user.getRole().name()) // Đảm bảo trả về "STAFF", "ADMIN" hoặc "STUDENT"
+                .role(user.getRole().name())
                 .build();
 
         return ResponseEntity.ok(response);
