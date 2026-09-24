@@ -13,6 +13,24 @@ interface CustomDateRangePickerProps {
 
 const WEEKDAYS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 
+// Helper formatting Date to local YYYY-MM-DD without UTC timezone shift
+export const toLocalIsoDate = (d: Date): string => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
+// Helper parsing YYYY-MM-DD into local Date
+export const parseLocalDate = (isoStr: string): Date => {
+  if (!isoStr) return new Date();
+  const parts = isoStr.split('-').map(Number);
+  if (parts.length === 3) {
+    return new Date(parts[0], parts[1] - 1, parts[2]);
+  }
+  return new Date();
+};
+
 export const CustomDateRangePicker: React.FC<CustomDateRangePickerProps> = ({
   startDate,
   endDate,
@@ -25,7 +43,7 @@ export const CustomDateRangePicker: React.FC<CustomDateRangePickerProps> = ({
 
   // Month currently viewed in the calendar
   const [viewDate, setViewDate] = useState(() => {
-    return endDate ? new Date(endDate) : new Date();
+    return endDate ? parseLocalDate(endDate) : new Date();
   });
 
   // Local selection while picking
@@ -41,7 +59,7 @@ export const CustomDateRangePicker: React.FC<CustomDateRangePickerProps> = ({
       setTempEnd(endDate);
       setValidationError(null);
       if (endDate) {
-        setViewDate(new Date(endDate));
+        setViewDate(parseLocalDate(endDate));
       }
     }
   }, [isOpen, startDate, endDate]);
@@ -100,14 +118,14 @@ export const CustomDateRangePicker: React.FC<CustomDateRangePickerProps> = ({
     for (let i = startingDay - 1; i >= 0; i--) {
       const d = prevMonthLastDay - i;
       const prevDate = new Date(year, month - 1, d);
-      const iso = prevDate.toISOString().split('T')[0];
+      const iso = toLocalIsoDate(prevDate);
       days.push({ dayNumber: d, iso, isCurrentMonth: false });
     }
 
     // Current month days
     for (let d = 1; d <= lastDayOfMonth.getDate(); d++) {
       const curDate = new Date(year, month, d);
-      const iso = curDate.toISOString().split('T')[0];
+      const iso = toLocalIsoDate(curDate);
       days.push({ dayNumber: d, iso, isCurrentMonth: true });
     }
 
@@ -116,7 +134,7 @@ export const CustomDateRangePicker: React.FC<CustomDateRangePickerProps> = ({
     const remaining = totalCells - days.length;
     for (let d = 1; d <= remaining; d++) {
       const nextDate = new Date(year, month + 1, d);
-      const iso = nextDate.toISOString().split('T')[0];
+      const iso = toLocalIsoDate(nextDate);
       days.push({ dayNumber: d, iso, isCurrentMonth: false });
     }
 
@@ -164,7 +182,7 @@ export const CustomDateRangePicker: React.FC<CustomDateRangePickerProps> = ({
   };
 
   // Check today
-  const todayIso = new Date().toISOString().split('T')[0];
+  const todayIso = toLocalIsoDate(new Date());
 
   // Selected range computation
   const activeEnd = tempEnd || (tempStart ? hoverDate || tempStart : '');
@@ -173,7 +191,9 @@ export const CustomDateRangePicker: React.FC<CustomDateRangePickerProps> = ({
   const selectedDaysCount = useMemo(() => {
     if (!tempStart || !tempEnd) return 0;
     if (tempEnd <= tempStart) return 0;
-    const diff = new Date(tempEnd).getTime() - new Date(tempStart).getTime();
+    const start = parseLocalDate(tempStart).getTime();
+    const end = parseLocalDate(tempEnd).getTime();
+    const diff = end - start;
     return Math.round(diff / (1000 * 3600 * 24)) + 1;
   }, [tempStart, tempEnd]);
 
@@ -285,11 +305,9 @@ export const CustomDateRangePicker: React.FC<CustomDateRangePickerProps> = ({
                   <button
                     key={iso}
                     type="button"
-                    className={`calendar-day-cell ${!isCurrentMonth ? 'other-month' : ''} ${
-                      isStart ? 'selected-start' : ''
-                    } ${isEnd ? 'selected-end' : ''} ${isSingle ? 'is-single' : ''} ${
-                      inRange ? 'in-range' : ''
-                    } ${isToday ? 'is-today' : ''}`}
+                    className={`calendar-day-cell ${!isCurrentMonth ? 'other-month' : ''} ${isStart ? 'selected-start' : ''
+                      } ${isEnd ? 'selected-end' : ''} ${isSingle ? 'is-single' : ''} ${inRange ? 'in-range' : ''
+                      } ${isToday ? 'is-today' : ''}`}
                     onClick={() => handleDayClick(iso)}
                     onMouseEnter={() => {
                       if (tempStart && !tempEnd) setHoverDate(iso);
@@ -324,13 +342,13 @@ export const CustomDateRangePicker: React.FC<CustomDateRangePickerProps> = ({
 
           {/* Footer with Selected Summary & Actions */}
           <div className="popover-footer">
-            <div className="popover-summary-text">
+            {/* <div className="popover-summary-text">
               <span>Đã chọn:</span>
               <strong>
                 {tempStart && tempEnd ? `${formatDisplay(tempStart)} - ${formatDisplay(tempEnd)}` : tempStart ? `${formatDisplay(tempStart)} - (Chọn ngày đến)` : 'Chưa chọn'}
                 {selectedDaysCount > 0 && ` (${selectedDaysCount} ngày)`}
               </strong>
-            </div>
+            </div> */}
 
             <div className="popover-footer-actions">
               <button type="button" className="popover-btn-clear" onClick={handleClear}>

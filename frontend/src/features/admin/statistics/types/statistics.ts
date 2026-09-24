@@ -1,3 +1,16 @@
+export interface MaintenanceResourceDetail {
+  resourceType: string;
+  resourceCode: string;
+  resourceName: string;
+  spaceCode?: string;
+  spaceName?: string;
+  location?: string;
+  reason?: string;
+  startTime?: string;
+  endTime?: string;
+  statusText?: string;
+}
+
 export interface DashboardStatisticsResponse {
   fromDate?: string;
   toDate?: string;
@@ -17,6 +30,7 @@ export interface DashboardStatisticsResponse {
   cancelledCount: number;
   rejectedCount: number;
   calculatedAt?: string;
+  maintenanceDetails?: MaintenanceResourceDetail[];
 }
 
 export type TimeFilterPreset = '7days' | '30days' | 'this_month' | 'all' | 'custom';

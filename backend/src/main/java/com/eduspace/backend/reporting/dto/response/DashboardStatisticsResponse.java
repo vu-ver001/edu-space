@@ -48,4 +48,7 @@ public class DashboardStatisticsResponse {
 
     // Thời điểm dữ liệu được tổng hợp tính toán gần nhất
     private LocalDateTime calculatedAt;
+
+    // Danh sách chi tiết các phòng, bàn, ghế cụ thể đang bảo trì / tạm ngừng
+    private java.util.List<MaintenanceResourceDetailResponse> maintenanceDetails;
 }

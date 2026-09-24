@@ -70,4 +70,10 @@ public interface MaintenanceBlockRepository extends JpaRepository<MaintenanceBlo
            "WHERE m.deletedAt IS NULL " +
            "AND CURRENT_TIMESTAMP BETWEEN m.startTime AND m.endTime")
     long countActiveMaintenanceSpaces();
+
+    @Query("SELECT m FROM MaintenanceBlock m JOIN FETCH m.space " +
+           "WHERE m.deletedAt IS NULL " +
+           "AND CURRENT_TIMESTAMP BETWEEN m.startTime AND m.endTime " +
+           "ORDER BY m.startTime ASC")
+    List<MaintenanceBlock> findActiveMaintenanceBlocks();
 }

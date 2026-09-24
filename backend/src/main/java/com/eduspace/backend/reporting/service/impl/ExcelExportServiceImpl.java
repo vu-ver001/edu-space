@@ -31,11 +31,11 @@ public class ExcelExportServiceImpl implements ExcelExportService {
             sheet.setDisplayGridlines(true);
 
             // Setup Color Palette
-            byte[] primaryBlueRgb = new byte[]{(byte) 30, (byte) 64, (byte) 175};      // #1E40AF (EduSpace Navy)
-            byte[] lightBlueRgb = new byte[]{(byte) 239, (byte) 246, (byte) 255};      // #EFF6FF
-            byte[] tableHeaderRgb = new byte[]{(byte) 241, (byte) 245, (byte) 249};    // #F1F5F9
-            byte[] zebraRowRgb = new byte[]{(byte) 248, (byte) 250, (byte) 252};       // #F8FAFC
-            byte[] borderGrayRgb = new byte[]{(byte) 203, (byte) 213, (byte) 225};     // #CBD5E1
+            byte[] primaryBlueRgb = new byte[] { (byte) 30, (byte) 64, (byte) 175 }; // #1E40AF (EduSpace Navy)
+            byte[] lightBlueRgb = new byte[] { (byte) 239, (byte) 246, (byte) 255 }; // #EFF6FF
+            byte[] tableHeaderRgb = new byte[] { (byte) 241, (byte) 245, (byte) 249 }; // #F1F5F9
+            byte[] zebraRowRgb = new byte[] { (byte) 248, (byte) 250, (byte) 252 }; // #F8FAFC
+            byte[] borderGrayRgb = new byte[] { (byte) 203, (byte) 213, (byte) 225 }; // #CBD5E1
 
             XSSFColor primaryBlue = new XSSFColor(primaryBlueRgb, null);
             XSSFColor lightBlue = new XSSFColor(lightBlueRgb, null);
@@ -138,7 +138,7 @@ public class ExcelExportServiceImpl implements ExcelExportService {
             Row orgRow = sheet.createRow(rowIdx++);
             orgRow.setHeightInPoints(22);
             Cell orgCell = orgRow.createCell(0);
-            orgCell.setCellValue("TRƯỜNG ĐẠI HỌC BÁCH KHOA - HỆ THỐNG QUẢN LÝ KHÔNG GIAN HỌC TẬP EDUSPACE");
+            orgCell.setCellValue("HỆ THỐNG QUẢN LÝ KHÔNG GIAN HỌC TẬP EDUSPACE");
             orgCell.setCellStyle(orgHeaderStyle);
 
             // Row 1: Main Title Banner
@@ -155,12 +155,14 @@ public class ExcelExportServiceImpl implements ExcelExportService {
             String fromStr = stats.getFromDate() != null ? stats.getFromDate().format(DATE_FMT) : "Toàn bộ";
             String toStr = stats.getToDate() != null ? stats.getToDate().format(DATE_FMT) : "Hiện tại";
             String exportedAtStr = LocalDateTime.now().format(DATE_TIME_FMT);
-            String calculatedAtStr = stats.getCalculatedAt() != null ? stats.getCalculatedAt().format(DATE_TIME_FMT) : exportedAtStr;
+            String calculatedAtStr = stats.getCalculatedAt() != null ? stats.getCalculatedAt().format(DATE_TIME_FMT)
+                    : exportedAtStr;
 
             createMetaRow(sheet, rowIdx++, "Khoảng thời gian thống kê:", fromStr + "  đến  " + toStr, boldDataFont);
             createMetaRow(sheet, rowIdx++, "Thời điểm tính toán dữ liệu gần nhất:", calculatedAtStr, dataFont);
             createMetaRow(sheet, rowIdx++, "Thời điểm xuất báo cáo:", exportedAtStr, dataFont);
-            createMetaRow(sheet, rowIdx++, "Người tạo báo cáo:", "Ban Quản lý Hệ thống EduSpace (Admin/Staff)", dataFont);
+            createMetaRow(sheet, rowIdx++, "Người tạo báo cáo:", "Ban Quản lý Hệ thống EduSpace (Admin/Staff)",
+                    dataFont);
 
             rowIdx++; // Empty space
 
@@ -169,16 +171,23 @@ public class ExcelExportServiceImpl implements ExcelExportService {
             // ==========================================
             createSectionHeader(sheet, rowIdx++, "I. CÁC CHỈ SỐ VẬN HÀNH CHÍNH (KPI TỔNG QUAN)", sectionHeaderStyle, 8);
 
-            String[] kpiHeaders = {"STT", "Chỉ số vận hành", "Giá trị ghi nhận", "Đơn vị tính", "Đánh giá & Ghi chú nghiệp vụ"};
+            String[] kpiHeaders = { "STT", "Chỉ số vận hành", "Giá trị ghi nhận", "Đơn vị tính",
+                    "Đánh giá & Ghi chú nghiệp vụ" };
             createTableHeader(sheet, rowIdx++, kpiHeaders, tableHeaderStyle);
 
             Object[][] kpiData = {
-                    {1, "Tổng số lượt đặt phòng", stats.getTotalBookings(), "lượt", "Tổng nhu cầu đặt chỗ trong khoảng thời gian"},
-                    {2, "Tỷ lệ sử dụng thực tế (Check-in & Hoàn thành)", stats.getActualUsageRate() + "%", "%", "Hiệu suất khai thác không gian học tập"},
-                    {3, "Tỷ lệ vắng mặt (No-Show)", stats.getNoShowRate() + "%", "%", "Đặt chỗ nhưng không đến làm thủ tục check-in"},
-                    {4, "Yêu cầu đang chờ phê duyệt", stats.getPendingApprovalCount(), "yêu cầu", "Đang chờ nhân viên Staff/Admin xử lý duyệt phòng"},
-                    {5, "Yêu cầu chờ duyệt bị quá hạn (Expired)", stats.getExpiredPendingCount(), "yêu cầu", "Hết hạn trước khi được duyệt (cần cải thiện tốc độ duyệt)"},
-                    {6, "Tổng tài nguyên bảo trì / ngừng phục vụ", stats.getTotalMaintenanceCount(), "tài nguyên", "Bao gồm Phòng học, Bàn nhóm và Ghế ngồi"}
+                    { 1, "Tổng số lượt đặt phòng", stats.getTotalBookings(), "lượt",
+                            "Tổng nhu cầu đặt chỗ trong khoảng thời gian" },
+                    { 2, "Tỷ lệ sử dụng thực tế (Check-in & Hoàn thành)", stats.getActualUsageRate() + "%", "%",
+                            "Hiệu suất khai thác không gian học tập" },
+                    { 3, "Tỷ lệ vắng mặt (No-Show)", stats.getNoShowRate() + "%", "%",
+                            "Đặt chỗ nhưng không đến làm thủ tục check-in" },
+                    { 4, "Yêu cầu đang chờ phê duyệt", stats.getPendingApprovalCount(), "yêu cầu",
+                            "Đang chờ nhân viên Staff/Admin xử lý duyệt phòng" },
+                    { 5, "Yêu cầu chờ duyệt bị quá hạn (Expired)", stats.getExpiredPendingCount(), "yêu cầu",
+                            "Hết hạn trước khi được duyệt (cần cải thiện tốc độ duyệt)" },
+                    { 6, "Tổng tài nguyên bảo trì / ngừng phục vụ", stats.getTotalMaintenanceCount(), "tài nguyên",
+                            "Bao gồm Phòng học, Bàn nhóm và Ghế ngồi" }
             };
 
             for (int i = 0; i < kpiData.length; i++) {
@@ -201,21 +210,34 @@ public class ExcelExportServiceImpl implements ExcelExportService {
             // ==========================================
             // Section 2: Chi Tiết Trạng Thái Booking
             // ==========================================
-            createSectionHeader(sheet, rowIdx++, "II. PHÂN BỔ CHI TIẾT THEO TRẠNG THÁI ĐẶT PHÒNG (BOOKING STATUS)", sectionHeaderStyle, 8);
+            createSectionHeader(sheet, rowIdx++, "II. PHÂN BỔ CHI TIẾT THEO TRẠNG THÁI ĐẶT PHÒNG (BOOKING STATUS)",
+                    sectionHeaderStyle, 8);
 
-            String[] statusHeaders = {"STT", "Trạng thái đặt phòng", "Mã kỹ thuật", "Số lượng", "Tỷ lệ (%)", "Tác động nghiệp vụ"};
+            String[] statusHeaders = { "STT", "Trạng thái đặt phòng", "Mã kỹ thuật", "Số lượng", "Tỷ lệ (%)",
+                    "Tác động nghiệp vụ" };
             createTableHeader(sheet, rowIdx++, statusHeaders, tableHeaderStyle);
 
             long total = stats.getTotalBookings() != null ? stats.getTotalBookings() : 0;
             Object[][] statusData = {
-                    {1, "Hoàn thành", "COMPLETED", stats.getCompletedCount(), calcPercent(stats.getCompletedCount(), total), "Sinh viên đã hoàn tất buổi sử dụng"},
-                    {2, "Đang sử dụng (Check-in)", "CHECKED_IN", stats.getCheckedInCount(), calcPercent(stats.getCheckedInCount(), total), "Đã check-in thành công tại quầy"},
-                    {3, "Đã xác nhận", "CONFIRMED", stats.getConfirmedCount(), calcPercent(stats.getConfirmedCount(), total), "Đã được duyệt/giữ chỗ thành công, chờ đến giờ"},
-                    {4, "Chờ phê duyệt", "PENDING_APPROVAL", stats.getPendingApprovalCount(), calcPercent(stats.getPendingApprovalCount(), total), "Đang chờ nhân viên vận hành duyệt"},
-                    {5, "Không đến (No-Show)", "NO_SHOW", stats.getNoShowCount(), calcPercent(stats.getNoShowCount(), total), "Không đến check-in trong khung giờ quy định"},
-                    {6, "Đã hủy", "CANCELLED", stats.getCancelledCount(), calcPercent(stats.getCancelledCount(), total), "Người dùng chủ động hủy trước giờ bắt đầu"},
-                    {7, "Bị từ chối", "REJECTED", stats.getRejectedCount(), calcPercent(stats.getRejectedCount(), total), "Bị nhân viên từ chối kèm lý do"},
-                    {8, "Chờ duyệt quá hạn", "EXPIRED", stats.getExpiredPendingCount(), calcPercent(stats.getExpiredPendingCount(), total), "Hết hạn trước khi nhân viên kịp duyệt"}
+                    { 1, "Hoàn thành", "COMPLETED", stats.getCompletedCount(),
+                            calcPercent(stats.getCompletedCount(), total), "Sinh viên đã hoàn tất buổi sử dụng" },
+                    { 2, "Đang sử dụng (Check-in)", "CHECKED_IN", stats.getCheckedInCount(),
+                            calcPercent(stats.getCheckedInCount(), total), "Đã check-in thành công tại quầy" },
+                    { 3, "Đã xác nhận", "CONFIRMED", stats.getConfirmedCount(),
+                            calcPercent(stats.getConfirmedCount(), total),
+                            "Đã được duyệt/giữ chỗ thành công, chờ đến giờ" },
+                    { 4, "Chờ phê duyệt", "PENDING_APPROVAL", stats.getPendingApprovalCount(),
+                            calcPercent(stats.getPendingApprovalCount(), total), "Đang chờ nhân viên vận hành duyệt" },
+                    { 5, "Không đến (No-Show)", "NO_SHOW", stats.getNoShowCount(),
+                            calcPercent(stats.getNoShowCount(), total), "Không đến check-in trong khung giờ quy định" },
+                    { 6, "Đã hủy", "CANCELLED", stats.getCancelledCount(),
+                            calcPercent(stats.getCancelledCount(), total),
+                            "Người dùng chủ động hủy trước giờ bắt đầu" },
+                    { 7, "Bị từ chối", "REJECTED", stats.getRejectedCount(),
+                            calcPercent(stats.getRejectedCount(), total), "Bị nhân viên từ chối kèm lý do" },
+                    { 8, "Chờ duyệt quá hạn", "EXPIRED", stats.getExpiredPendingCount(),
+                            calcPercent(stats.getExpiredPendingCount(), total),
+                            "Hết hạn trước khi nhân viên kịp duyệt" }
             };
 
             for (int i = 0; i < statusData.length; i++) {
@@ -237,20 +259,36 @@ public class ExcelExportServiceImpl implements ExcelExportService {
             rowIdx++; // Empty space
 
             // ==========================================
-            // Section 3: Bảo Trì Tài Nguyên Đa Bảng
+            // Section 3: Bảo Trì Tài Nguyên Đa Bảng (Tổng hợp & Danh sách chi tiết)
             // ==========================================
-            createSectionHeader(sheet, rowIdx++, "III. TÌNH TRẠNG BẢO TRÌ & TÀI NGUYÊN TẠM NGỪNG PHỤC VỤ (PHÒNG / BÀN / GHẾ)", sectionHeaderStyle, 8);
+            createSectionHeader(sheet, rowIdx++,
+                    "III. TÌNH TRẠNG BẢO TRÌ & TÀI NGUYÊN TẠM NGỪNG PHỤC VỤ (PHÒNG / BÀN / GHẾ)", sectionHeaderStyle,
+                    8);
 
-            String[] maintHeaders = {"STT", "Loại tài nguyên", "Nguồn dữ liệu CSDL", "Số lượng", "Tình trạng vận hành"};
-            createTableHeader(sheet, rowIdx++, maintHeaders, tableHeaderStyle);
+            // Bảng 3.A: Tổng hợp số lượng
+            String[] maintSummaryHeaders = { "STT", "Loại tài nguyên", "Nguồn dữ liệu CSDL", "Số lượng",
+                    "Đánh giá tổng quan" };
+            createTableHeader(sheet, rowIdx++, maintSummaryHeaders, tableHeaderStyle);
 
-            Object[][] maintData = {
-                    {1, "Phòng học / Không gian chung", "spaces (MAINTENANCE) & maintenance_blocks", stats.getMaintenanceSpacesCount(), stats.getMaintenanceSpacesCount() > 0 ? "Đang trong lịch sửa chữa / khóa lịch bảo trì" : "Hoạt động bình thường"},
-                    {2, "Cụm bàn nhóm", "space_tables (INACTIVE)", stats.getMaintenanceTablesCount(), stats.getMaintenanceTablesCount() > 0 ? "Tạm ngừng phục vụ đón khách" : "Sẵn sàng sử dụng"},
-                    {3, "Vị trí ghế ngồi cá nhân", "seats (INACTIVE)", stats.getMaintenanceSeatsCount(), stats.getMaintenanceSeatsCount() > 0 ? "Hỏng hóc / chờ thay thế linh kiện" : "Sẵn sàng sử dụng"}
+            Object[][] maintSummaryData = {
+                    { 1, "Phòng học / Không gian chung", "spaces (MAINTENANCE) & maintenance_blocks",
+                            stats.getMaintenanceSpacesCount() + " phòng",
+                            stats.getMaintenanceSpacesCount() > 0 ? "Có phòng đang sửa chữa / khóa lịch bảo trì"
+                                    : "Hoạt động bình thường" },
+                    { 2, "Cụm bàn nhóm", "space_tables (INACTIVE)",
+                            (stats.getMaintenanceTablesCount() != null ? stats.getMaintenanceTablesCount() : 0)
+                                    + " bàn",
+                            (stats.getMaintenanceTablesCount() != null && stats.getMaintenanceTablesCount() > 0)
+                                    ? "Có cụm bàn tạm ngừng đón khách"
+                                    : "Sẵn sàng sử dụng" },
+                    { 3, "Vị trí ghế ngồi cá nhân", "seats (INACTIVE)",
+                            (stats.getMaintenanceSeatsCount() != null ? stats.getMaintenanceSeatsCount() : 0) + " ghế",
+                            (stats.getMaintenanceSeatsCount() != null && stats.getMaintenanceSeatsCount() > 0)
+                                    ? "Có vị trí ghế hỏng / chờ thay thế"
+                                    : "Sẵn sàng sử dụng" }
             };
 
-            for (int i = 0; i < maintData.length; i++) {
+            for (int i = 0; i < maintSummaryData.length; i++) {
                 Row r = sheet.createRow(rowIdx++);
                 r.setHeightInPoints(20);
                 boolean isZebra = i % 2 == 1;
@@ -258,11 +296,61 @@ public class ExcelExportServiceImpl implements ExcelExportService {
                 XSSFCellStyle lStyle = isZebra ? zebraLeftStyle : dataLeftStyle;
                 XSSFCellStyle rStyle = isZebra ? zebraRightStyle : dataRightStyle;
 
-                createCell(r, 0, String.valueOf(maintData[i][0]), cStyle);
-                createCell(r, 1, String.valueOf(maintData[i][1]), lStyle);
-                createCell(r, 2, String.valueOf(maintData[i][2]), lStyle);
-                createCell(r, 3, String.valueOf(maintData[i][3]), rStyle);
-                createCell(r, 4, String.valueOf(maintData[i][4]), lStyle);
+                createCell(r, 0, String.valueOf(maintSummaryData[i][0]), cStyle);
+                createCell(r, 1, String.valueOf(maintSummaryData[i][1]), lStyle);
+                createCell(r, 2, String.valueOf(maintSummaryData[i][2]), lStyle);
+                createCell(r, 3, String.valueOf(maintSummaryData[i][3]), rStyle);
+                createCell(r, 4, String.valueOf(maintSummaryData[i][4]), lStyle);
+            }
+
+            rowIdx++; // Empty space
+
+            // Bảng 3.B: Danh sách chi tiết từng phòng, bàn, ghế đang bảo trì
+            Row subSecRow = sheet.createRow(rowIdx++);
+            subSecRow.setHeightInPoints(22);
+            Cell subSecCell = subSecRow.createCell(0);
+            subSecCell.setCellValue("DANH SÁCH CHI TIẾT TỪNG PHÒNG, BÀN, GHẾ ĐANG BẢO TRÌ / TẠM NGỪNG");
+            XSSFCellStyle subSecStyle = workbook.createCellStyle();
+            subSecStyle.setFont(boldDataFont);
+            subSecStyle.setAlignment(HorizontalAlignment.LEFT);
+            subSecCell.setCellStyle(subSecStyle);
+
+            String[] detailHeaders = { "STT", "Loại tài nguyên", "Mã tài nguyên", "Tên tài nguyên",
+                    "Thuộc không gian (Phòng)", "Vị trí", "Lý do / Tình trạng", "Thời gian hiệu lực" };
+            createTableHeader(sheet, rowIdx++, detailHeaders, tableHeaderStyle);
+
+            java.util.List<com.eduspace.backend.reporting.dto.response.MaintenanceResourceDetailResponse> details = stats
+                    .getMaintenanceDetails();
+            if (details != null && !details.isEmpty()) {
+                for (int i = 0; i < details.size(); i++) {
+                    com.eduspace.backend.reporting.dto.response.MaintenanceResourceDetailResponse item = details.get(i);
+                    Row r = sheet.createRow(rowIdx++);
+                    r.setHeightInPoints(20);
+                    boolean isZebra = i % 2 == 1;
+                    XSSFCellStyle cStyle = isZebra ? zebraCenterStyle : dataCenterStyle;
+                    XSSFCellStyle lStyle = isZebra ? zebraLeftStyle : dataLeftStyle;
+
+                    String periodStr = "Toàn thời gian (Tạm khóa)";
+                    if (item.getStartTime() != null && item.getEndTime() != null) {
+                        periodStr = item.getStartTime().format(DATE_FMT) + " đến " + item.getEndTime().format(DATE_FMT);
+                    }
+
+                    createCell(r, 0, String.valueOf(i + 1), cStyle);
+                    createCell(r, 1, item.getResourceType(), cStyle);
+                    createCell(r, 2, item.getResourceCode(), cStyle);
+                    createCell(r, 3, item.getResourceName(), lStyle);
+                    createCell(r, 4, item.getSpaceName() != null ? item.getSpaceName() : item.getSpaceCode(), lStyle);
+                    createCell(r, 5, item.getLocation(), lStyle);
+                    createCell(r, 6, item.getReason(), lStyle);
+                    createCell(r, 7, periodStr, cStyle);
+                }
+            } else {
+                Row emptyR = sheet.createRow(rowIdx++);
+                emptyR.setHeightInPoints(20);
+                Cell c = emptyR.createCell(0);
+                c.setCellValue("Hiện tại toàn bộ phòng học, bàn nhóm và ghế ngồi đều đang hoạt động bình thường.");
+                c.setCellStyle(dataLeftStyle);
+                sheet.addMergedRegion(new CellRangeAddress(rowIdx - 1, rowIdx - 1, 0, 7));
             }
 
             rowIdx++; // Empty space
@@ -271,12 +359,15 @@ public class ExcelExportServiceImpl implements ExcelExportService {
             // Section 4: Bảng Kê Chi Tiết Từng Ngày
             // ==========================================
             if (dailySummaries != null && !dailySummaries.isEmpty()) {
-                createSectionHeader(sheet, rowIdx++, "IV. BẢNG KÊ CHI TIẾT SỐ LIỆU THEO TỪNG NGÀY (DAILY BREAKDOWN)", sectionHeaderStyle, 8);
+                createSectionHeader(sheet, rowIdx++, "IV. BẢNG KÊ CHI TIẾT SỐ LIỆU THEO TỪNG NGÀY (DAILY BREAKDOWN)",
+                        sectionHeaderStyle, 8);
 
-                String[] dailyHeaders = {"STT", "Ngày thống kê", "Tổng đặt", "Hoàn thành", "Đang dùng", "Chờ duyệt", "Vắng mặt", "Đã hủy", "Từ chối"};
+                String[] dailyHeaders = { "STT", "Ngày thống kê", "Tổng đặt", "Hoàn thành", "Đang dùng", "Chờ duyệt",
+                        "Vắng mặt", "Đã hủy", "Từ chối" };
                 createTableHeader(sheet, rowIdx++, dailyHeaders, tableHeaderStyle);
 
-                long sumTotal = 0, sumCompleted = 0, sumCheckedIn = 0, sumPending = 0, sumNoShow = 0, sumCancelled = 0, sumRejected = 0;
+                long sumTotal = 0, sumCompleted = 0, sumCheckedIn = 0, sumPending = 0, sumNoShow = 0, sumCancelled = 0,
+                        sumRejected = 0;
 
                 for (int i = 0; i < dailySummaries.size(); i++) {
                     DailyBookingSummary s = dailySummaries.get(i);
@@ -396,7 +487,8 @@ public class ExcelExportServiceImpl implements ExcelExportService {
     }
 
     private String calcPercent(Long count, long total) {
-        if (count == null || count == 0 || total == 0) return "0%";
+        if (count == null || count == 0 || total == 0)
+            return "0%";
         double p = Math.round(((double) count / total * 100.0) * 10.0) / 10.0;
         return p + "%";
     }

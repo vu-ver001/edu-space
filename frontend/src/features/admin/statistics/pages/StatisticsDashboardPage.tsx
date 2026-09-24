@@ -1,7 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import {
   BarChart3,
-  RotateCcw,
   Download,
   TrendingUp,
   AlertTriangle,
@@ -17,7 +16,7 @@ import {
 } from 'lucide-react';
 import { statisticsService } from '../services/statisticsService';
 import type { DashboardStatisticsResponse, TimeFilterPreset } from '../types/statistics';
-import { CustomDateRangePicker } from '../components/CustomDateRangePicker';
+import { CustomDateRangePicker, toLocalIsoDate } from '../components/CustomDateRangePicker';
 import '../statistics.css';
 
 export default function StatisticsDashboardPage() {
@@ -28,9 +27,9 @@ export default function StatisticsDashboardPage() {
   const [fromDate, setFromDate] = useState<string>(() => {
     const d = new Date();
     d.setDate(d.getDate() - 30);
-    return d.toISOString().split('T')[0];
+    return toLocalIsoDate(d);
   });
-  const [toDate, setToDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  const [toDate, setToDate] = useState<string>(() => toLocalIsoDate(new Date()));
   const [isExporting, setIsExporting] = useState<boolean>(false);
 
   const loadData = async (from?: string, to?: string) => {
@@ -54,20 +53,20 @@ export default function StatisticsDashboardPage() {
   const handleApplyPreset = (newPreset: TimeFilterPreset) => {
     setPreset(newPreset);
     const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = toLocalIsoDate(today);
 
     let startStr = '';
     if (newPreset === '7days') {
       const d = new Date();
       d.setDate(d.getDate() - 7);
-      startStr = d.toISOString().split('T')[0];
+      startStr = toLocalIsoDate(d);
     } else if (newPreset === '30days') {
       const d = new Date();
       d.setDate(d.getDate() - 30);
-      startStr = d.toISOString().split('T')[0];
+      startStr = toLocalIsoDate(d);
     } else if (newPreset === 'this_month') {
       const d = new Date(today.getFullYear(), today.getMonth(), 1);
-      startStr = d.toISOString().split('T')[0];
+      startStr = toLocalIsoDate(d);
     } else if (newPreset === 'all') {
       startStr = '';
     }
@@ -98,7 +97,7 @@ export default function StatisticsDashboardPage() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      const todayStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
+      const todayStr = toLocalIsoDate(new Date()).replace(/-/g, '');
       link.setAttribute('download', `Thong_Ke_EduSpace_${todayStr}.xlsx`);
       document.body.appendChild(link);
       link.click();
@@ -186,23 +185,13 @@ export default function StatisticsDashboardPage() {
 
           <div className="stats-header-actions">
             <button
-              className="stats-action-btn secondary"
-              onClick={() => loadData(fromDate, toDate)}
-              disabled={isLoading}
-              title="Tải lại số liệu mới nhất"
-            >
-              <RotateCcw size={15} className={isLoading ? 'spin-icon' : ''} />
-              <span>{isLoading ? 'Đang tải...' : 'Làm mới'}</span>
-            </button>
-
-            <button
               className="stats-action-btn primary"
               onClick={handleExportExcel}
-              disabled={!stats || isExporting}
+              disabled={!stats || isExporting || isLoading}
               title="Xuất báo cáo chi tiết định dạng Excel (.xlsx)"
             >
               <Download size={15} className={isExporting ? 'spin-icon' : ''} />
-              <span>{isExporting ? 'Đang xuất...' : 'Xuất Excel'}</span>
+              <span>{isExporting ? 'Đang xuất...' : 'Xuất Báo Cáo'}</span>
             </button>
           </div>
         </header>
@@ -677,7 +666,7 @@ export default function StatisticsDashboardPage() {
               {/* Phân hệ Bảo trì đa tài nguyên: Phòng, Bàn, Ghế */}
               <tr style={{ background: '#f8fafc' }}>
                 <td colSpan={5} style={{ fontWeight: 700, color: '#0f172a', padding: '14px 16px', fontSize: '13px' }}>
-                  🛠️ THỐNG KÊ BẢO TRÌ & TẠM NGỪNG THEO LOẠI TÀI NGUYÊN (PHÒNG / BÀN / GHẾ)
+                  TỔNG HỢP SỐ LƯỢNG BẢO TRÌ THEO LOẠI TÀI NGUYÊN
                 </td>
               </tr>
               <tr>
@@ -713,6 +702,61 @@ export default function StatisticsDashboardPage() {
                   {stats?.maintenanceSeatsCount ? 'Hỏng hóc / chờ thay thế' : 'Sẵn sàng sử dụng'}
                 </td>
               </tr>
+
+              {/* Bảng Kê Chi Tiết Từng Phòng, Bàn, Ghế Đang Bảo Trì */}
+              <tr style={{ background: '#f1f5f9' }}>
+                <td colSpan={5} style={{ fontWeight: 700, color: '#1e3a8a', padding: '14px 16px', fontSize: '13px' }}>
+                  DANH SÁCH CHI TIẾT CỤ THỂ TÀI NGUYÊN ĐANG BẢO TRÌ
+                </td>
+              </tr>
+
+              {stats?.maintenanceDetails && stats.maintenanceDetails.length > 0 ? (
+                stats.maintenanceDetails.map((item, idx) => (
+                  <tr key={`${item.resourceType}-${item.resourceCode}-${idx}`}>
+                    <td>
+                      <span
+                        className="status-badge-pill"
+                        style={{
+                          background: item.resourceType.includes('Phòng') ? '#fee2e2' : item.resourceType.includes('Bàn') ? '#fef3c7' : '#e0e7ff',
+                          color: item.resourceType.includes('Phòng') ? '#b91c1c' : item.resourceType.includes('Bàn') ? '#92400e' : '#3730a3',
+                          fontWeight: 700,
+                        }}
+                      >
+                        {item.resourceType.includes('Phòng') ? '🏢 ' : item.resourceType.includes('Bàn') ? '🪑 ' : '💺 '}
+                        {item.resourceType}
+                      </span>
+                    </td>
+                    <td>
+                      <code style={{ fontWeight: 700, color: '#0f172a' }}>{item.resourceCode}</code>
+                    </td>
+                    <td>
+                      <strong>{item.resourceName}</strong>
+                      <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px' }}>
+                        Thuộc: <strong>{item.spaceName}</strong> ({item.location})
+                      </div>
+                    </td>
+                    <td>
+                      <span style={{ fontSize: '12px', color: '#475569' }}>
+                        {item.startTime && item.endTime
+                          ? `${new Date(item.startTime).toLocaleDateString('vi-VN')} - ${new Date(item.endTime).toLocaleDateString('vi-VN')}`
+                          : 'Toàn thời gian'}
+                      </span>
+                    </td>
+                    <td style={{ color: '#b91c1c', fontSize: '12.5px' }}>
+                      <strong>{item.statusText || 'Đang bảo trì'}</strong>
+                      <div style={{ fontSize: '11px', color: '#64748b', marginTop: '1px' }}>
+                        Lý do: {item.reason || 'Bảo trì kỹ thuật'}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={5} style={{ textAlign: 'center', padding: '16px', color: '#16a34a', fontWeight: 600 }}>
+                    ✅ Hiện tại toàn bộ phòng học, bàn nhóm và ghế ngồi đều đang hoạt động bình thường, không có tài nguyên nào bảo trì.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </section>

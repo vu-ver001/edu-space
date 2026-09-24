@@ -111,6 +111,77 @@ public class StatisticsServiceImpl implements StatisticsService {
         long maintenanceSeatsCount = seatRepository.countByStatusAndDeletedAtIsNull(SeatStatus.INACTIVE);
         long totalMaintenanceCount = maintenanceSpacesCount + maintenanceTablesCount + maintenanceSeatsCount;
 
+        // 6. Thu thập danh sách chi tiết từng phòng, bàn, ghế đang bảo trì / tạm ngừng
+        java.util.List<com.eduspace.backend.reporting.dto.response.MaintenanceResourceDetailResponse> maintenanceDetails = new java.util.ArrayList<>();
+
+        // Phòng bảo trì theo trạng thái
+        java.util.List<com.eduspace.backend.space.entity.Space> maintenanceSpaces = spaceRepository.findAllByStatusAndDeletedAtIsNull(SpaceStatus.MAINTENANCE);
+        for (com.eduspace.backend.space.entity.Space s : maintenanceSpaces) {
+            maintenanceDetails.add(com.eduspace.backend.reporting.dto.response.MaintenanceResourceDetailResponse.builder()
+                    .resourceType("Phòng học")
+                    .resourceCode(s.getSpaceCode())
+                    .resourceName(s.getName())
+                    .spaceCode(s.getSpaceCode())
+                    .spaceName(s.getName())
+                    .location(s.getBuilding() + " - Tầng " + s.getFloor())
+                    .reason((s.getDescription() != null && !s.getDescription().isBlank()) ? s.getDescription() : "Đang bảo trì định kỳ / khóa phòng")
+                    .statusText("Đang bảo trì")
+                    .build());
+        }
+
+        // Phòng bảo trì theo lịch khóa (maintenance_blocks)
+        java.util.List<com.eduspace.backend.space.entity.MaintenanceBlock> activeBlocks = maintenanceBlockRepository.findActiveMaintenanceBlocks();
+        for (com.eduspace.backend.space.entity.MaintenanceBlock mb : activeBlocks) {
+            com.eduspace.backend.space.entity.Space s = mb.getSpace();
+            boolean alreadyInList = maintenanceSpaces.stream().anyMatch(ms -> ms.getId().equals(s.getId()));
+            if (!alreadyInList) {
+                maintenanceDetails.add(com.eduspace.backend.reporting.dto.response.MaintenanceResourceDetailResponse.builder()
+                        .resourceType("Phòng học (Khóa lịch)")
+                        .resourceCode(s.getSpaceCode())
+                        .resourceName(s.getName())
+                        .spaceCode(s.getSpaceCode())
+                        .spaceName(s.getName())
+                        .location(s.getBuilding() + " - Tầng " + s.getFloor())
+                        .reason(mb.getReason())
+                        .startTime(mb.getStartTime())
+                        .endTime(mb.getEndTime())
+                        .statusText("Khóa lịch bảo trì")
+                        .build());
+            }
+        }
+
+        // Bàn nhóm INACTIVE
+        java.util.List<com.eduspace.backend.space.entity.SpaceTable> inactiveTables = spaceTableRepository.findAllByStatusWithSpace(SpaceTableStatus.INACTIVE);
+        for (com.eduspace.backend.space.entity.SpaceTable t : inactiveTables) {
+            com.eduspace.backend.space.entity.Space s = t.getSpace();
+            maintenanceDetails.add(com.eduspace.backend.reporting.dto.response.MaintenanceResourceDetailResponse.builder()
+                    .resourceType("Bàn nhóm")
+                    .resourceCode(t.getTableCode())
+                    .resourceName("Bàn " + t.getTableCode())
+                    .spaceCode(s != null ? s.getSpaceCode() : "-")
+                    .spaceName(s != null ? s.getName() : "-")
+                    .location(s != null ? s.getBuilding() + " - Tầng " + s.getFloor() : "-")
+                    .reason((t.getDescription() != null && !t.getDescription().isBlank()) ? t.getDescription() : "Tạm ngừng phục vụ")
+                    .statusText("Tạm ngừng")
+                    .build());
+        }
+
+        // Ghế ngồi INACTIVE
+        java.util.List<com.eduspace.backend.space.entity.Seat> inactiveSeats = seatRepository.findAllByStatusWithSpace(SeatStatus.INACTIVE);
+        for (com.eduspace.backend.space.entity.Seat st : inactiveSeats) {
+            com.eduspace.backend.space.entity.Space s = st.getSpace();
+            maintenanceDetails.add(com.eduspace.backend.reporting.dto.response.MaintenanceResourceDetailResponse.builder()
+                    .resourceType("Ghế ngồi")
+                    .resourceCode(st.getSeatCode())
+                    .resourceName("Ghế " + st.getSeatCode())
+                    .spaceCode(s != null ? s.getSpaceCode() : "-")
+                    .spaceName(s != null ? s.getName() : "-")
+                    .location(s != null ? s.getBuilding() + " - Tầng " + s.getFloor() : "-")
+                    .reason((st.getDescription() != null && !st.getDescription().isBlank()) ? st.getDescription() : "Hỏng hóc / chờ thay thế")
+                    .statusText("Tạm ngừng")
+                    .build());
+        }
+
         return DashboardStatisticsResponse.builder()
                 .fromDate(effectiveFrom)
                 .toDate(effectiveTo)
@@ -130,6 +201,7 @@ public class StatisticsServiceImpl implements StatisticsService {
                 .cancelledCount(cancelledCount)
                 .rejectedCount(rejectedCount)
                 .calculatedAt(latestCalculatedAt)
+                .maintenanceDetails(maintenanceDetails)
                 .build();
     }
 }
