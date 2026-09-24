@@ -17,7 +17,7 @@
   max-width: 1400px;
   width: 100%;
   margin: 0 auto;
-  padding: 28px 32px 48px;
+  padding: 28px 0px 48px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -240,14 +240,67 @@
   box-shadow: 0 4px 10px rgba(225, 29, 72, 0.1);
 }
 
-/* Filter & Search Bar */
-.facility-filter-bar {
+/* Unified list card: header + filters + inner table */
+.facility-list-card {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: 24px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 4px 12px rgba(0, 0, 0, 0.02);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow: hidden;
+}
+
+.facility-list-card-header {
+  width: 100%;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.facility-list-card-header::-webkit-scrollbar {
+  display: none;
+}
+
+.facility-list-card-title-group {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+.facility-list-card-title-group h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.facility-list-card-title-group span {
+  color: #64748b;
+  font-size: 13px;
+}
+
+/* Filter & Search Bar */
+.facility-filter-bar {
+  flex: 1 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
   margin-bottom: 0;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .facility-search-box {
@@ -317,7 +370,7 @@
   flex: 1;
   min-width: 0;
   background: #ffffff;
-  border-radius: 14px;
+  border-radius: 12px;
   border: 1px solid #e2e8f0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   overflow-x: auto;
@@ -354,15 +407,16 @@
 
 .facility-table tbody tr {
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
 }
 
 .facility-table tbody tr:hover {
-  background-color: #f8fafc;
+  background: #f9fbff;
 }
 
 .facility-table tbody tr.selected {
-  background-color: #eff6ff;
+  background: #f1f7ff;
+  box-shadow: inset 3px 0 #2a7cf3;
 }
 
 .facility-name-cell {
@@ -480,6 +534,7 @@
     opacity: 0;
     transform: translateX(12px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -683,6 +738,7 @@
   .facility-content-layout {
     flex-direction: column;
   }
+
   .facility-detail-sidebar {
     width: 100%;
     position: static;

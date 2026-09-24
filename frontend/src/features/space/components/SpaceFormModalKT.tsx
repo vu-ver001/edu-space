@@ -10,21 +10,17 @@ import {
   Star,
   ImagePlus,
 } from 'lucide-react';
-import type { Space, Facility, SpaceCreateRequest, SpaceUpdateRequest } from '../types/space';
+import type {
+  Space,
+  Facility,
+  SpaceCreateRequest,
+  SpaceUpdateRequest,
+  SpaceFormImage,
+} from '../types/space';
 import type { SpaceType } from '../types/spaceType';
 import './SpaceTypeFormModalKT.css';
 import './SpaceFormModalKT.css';
 import { formatImageUrl } from '../../../utils/imageUrl';
-
-export interface FormImageItem {
-  id: string;
-  type: 'file' | 'url' | 'existing';
-  file?: File;
-  url?: string;
-  previewUrl: string;
-  isPrimary: boolean;
-  sortOrder: number;
-}
 
 interface Props {
   isOpen: boolean;
@@ -36,7 +32,7 @@ interface Props {
   onClose: () => void;
   onSubmit: (
     data: SpaceCreateRequest | SpaceUpdateRequest,
-    images?: FormImageItem[]
+    images?: SpaceFormImage[]
   ) => Promise<void>;
 }
 
@@ -63,12 +59,13 @@ export const SpaceFormModalKT: React.FC<Props> = ({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   // Image Management States
-  const [images, setImages] = useState<FormImageItem[]>([]);
+  const [images, setImages] = useState<SpaceFormImage[]>([]);
   const [imageInputMethod, setImageInputMethod] = useState<'file' | 'url'>('file');
   const [urlInput, setUrlInput] = useState('');
   const [imageError, setImageError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -85,9 +82,10 @@ export const SpaceFormModalKT: React.FC<Props> = ({
 
         // Load existing images
         if (space.images && space.images.length > 0) {
-          const loaded: FormImageItem[] = space.images.map((img, idx) => ({
+          const loaded: SpaceFormImage[] = space.images.map((img, idx) => ({
             id: `existing-${img.id || idx}`,
             type: 'existing',
+            spaceImageId: img.id,
             url: img.imageUrl,
             previewUrl: formatImageUrl(img.imageUrl) || img.imageUrl,
             isPrimary: Boolean(img.isPrimary || img.primary),
@@ -141,6 +139,20 @@ export const SpaceFormModalKT: React.FC<Props> = ({
     };
   }, []);
 
+  useEffect(() => {
+    if (Object.keys(fieldErrors).length === 0) return;
+
+    const errorField = formRef.current?.querySelector<HTMLElement>(
+      '.input-error, .dropzone-error'
+    );
+    if (!errorField) return;
+
+    errorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (typeof errorField.focus === 'function') {
+      errorField.focus({ preventScroll: true });
+    }
+  }, [fieldErrors]);
+
   if (!isOpen) return null;
 
   const handleToggleFacility = (id: number) => {
@@ -160,7 +172,7 @@ export const SpaceFormModalKT: React.FC<Props> = ({
       return;
     }
 
-    const newItems: FormImageItem[] = [];
+    const newItems: SpaceFormImage[] = [];
     for (const file of files) {
       if (file.size > 5 * 1024 * 1024) {
         setImageError(`File "${file.name}" vượt quá dung lượng tối đa 5MB.`);
@@ -208,7 +220,7 @@ export const SpaceFormModalKT: React.FC<Props> = ({
       return;
     }
 
-    const newItem: FormImageItem = {
+    const newItem: SpaceFormImage = {
       id: `url-${Date.now()}-${Math.random()}`,
       type: 'url',
       url: trimmed,
@@ -292,8 +304,6 @@ export const SpaceFormModalKT: React.FC<Props> = ({
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || 'Có lỗi xảy ra khi lưu không gian.';
       const details = err?.response?.data?.details;
-      setValidationError(msg);
-
       const newFieldErrors: Record<string, string> = {};
       if (Array.isArray(details) && details.length > 0) {
         details.forEach((d: any) => {
@@ -329,6 +339,10 @@ export const SpaceFormModalKT: React.FC<Props> = ({
         newFieldErrors.images = newFieldErrors.images || msg;
         newFieldErrors.imageUrl = newFieldErrors.imageUrl || msg;
       }
+
+      // Lỗi của từng trường đã hiển thị ngay dưới ô nhập.
+      // Chỉ hiện thông báo chung khi backend không chỉ ra trường bị lỗi.
+      setValidationError(Object.keys(newFieldErrors).length === 0 ? msg : null);
       setFieldErrors(newFieldErrors);
     }
   };
@@ -377,7 +391,7 @@ export const SpaceFormModalKT: React.FC<Props> = ({
             </div>
           )}
 
-          <form id="space-form" onSubmit={handleSubmit} className="space-form-grid" noValidate>
+          <form ref={formRef} id="space-form" onSubmit={handleSubmit} className="space-form-grid" noValidate>
             {/* Mã không gian & Tên không gian */}
             <div className="space-form-grid-full" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px' }}>
               <div className="astp-form-group">

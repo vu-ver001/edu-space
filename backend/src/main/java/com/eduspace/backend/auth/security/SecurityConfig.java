@@ -54,6 +54,7 @@ public class SecurityConfig {
 						.authenticationEntryPoint(authenticationEntryPoint))
 				.authorizeHttpRequests(auth -> auth
 						.requestMatchers("/health", "/api/auth/login", "/api/auth/**", "/uploads/**").permitAll()
+						.requestMatchers(org.springframework.http.HttpMethod.GET, "/api/spaces/images/*/content").permitAll()
 						.requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/admin/policies", "/api/admin/policies/**").hasRole("ADMIN")
 						.requestMatchers("/api/admin/policies/history").hasRole("ADMIN")
 						.requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "STAFF")

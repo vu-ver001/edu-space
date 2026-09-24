@@ -24,7 +24,7 @@ import { spaceApi } from '../../space/api/spaceApi';
 import { formatImageUrl } from '../../../utils/imageUrl';
 import { staffApi } from '../api/staffApi';
 import { ApproveBookingModalKT } from '../components/ApproveBookingModalKT';
-import { RejectBookingModalKT } from '../components/RejectBookingModalKT';
+import { BulkBookingActionModalKT } from '../components/BulkBookingActionModalKT';
 import { RejectBookingConfirmModalKT } from '../components/RejectBookingConfirmModalKT';
 import type { BookingStatus, StaffBooking } from '../types/staff';
 import './BookingManagementPageKT.css';
@@ -114,6 +114,11 @@ const formatFloor = (floor?: string) => {
   return /^tầng\b/i.test(value) ? value : `Tầng ${value}`;
 };
 
+const getPrimarySpaceImage = (space?: Space) => {
+  const primaryImage = space?.images?.find((image) => image.isPrimary || image.primary);
+  return formatImageUrl(space?.primaryImageUrl || primaryImage?.imageUrl);
+};
+
 const wasHandledByStaff = (booking: StaffBooking) => {
   if (booking.status === 'REJECTED') return true;
   return ['CHECKED_IN', 'COMPLETED'].includes(booking.status)
@@ -183,8 +188,34 @@ export const BookingManagementPageKT = () => {
     return () => window.clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    if (
+      selectedBookingId == null
+      || confirmAction != null
+      || rejectingBooking != null
+      || bulkRejectingBookings.length > 0
+    ) return;
+
+    const previousOverflow = document.body.style.overflow;
+    const closeDetailOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setSelectedBookingId(null);
+    };
+
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', closeDetailOnEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', closeDetailOnEscape);
+    };
+  }, [selectedBookingId, confirmAction, rejectingBooking, bulkRejectingBookings.length]);
+
   const spaceById = useMemo(
     () => new Map(spaces.map((space) => [space.id, space])),
+    [spaces],
+  );
+  const spaceCodeById = useMemo(
+    () => new Map(spaces.map((space) => [space.id, space.spaceCode])),
     [spaces],
   );
 
@@ -238,6 +269,7 @@ export const BookingManagementPageKT = () => {
     ? null
     : bookings.find((booking) => booking.id === selectedBookingId) ?? null;
   const selectedSpace = selectedBooking ? spaceById.get(selectedBooking.spaceId) : undefined;
+  const selectedSpacePrimaryImage = getPrimarySpaceImage(selectedSpace);
 
   const handleConfirmAction = async () => {
     if (!confirmAction) return;
@@ -414,7 +446,7 @@ export const BookingManagementPageKT = () => {
         </article>
       </section>
 
-      <div className={`booking-workspace${selectedBooking ? ' detail-open' : ''}`}>
+      <div className="booking-workspace">
         <main className="booking-list-panel">
           <nav className="booking-tabs" aria-label="Phân loại booking">
             <button className={activeTab === 'pending' ? 'active' : ''} onClick={() => changeTab('pending')} type="button">
@@ -648,9 +680,20 @@ export const BookingManagementPageKT = () => {
         </main>
 
         {selectedBooking && (
-          <aside className="booking-detail-panel">
+          <div
+            className="booking-detail-backdrop"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) setSelectedBookingId(null);
+            }}
+          >
+            <aside
+              className="booking-detail-panel"
+              role="dialog"
+              aria-modal="true"
+              aria-label={`Chi tiết booking ${bookingCode(selectedBooking)}`}
+            >
               <div className="booking-detail-header">
-                <div><span>Chi tiết đặt chỗ</span><strong>{bookingCode(selectedBooking)}</strong></div>
+                <div><strong>{bookingCode(selectedBooking)}</strong></div>
                 <div className="booking-detail-heading-actions">
                   <StatusBadge status={selectedBooking.status} size="sm" />
                   <button
@@ -665,19 +708,19 @@ export const BookingManagementPageKT = () => {
                 </div>
               </div>
 
-              <section className="booking-detail-section">
+              <section className="booking-detail-section booking-student-section">
                 <h3>Thông tin sinh viên</h3>
                 <div className="booking-student-profile">
-                  <span className="booking-avatar">{initials(selectedBooking.studentName)}</span>
+                  <span className="booking-avatar small">{initials(selectedBooking.studentName)}</span>
                   <div><strong>{selectedBooking.studentName || 'Sinh viên'}</strong><span><Mail size={14} /> {selectedBooking.studentEmail || 'Chưa có email'}</span></div>
                 </div>
               </section>
 
-              <section className="booking-detail-section">
+              <section className="booking-detail-section booking-reservation-section">
                 <h3>Thông tin đặt chỗ</h3>
                 <div className="booking-space-summary">
-                  {formatImageUrl(selectedSpace?.primaryImageUrl || selectedSpace?.imageUrl) ? (
-                    <img src={formatImageUrl(selectedSpace?.primaryImageUrl || selectedSpace?.imageUrl) || ''} alt={selectedBooking.spaceName} />
+                  {selectedSpacePrimaryImage ? (
+                    <img src={selectedSpacePrimaryImage} alt={selectedBooking.spaceName} />
                   ) : (
                     <span className="booking-space-placeholder"><Building2 size={24} /></span>
                   )}
@@ -689,11 +732,13 @@ export const BookingManagementPageKT = () => {
                   </div>
                 </div>
                 <div className="booking-detail-list">
-                  <div><CalendarDays size={17} /><span><small>Thời gian</small><strong>{formatDate(selectedBooking.startTime)} · {formatTime(selectedBooking.startTime)} – {formatTime(selectedBooking.endTime)}</strong></span></div>
-                  <div><Target size={17} /><span><small>Mục đích</small><strong>{selectedBooking.purpose || 'Chưa cung cấp'}</strong></span></div>
-                  <div><UsersRound size={17} /><span><small>Số người tham gia</small><strong>{selectedBooking.participantCount} người</strong></span></div>
-                  {selectedBooking.tableCode && <div><DoorOpen size={17} /><span><small>Bàn đã chọn</small><strong>{selectedBooking.tableCode}</strong></span></div>}
-                  {!!selectedBooking.selectedSeats?.length && <div><UserRound size={17} /><span><small>Ghế đã chọn</small><strong>{selectedBooking.selectedSeats.join(', ')}</strong></span></div>}
+                  <div className="booking-detail-time"><CalendarDays size={17} /><span><small>Thời gian</small><strong>{formatDate(selectedBooking.startTime)} · {formatTime(selectedBooking.startTime)} – {formatTime(selectedBooking.endTime)}</strong></span></div>
+                  <div className="booking-detail-purpose"><Target size={17} /><span><small>Mục đích</small><strong>{selectedBooking.purpose || 'Chưa cung cấp'}</strong></span></div>
+                  {getBookingMode(selectedBooking, selectedSpace) !== 'PER_SEAT' && (
+                    <div className="booking-detail-participants"><UsersRound size={17} /><span><small>Số người tham gia</small><strong>{selectedBooking.participantCount} người</strong></span></div>
+                  )}
+                  {selectedBooking.tableCode && <div className="booking-detail-table"><DoorOpen size={17} /><span><small>Bàn đã chọn</small><strong>{selectedBooking.tableCode}</strong></span></div>}
+                  {!!selectedBooking.selectedSeats?.length && <div className="booking-detail-seats"><UserRound size={17} /><span><small>Ghế đã chọn</small><strong>{selectedBooking.selectedSeats.join(', ')}</strong></span></div>}
                 </div>
               </section>
 
@@ -710,7 +755,6 @@ export const BookingManagementPageKT = () => {
 
               {(selectedBooking.status === 'PENDING_APPROVAL' || selectedBooking.status === 'CONFIRMED') && (
                 <section className="booking-detail-actions">
-                  <h3>Thao tác</h3>
                   {selectedBooking.status === 'PENDING_APPROVAL' && (
                     <div>
                       <button type="button" className="approve" onClick={() => setConfirmAction({ type: 'approve', booking: selectedBooking })}><Check size={18} /> Duyệt yêu cầu</button>
@@ -727,7 +771,8 @@ export const BookingManagementPageKT = () => {
                   )}
                 </section>
               )}
-          </aside>
+            </aside>
+          </div>
         )}
       </div>
 
@@ -743,33 +788,36 @@ export const BookingManagementPageKT = () => {
       />
 
       <ConfirmDialog
-        isOpen={confirmAction != null && confirmAction.type !== 'approve'}
-        title={confirmAction?.type === 'bulk-approve'
-          ? `Duyệt ${confirmAction.bookings.length} booking đã chọn?`
-          : 'Xác nhận check-in?'}
-        message={confirmAction?.type === 'bulk-approve'
-          ? 'Vui lòng kiểm tra các yêu cầu đã chọn trước khi duyệt.'
-          : confirmAction?.type === 'checkin'
-            ? `${bookingCode(confirmAction.booking)} · ${confirmAction.booking.studentName} · ${confirmAction.booking.spaceName}`
-            : ''}
-        confirmText={confirmAction?.type === 'bulk-approve'
-          ? `Duyệt ${confirmAction.bookings.length} booking`
-          : 'Xác nhận check-in'}
+        isOpen={confirmAction?.type === 'checkin'}
+        title="Xác nhận check-in?"
+        message={confirmAction?.type === 'checkin'
+          ? `${bookingCode(confirmAction.booking)} · ${confirmAction.booking.studentName} · ${confirmAction.booking.spaceName}`
+          : ''}
+        confirmText="Xác nhận check-in"
         isDanger={false}
         isLoading={actionLoading}
         onCancel={() => setConfirmAction(null)}
         onConfirm={handleConfirmAction}
       />
 
-      <RejectBookingModalKT
-        isOpen={bulkRejectingBookings.length > 0}
-        booking={bulkRejectingBookings[0] || null}
-        bookingCount={bulkRejectingBookings.length}
+      <BulkBookingActionModalKT
+        isOpen={confirmAction?.type === 'bulk-approve'}
+        action="approve"
+        bookings={confirmAction?.type === 'bulk-approve' ? confirmAction.bookings : []}
+        spaceCodeById={spaceCodeById}
         isLoading={actionLoading}
-        onClose={() => {
-          setBulkRejectingBookings([]);
-        }}
-        onConfirm={handleReject}
+        onClose={() => setConfirmAction(null)}
+        onConfirm={handleConfirmAction}
+      />
+
+      <BulkBookingActionModalKT
+        isOpen={bulkRejectingBookings.length > 0}
+        action="reject"
+        bookings={bulkRejectingBookings}
+        spaceCodeById={spaceCodeById}
+        isLoading={actionLoading}
+        onClose={() => setBulkRejectingBookings([])}
+        onConfirm={(reason) => handleReject(reason || '')}
       />
 
       <RejectBookingConfirmModalKT
