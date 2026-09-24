@@ -475,7 +475,9 @@ public class BookingService {
         auditLogRepository.save(audit);
 
         log.info("Booking #{} đã được duyệt thành công bởi Staff {}", booking.getId(), staffEmail);
-        return toBookingResponse(booking, now);
+        BookingResponse response = toBookingResponse(booking, now);
+        response.setMessage("Duyệt đặt phòng thành công");
+        return response;
     }
 
     /**
@@ -518,8 +520,11 @@ public class BookingService {
         auditLogRepository.save(audit);
 
         log.info("Booking #{} đã bị từ chối bởi Staff {}. Lý do: {}", booking.getId(), staffEmail, rejectReason);
-        return toBookingResponse(booking, now);
+        BookingResponse response = toBookingResponse(booking, now);
+        response.setMessage("Từ chối đặt phòng thành công");
+        return response;
     }
+
 
     /**
      * Duyệt hàng loạt booking (Staff).
@@ -575,7 +580,12 @@ public class BookingService {
             }
         }
 
+        String bulkApproveMsg = failureList.isEmpty()
+                ? ("Duyệt hàng loạt thành công (" + successList.size() + " đơn)")
+                : ("Duyệt hàng loạt hoàn tất: " + successList.size() + " thành công, " + failureList.size() + " thất bại");
+
         return BulkBookingOperationResponse.builder()
+                .message(bulkApproveMsg)
                 .totalRequested(bookingIds.size())
                 .successCount(successList.size())
                 .failureCount(failureList.size())
@@ -594,6 +604,7 @@ public class BookingService {
         }
         if (bookingIds == null || bookingIds.isEmpty()) {
             return BulkBookingOperationResponse.builder()
+                    .message("Danh sách yêu cầu rỗng")
                     .totalRequested(0)
                     .successCount(0)
                     .failureCount(0)
@@ -640,7 +651,12 @@ public class BookingService {
             }
         }
 
+        String bulkRejectMsg = failureList.isEmpty()
+                ? ("Từ chối hàng loạt thành công (" + successList.size() + " đơn)")
+                : ("Từ chối hàng loạt hoàn tất: " + successList.size() + " thành công, " + failureList.size() + " thất bại");
+
         return BulkBookingOperationResponse.builder()
+                .message(bulkRejectMsg)
                 .totalRequested(bookingIds.size())
                 .successCount(successList.size())
                 .failureCount(failureList.size())
@@ -648,6 +664,7 @@ public class BookingService {
                 .failedBookings(failureList)
                 .build();
     }
+
 
     @Transactional(readOnly = true)
     public List<BookingResponse> getPendingBookingsForStaff() {

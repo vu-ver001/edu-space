@@ -16,8 +16,10 @@ import com.eduspace.backend.booking.entity.BookingStatus;
 @AllArgsConstructor
 @Builder
 public class BookingResponse {
+    private String message;
     private Long id;
     private String bookingCode;
+
     private Long studentId;
     private String studentName;
     private String studentEmail;
