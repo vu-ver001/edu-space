@@ -65,4 +65,9 @@ public interface MaintenanceBlockRepository extends JpaRepository<MaintenanceBlo
     default boolean hasOverlappingMaintenance(Long spaceId, LocalDateTime startTime, LocalDateTime endTime) {
         return !findOverlappingBlocks(spaceId, startTime, endTime).isEmpty();
     }
+
+    @Query("SELECT COUNT(DISTINCT m.space.id) FROM MaintenanceBlock m " +
+           "WHERE m.deletedAt IS NULL " +
+           "AND CURRENT_TIMESTAMP BETWEEN m.startTime AND m.endTime")
+    long countActiveMaintenanceSpaces();
 }

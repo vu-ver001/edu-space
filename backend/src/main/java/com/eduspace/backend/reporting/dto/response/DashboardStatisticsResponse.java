@@ -32,8 +32,11 @@ public class DashboardStatisticsResponse {
     // Số booking chờ duyệt bị hết hạn (EXPIRED)
     private Long expiredPendingCount;
 
-    // Số phòng đang trong tình trạng bảo trì (MAINTENANCE)
+    // Thống kê tài nguyên đang bảo trì / ngừng phục vụ (Phòng, Bàn, Ghế)
     private Long maintenanceSpacesCount;
+    private Long maintenanceTablesCount;
+    private Long maintenanceSeatsCount;
+    private Long totalMaintenanceCount;
 
     // Chi tiết số lượng theo từng trạng thái để giao diện dễ vẽ biểu đồ
     private Long confirmedCount;
@@ -42,4 +45,7 @@ public class DashboardStatisticsResponse {
     private Long noShowCount;
     private Long cancelledCount;
     private Long rejectedCount;
+
+    // Thời điểm dữ liệu được tổng hợp tính toán gần nhất
+    private LocalDateTime calculatedAt;
 }

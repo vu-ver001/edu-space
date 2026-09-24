@@ -12,5 +12,6 @@ public interface SeatRepository extends JpaRepository<Seat, Long> {
     Optional<Seat> findByIdAndDeletedAtIsNull(Long id);
     List<Seat> findBySpaceIdAndDeletedAtIsNull(Long spaceId);
     long countBySpaceIdAndDeletedAtIsNull(Long spaceId);
+    long countByStatusAndDeletedAtIsNull(com.eduspace.backend.space.entity.SeatStatus status);
     boolean existsBySpaceIdAndSeatCodeIgnoreCase(Long spaceId, String seatCode);
 }

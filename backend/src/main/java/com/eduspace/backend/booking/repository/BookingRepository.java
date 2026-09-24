@@ -30,6 +30,9 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     long countByStatusAndCreatedAtBetween(BookingStatus status, LocalDateTime from, LocalDateTime to);
 
+    @Query("SELECT MIN(b.createdAt) FROM Booking b")
+    LocalDateTime findEarliestCreatedAt();
+
 
     /**
      * Tìm các booking đang chiếm chỗ của một phòng giao nhau với khoảng thời gian [startTime, endTime].
