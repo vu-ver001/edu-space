@@ -84,6 +84,12 @@ export const SpaceDetailPage: React.FC = () => {
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBookingError(null);
+
+    if (space?.status && space.status !== 'AVAILABLE') {
+      setBookingError(`Không gian này hiện đang ở trạng thái ${space.status === 'MAINTENANCE' ? 'Bảo trì' : 'Tạm khóa'}, tạm thời không nhận đặt chỗ.`);
+      return;
+    }
+
     if (!date || !startTime || !endTime) {
       setBookingError('Vui lòng điền đầy đủ ngày và khung giờ đặt phòng.');
       return;
@@ -126,7 +132,7 @@ export const SpaceDetailPage: React.FC = () => {
         setToastMessage('✓ Đặt phòng thành công! Toàn bộ không gian đã được giữ chỗ cho nhóm của bạn. Đang chuyển hướng...');
       }
       setTimeout(() => {
-        navigate('/my-bookings');
+        navigate('/student/my-bookings');
       }, 1500);
     } catch (err: any) {
       setBookingError(err?.response?.data?.message || err?.message || 'Không thể hoàn tất đặt phòng.');
@@ -143,7 +149,7 @@ export const SpaceDetailPage: React.FC = () => {
       setToastMessage(`✓ Đặt chỗ thành công! Chỗ ngồi ${selectedItems.join(', ')} đã được xác nhận. Đang chuyển hướng...`);
     }
     setTimeout(() => {
-      navigate('/my-bookings');
+      navigate('/student/my-bookings');
     }, 1500);
   };
 
@@ -165,7 +171,7 @@ export const SpaceDetailPage: React.FC = () => {
           <span>⚠️</span>
           <h4>Lỗi tải dữ liệu</h4>
           <p>{error || 'Không tìm thấy thông tin không gian yêu cầu.'}</p>
-          <button className="btn-portal-retry" onClick={() => navigate('/spaces')}>
+          <button className="btn-portal-retry" onClick={() => navigate('/student/spaces')}>
             Quay lại tìm không gian
           </button>
         </div>
@@ -188,7 +194,7 @@ export const SpaceDetailPage: React.FC = () => {
         <button
           type="button"
           className="btn-back-link"
-          onClick={() => navigate('/spaces')}
+          onClick={() => navigate('/student/spaces')}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <line x1="19" y1="12" x2="5" y2="12" />
@@ -207,7 +213,15 @@ export const SpaceDetailPage: React.FC = () => {
             <div className="space-hero-image-box">
               <img src={imageUrl} alt={space.name} className="space-hero-img" />
               <div className="hero-badge-pinned">
-                {requiresApproval ? (
+                {space.status === 'MAINTENANCE' ? (
+                  <span className="badge-status-pill" style={{ background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECDD3' }}>
+                    <span className="badge-dot" style={{ background: '#DC2626' }} /> Đang bảo trì
+                  </span>
+                ) : space.status === 'INACTIVE' ? (
+                  <span className="badge-status-pill" style={{ background: '#F8FAFC', color: '#64748B', border: '1px solid #E2E8F0' }}>
+                    <span className="badge-dot" style={{ background: '#94A3B8' }} /> Tạm khóa
+                  </span>
+                ) : requiresApproval ? (
                   <span className="badge-status-pill badge-approval">
                     <span className="badge-dot dot-amber" /> Cần phê duyệt
                   </span>
@@ -235,7 +249,13 @@ export const SpaceDetailPage: React.FC = () => {
               <div className="specs-compact-grid">
                 {/* Khung 1: Địa điểm */}
                 <div className="spec-compact-item">
-                  <span className="spec-compact-icon">📍</span>
+                  <span className="spec-compact-icon">
+                    {/* MapPin icon */}
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E11D48" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                      <circle cx="12" cy="10" r="3"/>
+                    </svg>
+                  </span>
                   <div>
                     <span className="spec-compact-label">Địa điểm</span>
                     <strong className="spec-compact-val">
@@ -246,7 +266,15 @@ export const SpaceDetailPage: React.FC = () => {
 
                 {/* Khung 2: Sức chứa */}
                 <div className="spec-compact-item">
-                  <span className="spec-compact-icon">👥</span>
+                  <span className="spec-compact-icon">
+                    {/* Users icon */}
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                      <circle cx="9" cy="7" r="4"/>
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                  </span>
                   <div>
                     <span className="spec-compact-label">Sức chứa</span>
                     <strong className="spec-compact-val">{space.capacity} người</strong>
@@ -255,7 +283,13 @@ export const SpaceDetailPage: React.FC = () => {
 
                 {/* Khung 3: Phê duyệt */}
                 <div className="spec-compact-item">
-                  <span className="spec-compact-icon">🛡️</span>
+                  <span className="spec-compact-icon">
+                    {/* Shield-check icon */}
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                      <polyline points="9 12 11 14 15 10"/>
+                    </svg>
+                  </span>
                   <div>
                     <span className="spec-compact-label">Phê duyệt</span>
                     <strong className="spec-compact-val">
@@ -266,7 +300,30 @@ export const SpaceDetailPage: React.FC = () => {
 
                 {/* Khung 4: Mô hình */}
                 <div className="spec-compact-item">
-                  <span className="spec-compact-icon">{isPerSeat ? '🎧' : isPerTable ? '👥' : '🏢'}</span>
+                  <span className="spec-compact-icon">
+                    {isPerSeat ? (
+                      /* Armchair / Seat icon */
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M19 9V6a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v3"/>
+                        <path d="M3 11v5a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v2H7v-2a2 2 0 0 0-4 0z"/>
+                        <line x1="5" y1="18" x2="5" y2="21"/>
+                        <line x1="19" y1="18" x2="19" y2="21"/>
+                      </svg>
+                    ) : isPerTable ? (
+                      /* Table icon */
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="9" width="18" height="3" rx="1"/>
+                        <line x1="7" y1="12" x2="7" y2="20"/>
+                        <line x1="17" y1="12" x2="17" y2="20"/>
+                      </svg>
+                    ) : (
+                      /* Building / Door icon */
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                        <polyline points="9 22 9 12 15 12 15 22"/>
+                      </svg>
+                    )}
+                  </span>
                   <div>
                     <span className="spec-compact-label">Mô hình</span>
                     <strong className="spec-compact-val">
@@ -306,6 +363,19 @@ export const SpaceDetailPage: React.FC = () => {
                 {isPerSeat ? 'Xác nhận khung giờ và chọn vị trí ghế ngồi cá nhân' : isPerTable ? 'Xác nhận khung giờ và chọn bàn thảo luận nhóm' : 'Xác nhận khung giờ và đặt trọn gói nguyên phòng'}
               </p>
             </div>
+
+            {space.status === 'MAINTENANCE' && (
+              <div style={{ margin: '14px 20px 0', padding: '12px 14px', background: '#FEF2F2', border: '1px solid #FECDD3', borderRadius: '10px', color: '#DC2626', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '16px' }}>🔧</span>
+                <span><strong>Không gian đang bảo trì:</strong> Tạm thời không thể tiếp nhận đặt chỗ mới.</span>
+              </div>
+            )}
+            {space.status === 'INACTIVE' && (
+              <div style={{ margin: '14px 20px 0', padding: '12px 14px', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', color: '#64748B', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '16px' }}>🔒</span>
+                <span><strong>Không gian tạm ngưng:</strong> Hiện không khả dụng cho các phiên đặt phòng.</span>
+              </div>
+            )}
 
             <form onSubmit={handleFormSubmit} className="detail-booking-form">
               {/* Ngày */}
@@ -395,12 +465,26 @@ export const SpaceDetailPage: React.FC = () => {
               <button 
                 type="submit" 
                 className="btn-detail-book-now"
-                disabled={submitting}
+                disabled={submitting || (space?.status != null && space.status !== 'AVAILABLE')}
+                style={{
+                  opacity: (space?.status != null && space.status !== 'AVAILABLE') ? 0.6 : 1,
+                  cursor: (space?.status != null && space.status !== 'AVAILABLE') ? 'not-allowed' : 'pointer'
+                }}
               >
                 {submitting ? (
                   <>
                     <div className="portal-spinner" style={{ width: 18, height: 18, borderWidth: 2, marginRight: 8, display: 'inline-block', verticalAlign: 'middle' }} />
                     Đang xử lý đặt phòng...
+                  </>
+                ) : space?.status === 'MAINTENANCE' ? (
+                  <>
+                    <span style={{ fontSize: '18px', marginRight: '6px' }}>🔧</span>
+                    Không gian đang bảo trì (Tạm khóa)
+                  </>
+                ) : space?.status === 'INACTIVE' ? (
+                  <>
+                    <span style={{ fontSize: '18px', marginRight: '6px' }}>🔒</span>
+                    Không gian tạm ngưng hoạt động
                   </>
                 ) : isPerSeat ? (
                   <>

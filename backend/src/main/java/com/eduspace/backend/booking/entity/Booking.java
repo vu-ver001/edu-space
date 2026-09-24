@@ -21,6 +21,9 @@ public class Booking {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "booking_code", length = 35, unique = true)
+    private String bookingCode;
+
     @Column(name = "student_id", nullable = false)
     private Long studentId;
 

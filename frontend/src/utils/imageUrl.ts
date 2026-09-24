@@ -14,6 +14,6 @@ export const formatImageUrl = (url?: string | null): string | null => {
   ) {
     return trimmed;
   }
-  const backendBase = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+  const backendBase = import.meta.env.VITE_API_URL || 'http://localhost:8081';
   return `${backendBase.replace(/\/+$/, '')}/${trimmed.replace(/^\/+/, '')}`;
 };

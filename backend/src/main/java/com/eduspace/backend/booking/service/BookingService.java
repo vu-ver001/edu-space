@@ -16,7 +16,14 @@ import java.util.stream.Collectors;
 import com.eduspace.backend.booking.dto.request.CreateBookingRequest;
 import com.eduspace.backend.booking.dto.response.BookingAuditLogResponse;
 import com.eduspace.backend.booking.dto.response.BookingResponse;
+import com.eduspace.backend.booking.dto.response.BulkBookingFailureItem;
+import com.eduspace.backend.booking.dto.response.BulkBookingOperationResponse;
 import com.eduspace.backend.booking.dto.response.ConflictDetail;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
+import java.util.ArrayList;
 import com.eduspace.backend.booking.entity.AuditAction;
 import com.eduspace.backend.booking.entity.Booking;
 import com.eduspace.backend.booking.entity.BookingAuditLog;
@@ -52,6 +59,9 @@ public class BookingService {
     // ================= BEGIN KT =================
     private final com.eduspace.backend.staff.repository.MaintenanceBlockRepository maintenanceBlockRepository;
     // ================= END KT =================
+
+    @Autowired(required = false)
+    private PlatformTransactionManager transactionManager;
 
     /**
      * API Tạo booking với 10 BƯỚC VALIDATE TUẦN TỰ BẮT BUỘC (02_Yeu_cau_logic §4.2):
@@ -321,7 +331,10 @@ public class BookingService {
                 ? request.getPurpose().trim()
                 : (isPerSeat ? "Tự học cá nhân" : "Học tập & Thảo luận");
 
+        String bookingCode = generateBookingCode(now);
+
         Booking booking = Booking.builder()
+                .bookingCode(bookingCode)
                 .studentId(studentId)
                 .spaceId(space.getId())
                 .startTime(startTime)
@@ -508,6 +521,134 @@ public class BookingService {
         return toBookingResponse(booking, now);
     }
 
+    /**
+     * Duyệt hàng loạt booking (Staff).
+     * Áp dụng quy tắc cho từng đơn độc lập: các đơn hợp lệ được duyệt (CONFIRMED),
+     * các đơn phát sinh xung đột hoặc hết hạn được ghi nhận chi tiết lỗi.
+     */
+    public BulkBookingOperationResponse bulkApproveBookings(List<Long> bookingIds, String staffEmail) {
+        if (bookingIds == null || bookingIds.isEmpty()) {
+            return BulkBookingOperationResponse.builder()
+                    .totalRequested(0)
+                    .successCount(0)
+                    .failureCount(0)
+                    .successfulBookings(new ArrayList<>())
+                    .failedBookings(new ArrayList<>())
+                    .build();
+        }
+
+        List<BookingResponse> successList = new ArrayList<>();
+        List<BulkBookingFailureItem> failureList = new ArrayList<>();
+
+        for (Long id : bookingIds) {
+            if (id == null) continue;
+            try {
+                BookingResponse res;
+                if (transactionManager != null) {
+                    TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
+                    txTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+                    res = txTemplate.execute(status -> approveBooking(id, staffEmail));
+                } else {
+                    res = approveBooking(id, staffEmail);
+                }
+                if (res != null) {
+                    successList.add(res);
+                }
+            } catch (BusinessException be) {
+                log.warn("Duyệt hàng loạt thất bại cho booking #{}: [{}] {}", id, be.getCode(), be.getMessage());
+                String code = bookingRepository.findById(id).map(Booking::getBookingCode).orElse(null);
+                failureList.add(BulkBookingFailureItem.builder()
+                        .bookingId(id)
+                        .bookingCode(code)
+                        .errorCode(be.getCode())
+                        .errorMessage(be.getMessage())
+                        .build());
+            } catch (Exception ex) {
+                log.error("Lỗi không xác định khi duyệt hàng loạt booking #{}: {}", id, ex.getMessage(), ex);
+                String code = bookingRepository.findById(id).map(Booking::getBookingCode).orElse(null);
+                failureList.add(BulkBookingFailureItem.builder()
+                        .bookingId(id)
+                        .bookingCode(code)
+                        .errorCode("INTERNAL_ERROR")
+                        .errorMessage(ex.getMessage() != null ? ex.getMessage() : "Lỗi hệ thống khi duyệt booking")
+                        .build());
+            }
+        }
+
+        return BulkBookingOperationResponse.builder()
+                .totalRequested(bookingIds.size())
+                .successCount(successList.size())
+                .failureCount(failureList.size())
+                .successfulBookings(successList)
+                .failedBookings(failureList)
+                .build();
+    }
+
+    /**
+     * Từ chối hàng loạt booking (Staff).
+     * Bắt buộc có lý do từ chối chung theo quy tắc R-20.
+     */
+    public BulkBookingOperationResponse bulkRejectBookings(List<Long> bookingIds, String staffEmail, String rejectReason) {
+        if (rejectReason == null || rejectReason.trim().isEmpty()) {
+            throw BusinessException.badRequest("REJECT_REASON_REQUIRED", "Lý do từ chối không được để trống theo quy tắc R-20");
+        }
+        if (bookingIds == null || bookingIds.isEmpty()) {
+            return BulkBookingOperationResponse.builder()
+                    .totalRequested(0)
+                    .successCount(0)
+                    .failureCount(0)
+                    .successfulBookings(new ArrayList<>())
+                    .failedBookings(new ArrayList<>())
+                    .build();
+        }
+
+        List<BookingResponse> successList = new ArrayList<>();
+        List<BulkBookingFailureItem> failureList = new ArrayList<>();
+
+        for (Long id : bookingIds) {
+            if (id == null) continue;
+            try {
+                BookingResponse res;
+                if (transactionManager != null) {
+                    TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
+                    txTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+                    res = txTemplate.execute(status -> rejectBooking(id, staffEmail, rejectReason.trim()));
+                } else {
+                    res = rejectBooking(id, staffEmail, rejectReason.trim());
+                }
+                if (res != null) {
+                    successList.add(res);
+                }
+            } catch (BusinessException be) {
+                log.warn("Từ chối hàng loạt thất bại cho booking #{}: [{}] {}", id, be.getCode(), be.getMessage());
+                String code = bookingRepository.findById(id).map(Booking::getBookingCode).orElse(null);
+                failureList.add(BulkBookingFailureItem.builder()
+                        .bookingId(id)
+                        .bookingCode(code)
+                        .errorCode(be.getCode())
+                        .errorMessage(be.getMessage())
+                        .build());
+            } catch (Exception ex) {
+                log.error("Lỗi không xác định khi từ chối hàng loạt booking #{}: {}", id, ex.getMessage(), ex);
+                String code = bookingRepository.findById(id).map(Booking::getBookingCode).orElse(null);
+                failureList.add(BulkBookingFailureItem.builder()
+                        .bookingId(id)
+                        .bookingCode(code)
+                        .errorCode("INTERNAL_ERROR")
+                        .errorMessage(ex.getMessage() != null ? ex.getMessage() : "Lỗi hệ thống khi từ chối booking")
+                        .build());
+            }
+        }
+
+        return BulkBookingOperationResponse.builder()
+                .totalRequested(bookingIds.size())
+                .successCount(successList.size())
+                .failureCount(failureList.size())
+                .successfulBookings(successList)
+                .failedBookings(failureList)
+                .build();
+    }
+
     @Transactional(readOnly = true)
     public List<BookingResponse> getPendingBookingsForStaff() {
         LocalDateTime now = LocalDateTime.now();
@@ -587,9 +728,16 @@ public class BookingService {
                         .orElse(null);
             } catch (Exception ignored) {}
         }
+        String bookingCode = booking.getBookingCode();
+        if (bookingCode == null || bookingCode.isBlank()) {
+            String datePart = (booking.getCreatedAt() != null ? booking.getCreatedAt() : LocalDateTime.now())
+                    .format(java.time.format.DateTimeFormatter.ofPattern("yyMMdd"));
+            bookingCode = String.format("BK-%s-%04d", datePart, booking.getId() != null ? booking.getId() : 1);
+        }
 
         return BookingResponse.builder()
                 .id(booking.getId())
+                .bookingCode(bookingCode)
                 .studentId(booking.getStudentId())
                 .studentName(userRepository.findById(booking.getStudentId()).map(User::getFullName).orElse(null))
                 .studentEmail(resolveEmailFromStudentId(booking.getStudentId()))
@@ -640,5 +788,31 @@ public class BookingService {
 
     private String resolveEmailFromStudentId(Long id) {
         return userRepository.findById(id).map(User::getEmail).orElse(null);
+    }
+
+    /**
+     * Sinh mã booking tự động ngắn gọn, logic và thực tế nghiệp vụ cao:
+     * Định dạng: BK-YYMMDD-[SEQ:04d] (Ví dụ: BK-260923-0001)
+     * - BK: Tiền tố nhận diện đơn đặt chỗ EduSpace (Booking)
+     * - YYMMDD: Ngày giao dịch đặt phòng (Ví dụ: 260923 tức 23/09/2026)
+     * - SEQ: Số thứ tự đơn trong ngày (0001, 0002...), tăng dần và chống trùng lặp tuyệt đối.
+     */
+    public String generateBookingCode(LocalDateTime bookingTime) {
+        String datePart = (bookingTime != null ? bookingTime : LocalDateTime.now())
+                .format(java.time.format.DateTimeFormatter.ofPattern("yyMMdd"));
+
+        java.time.LocalDate today = (bookingTime != null ? bookingTime : LocalDateTime.now()).toLocalDate();
+        LocalDateTime dayStart = today.atStartOfDay();
+        LocalDateTime dayEnd = today.plusDays(1).atStartOfDay();
+
+        long countToday = bookingRepository.countByCreatedAtBetween(dayStart, dayEnd);
+        long seq = countToday + 1;
+
+        String candidateCode = String.format("BK-%s-%04d", datePart, seq);
+        while (bookingRepository.existsByBookingCode(candidateCode)) {
+            seq++;
+            candidateCode = String.format("BK-%s-%04d", datePart, seq);
+        }
+        return candidateCode;
     }
 }

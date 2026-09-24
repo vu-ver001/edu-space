@@ -14,6 +14,8 @@ import PolicyManagementPage from './features/admin/policy/pages/PolicyManagement
 import PolicyHistoryPage from './features/admin/policy/pages/PolicyHistoryPage';
 import { TimelinePage } from './features/operations/pages/TimelinePage';
 import { AuditLogPage } from './features/operations/pages/AuditLogPage';
+import { SearchSpacesPage, SpaceDetailPage, MyBookingsPage } from './features/bookings/core';
+import { UserManagementPage } from './features/admin/auth/UserManagementPage.tsx';
 
 const ADMIN_BASE = import.meta.env.VITE_ROUTE_ADMIN || '/admin';
 const STAFF_BASE = import.meta.env.VITE_ROUTE_STAFF || '/staff';
@@ -28,7 +30,7 @@ const RootRedirect = () => {
         const user = JSON.parse(userStr);
         if (user.role === 'ADMIN') return <Navigate to={`${ADMIN_BASE}/stats`} replace />;
         if (user.role === 'STAFF') return <Navigate to={STAFF_BASE} replace />;
-        return <Navigate to={STUDENT_BASE} replace />;
+        return <Navigate to="/student/spaces" replace />;
     } catch {
         return <Navigate to="/login" replace />;
     }
@@ -94,6 +96,7 @@ export default function App() {
                         <Route path={`${ADMIN_BASE}/space-types`} element={<SpaceTypeListPageKT />} />
                         <Route path={`${ADMIN_BASE}/space-types/:id`} element={<SpaceTypeDetailPageKT />} />
                         <Route path={`${ADMIN_BASE}/settings-general`} element={<GeneralSettingsPage />} />
+                        <Route path={`${ADMIN_BASE}/users`} element={<UserManagementPage />} />
                     </Route>
 
                     {/* STAFF */}
@@ -108,10 +111,14 @@ export default function App() {
                     {/* STUDENT */}
                     <Route element={<ProtectedRoute />}>
                         <Route path={STUDENT_BASE} element={<DevDashboard />} />
-                        {/*<Route path="/spaces" element={<SearchSpacesPage />} />*/}
-                        {/*<Route path="/spaces/:id" element={<SpaceDetailPage />} />*/}
-                        {/*<Route path="/my-bookings" element={<MyBookingsPage />} />*/}
-                        {/*<Route path="/core-approval" element={<CoreApprovalDemo />} />*/}
+                        {/* Phân hệ Student (Khánh Vân) có tiền tố /student */}
+                        <Route path="/student/spaces" element={<SearchSpacesPage />} />
+                        <Route path="/student/spaces/:id" element={<SpaceDetailPage />} />
+                        <Route path="/student/my-bookings" element={<MyBookingsPage />} />
+                        {/* Hỗ trợ chuyển hướng tự động cho đường dẫn cũ */}
+                        <Route path="/spaces" element={<Navigate to="/student/spaces" replace />} />
+                        <Route path="/spaces/:id" element={<Navigate to="/student/spaces" replace />} />
+                        <Route path="/my-bookings" element={<Navigate to="/student/my-bookings" replace />} />
                         <Route path="/space-types" element={<SpaceTypeListPageKT />} />
                         <Route path="/space-types/:id" element={<SpaceTypeDetailPageKT />} />
                     </Route>
