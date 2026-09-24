@@ -13,14 +13,9 @@ interface RejectBookingConfirmModalKTProps {
 }
 
 const MAX_REASON_LENGTH = 500;
-const pad = (value: number) => String(value).padStart(2, '0');
 
 const bookingCode = (booking: StaffBooking) => {
-  const source = new Date(booking.createdAt || booking.startTime);
-  const datePart = Number.isNaN(source.getTime())
-    ? 'BOOKING'
-    : `${source.getFullYear()}${pad(source.getMonth() + 1)}${pad(source.getDate())}`;
-  return `BK-${datePart}-${String(booking.id).padStart(3, '0')}`;
+  return booking.bookingCode || 'Chưa có mã';
 };
 
 const formatBookingDate = (value: string) => {

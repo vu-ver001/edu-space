@@ -596,6 +596,7 @@ class BookingCoreLogicTest {
             BookingResponse res = bookingService.approveBooking(bookingId, staff.getEmail());
 
             assertEquals(BookingStatus.CONFIRMED, res.getStatus());
+            assertEquals("Duyệt đặt phòng thành công", res.getMessage());
         }
 
         @Test
@@ -626,7 +627,9 @@ class BookingCoreLogicTest {
 
             assertEquals(BookingStatus.REJECTED, res.getStatus());
             assertEquals("Phòng cần sửa chữa đột xuất", res.getRejectReason());
+            assertEquals("Từ chối đặt phòng thành công", res.getMessage());
         }
+
 
         @Test
         @DisplayName("3.6. Bảo mật: Chặn sinh viên khác xem trộm chi tiết booking của người khác -> 403 Forbidden")
@@ -682,6 +685,8 @@ class BookingCoreLogicTest {
             assertEquals(1, res.getFailedBookings().size());
             assertEquals(b2, res.getFailedBookings().get(0).getBookingId());
             assertEquals("INVALID_STATUS_FOR_APPROVAL", res.getFailedBookings().get(0).getErrorCode());
+            assertNotNull(res.getMessage());
+            assertTrue(res.getMessage().contains("Duyệt hàng loạt hoàn tất"));
         }
 
         @Test
@@ -707,7 +712,10 @@ class BookingCoreLogicTest {
             assertEquals(0, res.getFailureCount());
             assertEquals(BookingStatus.REJECTED, res.getSuccessfulBookings().get(0).getStatus());
             assertEquals("Phòng quá tải", res.getSuccessfulBookings().get(0).getRejectReason());
+            assertNotNull(res.getMessage());
+            assertTrue(res.getMessage().contains("Từ chối hàng loạt thành công"));
         }
+
     }
 
     // =========================================================================

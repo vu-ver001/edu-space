@@ -64,52 +64,60 @@ DROP TEMPORARY TABLE demo_pending_booking_ids;
 
 -- Tất cả start_time đều ở tương lai để scheduler không chuyển thành EXPIRED.
 INSERT INTO bookings
-    (student_id, space_id, start_time, end_time, participant_count, purpose,
+    (booking_code, student_id, space_id, start_time, end_time, participant_count, purpose,
      selected_seats, table_id, status, created_at, updated_at)
 VALUES
-    (@student_anh, @space_p201,
+    (CONCAT('BK-', DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 2 DAY), '%y%m%d'), '-9001'),
+     @student_anh, @space_p201,
      DATE_ADD(CURDATE(), INTERVAL 1 DAY) + INTERVAL 9 HOUR,
      DATE_ADD(CURDATE(), INTERVAL 1 DAY) + INTERVAL 11 HOUR,
      8, '[DEMO-PENDING] Thuyết trình đồ án môn học', NULL, NULL,
      'PENDING_APPROVAL', DATE_SUB(NOW(), INTERVAL 2 DAY), NOW()),
 
-    (@student_nam, @space_p201,
+    (CONCAT('BK-', DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 1 DAY), '%y%m%d'), '-9002'),
+     @student_nam, @space_p201,
      DATE_ADD(CURDATE(), INTERVAL 1 DAY) + INTERVAL 13 HOUR,
      DATE_ADD(CURDATE(), INTERVAL 1 DAY) + INTERVAL 15 HOUR,
      12, '[DEMO-PENDING] Báo cáo tiến độ dự án nhóm', NULL, NULL,
      'PENDING_APPROVAL', DATE_SUB(NOW(), INTERVAL 1 DAY), NOW()),
 
-    (@student_ha, @space_clb401,
+    (CONCAT('BK-', DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 10 HOUR), '%y%m%d'), '-9003'),
+     @student_ha, @space_clb401,
      DATE_ADD(CURDATE(), INTERVAL 2 DAY) + INTERVAL 8 HOUR,
      DATE_ADD(CURDATE(), INTERVAL 2 DAY) + INTERVAL 10 HOUR,
      20, '[DEMO-PENDING] Họp ban tổ chức câu lạc bộ', NULL, NULL,
      'PENDING_APPROVAL', DATE_SUB(NOW(), INTERVAL 10 HOUR), NOW()),
 
-    (@student_bao, @space_p201,
+    (CONCAT('BK-', DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 5 HOUR), '%y%m%d'), '-9004'),
+     @student_bao, @space_p201,
      DATE_ADD(CURDATE(), INTERVAL 2 DAY) + INTERVAL 14 HOUR,
      DATE_ADD(CURDATE(), INTERVAL 2 DAY) + INTERVAL 16 HOUR,
      15, '[DEMO-PENDING] Tập dượt thuyết trình cuối kỳ', NULL, NULL,
      'PENDING_APPROVAL', DATE_SUB(NOW(), INTERVAL 5 HOUR), NOW()),
 
-    (@student_chi, @space_clb401,
+    (CONCAT('BK-', DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 3 HOUR), '%y%m%d'), '-9005'),
+     @student_chi, @space_clb401,
      DATE_ADD(CURDATE(), INTERVAL 3 DAY) + INTERVAL 9 HOUR,
      DATE_ADD(CURDATE(), INTERVAL 3 DAY) + INTERVAL 12 HOUR,
      25, '[DEMO-PENDING] Workshop chia sẻ kỹ năng học tập', NULL, NULL,
      'PENDING_APPROVAL', DATE_SUB(NOW(), INTERVAL 3 HOUR), NOW()),
 
-    (@student_anh, @space_clb401,
+    (CONCAT('BK-', DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 90 MINUTE), '%y%m%d'), '-9006'),
+     @student_anh, @space_clb401,
      DATE_ADD(CURDATE(), INTERVAL 4 DAY) + INTERVAL 13 HOUR,
      DATE_ADD(CURDATE(), INTERVAL 4 DAY) + INTERVAL 15 HOUR,
      18, '[DEMO-PENDING] Sinh hoạt câu lạc bộ học thuật', NULL, NULL,
      'PENDING_APPROVAL', DATE_SUB(NOW(), INTERVAL 90 MINUTE), NOW()),
 
-    (@student_nam, @space_p201,
+    (CONCAT('BK-', DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 30 MINUTE), '%y%m%d'), '-9007'),
+     @student_nam, @space_p201,
      DATE_ADD(CURDATE(), INTERVAL 5 DAY) + INTERVAL 8 HOUR,
      DATE_ADD(CURDATE(), INTERVAL 5 DAY) + INTERVAL 10 HOUR,
      10, '[DEMO-PENDING] Bảo vệ bài tập lớn', NULL, NULL,
      'PENDING_APPROVAL', DATE_SUB(NOW(), INTERVAL 30 MINUTE), NOW()),
 
-    (@student_ha, @space_clb401,
+    (CONCAT('BK-', DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 10 MINUTE), '%y%m%d'), '-9008'),
+     @student_ha, @space_clb401,
      DATE_ADD(CURDATE(), INTERVAL 6 DAY) + INTERVAL 15 HOUR,
      DATE_ADD(CURDATE(), INTERVAL 6 DAY) + INTERVAL 17 HOUR,
      30, '[DEMO-PENDING] Tổ chức buổi định hướng thành viên mới', NULL, NULL,
@@ -120,6 +128,7 @@ COMMIT;
 -- Kiểm tra nhanh kết quả vừa tạo.
 SELECT
     b.id AS booking_id,
+    b.booking_code,
     u.full_name AS student_name,
     s.space_code,
     s.name AS space_name,

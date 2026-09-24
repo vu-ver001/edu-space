@@ -140,18 +140,32 @@ export const SeatSelectionModal: React.FC<Props> = ({
       return;
     }
 
+    // Kiểm tra thời gian bắt đầu trong tương lai
+    const startDateTime = new Date(startIso);
+    if (startDateTime.getTime() <= Date.now()) {
+      setErrorMessage('Thời gian bắt đầu phải lớn hơn thời điểm hiện tại. Vui lòng đóng cửa sổ và chọn lại khung giờ trong tương lai.');
+      return;
+    }
+
     setSubmitting(true);
     setErrorMessage(null);
 
     try {
       const sortedItems = [...selectedItems].sort();
+      const selectedTable = isTableMode && selectedItems.length > 0
+        ? tablesList.find((t) => t.tableCode === selectedItems[0] || String(t.id) === selectedItems[0])
+        : null;
+
       const newBooking = await bookingService.createBooking({
         spaceId: space.id,
         startTime: startIso,
         endTime: endIso,
-        participantCount: Math.max(selectedItems.length, participantCount),
+        participantCount: isTableMode && selectedTable
+          ? Math.min(Number(participantCount) || selectedTable.capacity, selectedTable.capacity)
+          : Math.max(selectedItems.length, Number(participantCount) || 1),
         purpose: purpose.trim() || (isTableMode ? 'Thảo luận theo bàn' : 'Tự học tại chỗ ngồi'),
-        selectedSeats: sortedItems,
+        selectedSeats: isTableMode ? [selectedItems[0]] : sortedItems,
+        tableId: isTableMode && selectedTable ? selectedTable.id : undefined,
       });
 
       onSuccess(newBooking.id, sortedItems);

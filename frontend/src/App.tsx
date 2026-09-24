@@ -14,6 +14,7 @@ import PolicyManagementPage from './features/admin/policy/pages/PolicyManagement
 import PolicyHistoryPage from './features/admin/policy/pages/PolicyHistoryPage';
 import { TimelinePage } from './features/operations/pages/TimelinePage';
 import { AuditLogPage } from './features/operations/pages/AuditLogPage';
+import { StatisticsDashboardPage } from './features/admin/statistics';
 import { SearchSpacesPage, SpaceDetailPage, MyBookingsPage } from './features/bookings/core';
 import { UserManagementPage } from './features/admin/auth/UserManagementPage.tsx';
 
@@ -65,7 +66,6 @@ export default function App() {
     return (
         <BrowserRouter>
             <Routes>
-<<<<<<< HEAD
                 {/* 1. Các trang Quản lý Không gian, Tiện ích & Vận hành của Kim Tuyến */}
                 {/* Truy cập trực tiếp qua URL, hiển thị nguyên bản toàn màn hình, không bọc menu */}
                 <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
@@ -78,24 +78,6 @@ export default function App() {
                     <Route path="/staff/bookings" element={<BookingManagementPageKT />} />
                     <Route path="/staff/operations" element={<StaffOperationsPageKT />} />
                 </Route>
-=======
-                {/* 1. Quản lý Không gian, Tiện ích & Vận hành */}
-                <Route path="/admin/space-types" element={<SpaceTypeListPageKT />} />
-                <Route path="/admin/space-types/:id" element={<SpaceTypeDetailPageKT />} />
-                <Route path="/space-types" element={<SpaceTypeListPageKT />} />
-                <Route path="/space-types/:id" element={<SpaceTypeDetailPageKT />} />
-                <Route path="/admin/spaces" element={<SpaceListPageKT />} />
-                <Route path="/admin/spaces/:id" element={<SpaceDetailPageKT />} />
-                <Route path="/spaces-management" element={<SpaceListPageKT />} />
-                <Route path="/spaces-management/:id" element={<SpaceDetailPageKT />} />
-                <Route path="/admin/facilities" element={<FacilityListPageKT />} />
-                <Route path="/facilities" element={<FacilityListPageKT />} />
-                <Route path="/staff" element={<StaffOperationsPageKT />} />
->>>>>>> 97ea929719a964922d98f019fe803536f3d04613
-
-                {/* 2. Module Chính sách */}
-                <Route path="/admin/policy" element={<PolicyManagementPage />} />
-                <Route path="/admin/policy/history" element={<PolicyHistoryPage />} />
 
                 {/* 3. Đăng nhập */}
                 <Route path="/login" element={<LoginPage />} />
@@ -106,8 +88,12 @@ export default function App() {
 
                     {/* ADMIN */}
                     <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
-                        <Route path={`${ADMIN_BASE}/policy`} element={<Placeholder title="Chính sách" owner="Anh" />} />
-                        <Route path={`${ADMIN_BASE}/stats`} element={<Placeholder title="Thống kê" owner="Anh" />} />
+                        <Route path={`${ADMIN_BASE}/stats`} element={<StatisticsDashboardPage />} />
+                        <Route path={`${ADMIN_BASE}/policy`} element={<PolicyManagementPage />} />
+                        <Route path={`${ADMIN_BASE}/policy/history`} element={<PolicyHistoryPage />} />
+                        <Route path={`${ADMIN_BASE}/spaces`} element={<SpaceListPageKT />} />
+                        <Route path={`${ADMIN_BASE}/spaces/:id`} element={<SpaceDetailPageKT />} />
+                        <Route path={`${ADMIN_BASE}/facilities`} element={<FacilityListPageKT />} />
                         <Route path={`${ADMIN_BASE}/space-types`} element={<SpaceTypeListPageKT />} />
                         <Route path={`${ADMIN_BASE}/space-types/:id`} element={<SpaceTypeDetailPageKT />} />
                         <Route path={`${ADMIN_BASE}/settings-general`} element={<GeneralSettingsPage />} />
@@ -123,8 +109,8 @@ export default function App() {
                         <Route path={`${STAFF_BASE}/equipment`} element={<Placeholder title="Thiết bị" owner="Vũ" />} />
                     </Route>
 
-                    {/* STUDENT */}
-                    <Route element={<ProtectedRoute />}>
+                    {/* STUDENT (Chỉ tài khoản Sinh viên mới có quyền truy cập, sai quyền chuyển hướng 403) */}
+                    <Route element={<ProtectedRoute allowedRoles={['STUDENT']} />}>
                         <Route path={STUDENT_BASE} element={<DevDashboard />} />
                         {/* Phân hệ Student (Khánh Vân) có tiền tố /student */}
                         <Route path="/student/spaces" element={<SearchSpacesPage />} />

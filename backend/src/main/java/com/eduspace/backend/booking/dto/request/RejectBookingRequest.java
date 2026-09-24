@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 public class RejectBookingRequest {
 
     @NotBlank(message = "Lý do từ chối không được để trống theo quy tắc R-20")
-    @Size(max = 2000)
+    @Size(max = 2000, message = "Lý do từ chối không được vượt quá 2000 ký tự")
     private String rejectReason;
 }
+

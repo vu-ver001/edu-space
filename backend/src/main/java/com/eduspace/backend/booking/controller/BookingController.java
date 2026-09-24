@@ -27,10 +27,11 @@ public class BookingController {
     private final BookingService bookingService;
 
     /**
-     * Tạo yêu cầu đặt chỗ mới (Sinh viên):
+     * Tạo yêu cầu đặt chỗ mới (Chỉ dành cho Sinh viên):
      * POST /api/bookings
      */
     @PostMapping
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<BookingResponse> createBooking(@Valid @RequestBody CreateBookingRequest request) {
         String currentUserEmail = resolveCurrentUserEmail();
         BookingResponse response = bookingService.createBooking(request, currentUserEmail);
@@ -38,10 +39,11 @@ public class BookingController {
     }
 
     /**
-     * Xem danh sách booking của tôi:
+     * Xem danh sách booking của tôi (Chỉ dành cho Sinh viên):
      * GET /api/bookings/my-bookings hoặc GET /api/bookings/my
      */
     @GetMapping({"/my-bookings", "/my"})
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<List<BookingResponse>> getMyBookings(
             @RequestParam(required = false) BookingStatus status) {
         String currentUserEmail = resolveCurrentUserEmail();
@@ -53,6 +55,7 @@ public class BookingController {
      * GET /api/bookings/{id}
      */
     @GetMapping("/{id}")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('STUDENT', 'STAFF', 'ADMIN')")
     public ResponseEntity<BookingResponse> getBookingById(@PathVariable Long id) {
         String currentUserEmail = resolveCurrentUserEmail();
         return ResponseEntity.ok(bookingService.getBookingById(id, currentUserEmail));
@@ -63,15 +66,17 @@ public class BookingController {
      * GET /api/bookings/{id}/history
      */
     @GetMapping({"/{id}/history"})
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('STUDENT', 'STAFF', 'ADMIN')")
     public ResponseEntity<List<BookingAuditLogResponse>> getBookingAuditLogs(@PathVariable Long id) {
         return ResponseEntity.ok(bookingService.getBookingAuditLogs(id));
     }
 
     /**
-     * Hủy booking (Sinh viên hủy trước giờ bắt đầu):
+     * Hủy booking (Sinh viên sở hữu đơn hoặc Staff/Admin):
      * POST /api/bookings/{id}/cancel
      */
     @PostMapping("/{id}/cancel")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('STUDENT', 'STAFF', 'ADMIN')")
     public ResponseEntity<BookingResponse> cancelBooking(
             @PathVariable Long id,
             @RequestParam(required = false) String reason) {

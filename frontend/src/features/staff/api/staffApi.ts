@@ -1,6 +1,7 @@
 import api from '../../../services/api';
 import type {
   BookingStatus,
+  BulkBookingOperationResponse,
   PendingBooking,
   StaffBooking,
   StaffTimeline,
@@ -42,6 +43,30 @@ export const staffApi = {
    */
   rejectBooking: async (bookingId: number, reason: string): Promise<StaffBooking> => {
     const res = await api.post<StaffBooking>(`/api/bookings/${bookingId}/reject`, { rejectReason: reason });
+    return res.data;
+  },
+
+  /**
+   * POST /api/bookings/bulk-approve
+   * Duyệt nhiều booking trong một request.
+   */
+  bulkApproveBookings: async (bookingIds: number[]): Promise<BulkBookingOperationResponse> => {
+    const res = await api.post<BulkBookingOperationResponse>('/api/bookings/bulk-approve', { bookingIds });
+    return res.data;
+  },
+
+  /**
+   * POST /api/bookings/bulk-reject
+   * Từ chối nhiều booking với một lý do chung.
+   */
+  bulkRejectBookings: async (
+    bookingIds: number[],
+    rejectReason: string,
+  ): Promise<BulkBookingOperationResponse> => {
+    const res = await api.post<BulkBookingOperationResponse>('/api/bookings/bulk-reject', {
+      bookingIds,
+      rejectReason,
+    });
     return res.data;
   },
 
