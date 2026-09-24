@@ -19,6 +19,7 @@ import { StaffTimelineKT } from '../components/StaffTimelineKT';
 import { MaintenanceFormModalKT } from '../components/MaintenanceFormModalKT';
 import { StaffAuditLogTableKT } from '../components/StaffAuditLogTableKT';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
+import CheckInTokenInput from '../../bookings/checkin/components/CheckInTokenInput';
 import './StaffOperationsPageKT.css';
 
 type StaffTab = 'pending' | 'timeline' | 'maintenance' | 'audit';
@@ -42,6 +43,7 @@ export const StaffOperationsPageKT: React.FC = () => {
   const [loadingTimeline, setLoadingTimeline] = useState(false);
   const [timelineDays, setTimelineDays] = useState(7);
   const [checkInLoadingId, setCheckInLoadingId] = useState<number | null>(null);
+  const [tokenBookingId, setTokenBookingId] = useState<number | null>(null);
 
   // Tab 3: Maintenance
   const [maintenanceList, setMaintenanceList] = useState<MaintenanceBlock[]>([]);
@@ -383,8 +385,30 @@ export const StaffOperationsPageKT: React.FC = () => {
               events={timeline?.events || []}
               isLoading={loadingTimeline}
               onCheckIn={handleStaffCheckIn}
+              onVerifyToken={setTokenBookingId}
               checkInLoadingId={checkInLoadingId}
             />
+            {tokenBookingId !== null && (
+              <div className="staff-token-verification">
+                <div className="staff-token-verification__heading">
+                  <div>
+                    <strong>Xác minh check-in bằng QR/mã một lần</strong>
+                    <span>Booking #{tokenBookingId}</span>
+                  </div>
+                  <button type="button" className="staff-btn staff-btn-secondary" onClick={() => setTokenBookingId(null)}>
+                    Đóng
+                  </button>
+                </div>
+                <CheckInTokenInput
+                  bookingId={tokenBookingId}
+                  onVerified={() => {
+                    showToast(`✓ Đã xác minh mã cho Booking #${tokenBookingId}`);
+                    setTokenBookingId(null);
+                    if (selectedSpaceId) fetchTimeline(selectedSpaceId, timelineDays);
+                  }}
+                />
+              </div>
+            )}
           </div>
         )}
 

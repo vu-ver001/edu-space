@@ -72,24 +72,6 @@ export function getCheckInPresentation(
     };
   }
 
-  if (booking.demoState === 'TOO_EARLY') {
-    return {
-      label: 'Chưa đến giờ',
-      tone: 'info',
-      description: `Có thể check-in từ ${formatTime(booking.checkInOpenAt)}.`,
-      canSubmit: false,
-    };
-  }
-
-  if (booking.demoState === 'CLOSED') {
-    return {
-      label: 'Đã hết hạn',
-      tone: 'warning',
-      description: `Hạn cuối là ${formatTime(booking.checkInDeadline)}.`,
-      canSubmit: false,
-    };
-  }
-
   return {
     label: actor.role === 'STUDENT' ? 'Có thể check-in' : 'Có thể hỗ trợ',
     tone: 'success',

@@ -143,14 +143,28 @@ public class BookingService {
 
         SpaceTable targetTable = null;
         if (isPerTable) {
+            if (requestedTableId == null && requestedSeats != null && !requestedSeats.isEmpty() && spaceTableRepository != null) {
+                String code = requestedSeats.get(0).trim();
+                List<SpaceTable> activeTables = spaceTableRepository.findBySpaceIdAndDeletedAtIsNull(space.getId());
+                for (SpaceTable st : activeTables) {
+                    if (st.getTableCode() != null && st.getTableCode().equalsIgnoreCase(code)) {
+                        targetTable = st;
+                        requestedTableId = st.getId();
+                        break;
+                    }
+                }
+            }
             if (requestedTableId == null) {
                 throw BusinessException.badRequest("TABLE_REQUIRED", 
                         "Không gian loại [" + space.getSpaceTypeName() + "] yêu cầu chọn bàn cụ thể, vui lòng chọn mã bàn.");
             }
-            if (spaceTableRepository != null) {
-                targetTable = spaceTableRepository.findById(requestedTableId)
+            if (spaceTableRepository != null && targetTable == null) {
+                Long lookupId = requestedTableId;
+                targetTable = spaceTableRepository.findById(lookupId)
                         .orElseThrow(() -> BusinessException.notFound("TABLE_NOT_FOUND", 
-                                "Không tìm thấy bàn với mã ID: " + requestedTableId));
+                                "Không tìm thấy bàn với mã ID: " + lookupId));
+            }
+            if (targetTable != null) {
                 if (!targetTable.getSpace().getId().equals(space.getId())) {
                     throw BusinessException.badRequest("TABLE_SPACE_MISMATCH", 
                             "Bàn đã chọn không thuộc không gian " + space.getName());
@@ -192,8 +206,11 @@ public class BookingService {
             }
 
             // 5b. Kiểm tra xung đột chính bàn này
+            final Long finalTableId = requestedTableId;
+            final SpaceTable finalTargetTable = targetTable;
             Optional<Booking> tableConflictOpt = overlappingSpaceBookings.stream()
-                    .filter(b -> b.getTableId() != null && b.getTableId().equals(requestedTableId))
+                    .filter(b -> (b.getTableId() != null && b.getTableId().equals(finalTableId))
+                            || (finalTargetTable != null && b.getSelectedSeatsList().contains(finalTargetTable.getTableCode())))
                     .findFirst();
             if (tableConflictOpt.isPresent()) {
                 Booking conflictBooking = tableConflictOpt.get();
@@ -347,6 +364,8 @@ public class BookingService {
 
         if (request.getSelectedSeats() != null && !request.getSelectedSeats().isEmpty()) {
             booking.setSelectedSeatsList(request.getSelectedSeats());
+        } else if (targetTable != null) {
+            booking.setSelectedSeatsList(Collections.singletonList(targetTable.getTableCode()));
         }
 
         booking = bookingRepository.save(booking);
@@ -475,7 +494,9 @@ public class BookingService {
         auditLogRepository.save(audit);
 
         log.info("Booking #{} đã được duyệt thành công bởi Staff {}", booking.getId(), staffEmail);
-        return toBookingResponse(booking, now);
+        BookingResponse response = toBookingResponse(booking, now);
+        response.setMessage("Duyệt đặt phòng thành công");
+        return response;
     }
 
     /**
@@ -518,8 +539,11 @@ public class BookingService {
         auditLogRepository.save(audit);
 
         log.info("Booking #{} đã bị từ chối bởi Staff {}. Lý do: {}", booking.getId(), staffEmail, rejectReason);
-        return toBookingResponse(booking, now);
+        BookingResponse response = toBookingResponse(booking, now);
+        response.setMessage("Từ chối đặt phòng thành công");
+        return response;
     }
+
 
     /**
      * Duyệt hàng loạt booking (Staff).
@@ -575,7 +599,12 @@ public class BookingService {
             }
         }
 
+        String bulkApproveMsg = failureList.isEmpty()
+                ? ("Duyệt hàng loạt thành công (" + successList.size() + " đơn)")
+                : ("Duyệt hàng loạt hoàn tất: " + successList.size() + " thành công, " + failureList.size() + " thất bại");
+
         return BulkBookingOperationResponse.builder()
+                .message(bulkApproveMsg)
                 .totalRequested(bookingIds.size())
                 .successCount(successList.size())
                 .failureCount(failureList.size())
@@ -594,6 +623,7 @@ public class BookingService {
         }
         if (bookingIds == null || bookingIds.isEmpty()) {
             return BulkBookingOperationResponse.builder()
+                    .message("Danh sách yêu cầu rỗng")
                     .totalRequested(0)
                     .successCount(0)
                     .failureCount(0)
@@ -640,7 +670,12 @@ public class BookingService {
             }
         }
 
+        String bulkRejectMsg = failureList.isEmpty()
+                ? ("Từ chối hàng loạt thành công (" + successList.size() + " đơn)")
+                : ("Từ chối hàng loạt hoàn tất: " + successList.size() + " thành công, " + failureList.size() + " thất bại");
+
         return BulkBookingOperationResponse.builder()
+                .message(bulkRejectMsg)
                 .totalRequested(bookingIds.size())
                 .successCount(successList.size())
                 .failureCount(failureList.size())
@@ -648,6 +683,7 @@ public class BookingService {
                 .failedBookings(failureList)
                 .build();
     }
+
 
     @Transactional(readOnly = true)
     public List<BookingResponse> getPendingBookingsForStaff() {

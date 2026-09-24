@@ -62,7 +62,8 @@ CSDL `eduspace` đã được nạp trên MySQL Server 8.0 local (Port 3306, Use
 Mở cửa sổ Terminal 1:
 ```bash
 cd backend
-.\mvnw.cmd spring-boot:run
+.\mvnw.cmd spring-boot:run (Windows)
+Hoặc .\mvnw spring-boot:run (MacOS, Linux)
 ```
 * Backend sẽ khởi động tại: `http://localhost:8080`
 * Kiểm tra trạng thái máy chủ: `http://localhost:8080/health` $\rightarrow$ `{"status":"OK"}`

@@ -20,6 +20,11 @@ public interface SpaceTableRepository extends JpaRepository<SpaceTable, Long> {
 
     boolean existsBySpaceIdAndTableCodeIgnoreCase(Long spaceId, String tableCode);
 
+    long countByStatusAndDeletedAtIsNull(com.eduspace.backend.space.entity.SpaceTableStatus status);
+
+    @Query("SELECT t FROM SpaceTable t JOIN FETCH t.space WHERE t.status = :status AND t.deletedAt IS NULL")
+    List<SpaceTable> findAllByStatusWithSpace(@Param("status") com.eduspace.backend.space.entity.SpaceTableStatus status);
+
     @Query("SELECT COALESCE(SUM(t.capacity), 0) FROM SpaceTable t WHERE t.space.id = :spaceId AND t.deletedAt IS NULL")
     Integer sumActiveCapacityBySpaceId(@Param("spaceId") Long spaceId);
 }

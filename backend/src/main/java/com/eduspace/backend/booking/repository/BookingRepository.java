@@ -30,6 +30,8 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     long countByStatusAndCreatedAtBetween(BookingStatus status, LocalDateTime from, LocalDateTime to);
 
+    @Query("SELECT MIN(b.createdAt) FROM Booking b")
+    LocalDateTime findEarliestCreatedAt();
     Optional<Booking> findByBookingCode(String bookingCode);
 
     boolean existsByBookingCode(String bookingCode);
