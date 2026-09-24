@@ -11,6 +11,7 @@ import type { Space } from '../../space/types/space';
 import { staffApi } from '../api/staffApi';
 import { maintenanceApi } from '../api/maintenanceApi';
 import { auditLogApi } from '../api/auditLogApi';
+import { readStaffApiError } from '../api/staffApiError';
 import { spaceApi } from '../../space/api/spaceApi';
 import { PendingBookingTableKT } from '../components/PendingBookingTableKT';
 import { RejectBookingModalKT } from '../components/RejectBookingModalKT';
@@ -158,7 +159,6 @@ export const StaffOperationsPageKT: React.FC = () => {
     setActionLoading(true);
     try {
       await staffApi.approveBooking(approvingBooking.id);
-      showToast(`✓ Đã duyệt thành công yêu cầu đặt phòng #${approvingBooking.id}`);
       setApproveConfirmOpen(false);
       setApprovingBooking(null);
       fetchPending();
@@ -175,7 +175,6 @@ export const StaffOperationsPageKT: React.FC = () => {
     setActionLoading(true);
     try {
       await staffApi.rejectBooking(rejectingBooking.id, reason);
-      showToast(`✕ Đã từ chối yêu cầu đặt phòng #${rejectingBooking.id}`);
       setRejectModalOpen(false);
       setRejectingBooking(null);
       fetchPending();
@@ -192,7 +191,6 @@ export const StaffOperationsPageKT: React.FC = () => {
     setCheckInLoadingId(bookingId);
     try {
       await staffApi.staffAssistedCheckIn(bookingId);
-      showToast(`✓ Staff hỗ trợ Check-in thành công cho Booking #${bookingId}`);
       if (selectedSpaceId) fetchTimeline(selectedSpaceId, timelineDays);
     } catch (err: any) {
       showToast(err?.response?.data?.message || 'Lỗi khi hỗ trợ check-in', 'error');
@@ -208,11 +206,11 @@ export const StaffOperationsPageKT: React.FC = () => {
   ) => {
     try {
       if (maintMode === 'create') {
-        await maintenanceApi.createMaintenance(spId, data as MaintenanceCreateRequest);
-        showToast('✓ Đã tạo khoảng bảo trì thành công');
+        const response = await maintenanceApi.createMaintenance(spId, data as MaintenanceCreateRequest);
+        showToast(response.message);
       } else if (editingMaint) {
-        await maintenanceApi.updateMaintenance(editingMaint.id, data as MaintenanceUpdateRequest);
-        showToast('✓ Đã cập nhật thông tin bảo trì');
+        const response = await maintenanceApi.updateMaintenance(editingMaint.id, data as MaintenanceUpdateRequest);
+        showToast(response.message);
       }
       setMaintModalOpen(false);
       fetchMaintenance(spId);
@@ -227,13 +225,19 @@ export const StaffOperationsPageKT: React.FC = () => {
     if (!deletingMaint) return;
     setActionLoading(true);
     try {
-      await maintenanceApi.deleteMaintenance(deletingMaint.id);
-      showToast(`✓ Đã hủy khoảng bảo trì #${deletingMaint.id}`);
+      const response = await maintenanceApi.deleteMaintenance(deletingMaint.id);
+      showToast(response.message);
       setDeleteMaintConfirmOpen(false);
       setDeletingMaint(null);
       if (selectedSpaceId) fetchMaintenance(selectedSpaceId);
-    } catch (err: any) {
-      showToast(err?.response?.data?.message || 'Lỗi khi hủy bảo trì', 'error');
+    } catch (error: unknown) {
+      const apiError = readStaffApiError(error, 'Lỗi khi hủy bảo trì');
+      if (apiError.code === 'MAINTENANCE_NOT_FOUND') {
+        setDeleteMaintConfirmOpen(false);
+        setDeletingMaint(null);
+        if (selectedSpaceId) fetchMaintenance(selectedSpaceId);
+      }
+      showToast(apiError.message, 'error');
     } finally {
       setActionLoading(false);
     }
@@ -287,9 +291,9 @@ export const StaffOperationsPageKT: React.FC = () => {
             <div className="staff-rule-notice">
               <span style={{ fontSize: '20px' }}>🛡️</span>
               <div>
-                <strong>Quy tắc nghiệp vụ phê duyệt phòng chuyên dụng (Staff Workflow):</strong>
+                <strong>Lưu ý khi xử lý yêu cầu đặt chỗ:</strong>
                 <div>
-                  Theo quy tắc <code>R-18</code>, Staff chỉ có thể duyệt khi <code>now &lt; startTime</code>. Nếu đã quá giờ, booking tự chuyển sang <code>EXPIRED</code>. Khi từ chối bắt buộc nhập lý do theo quy tắc <code>R-20</code>.
+                  Chỉ có thể duyệt trước giờ sử dụng. Yêu cầu đã quá giờ sẽ tự hết hạn; khi từ chối, bạn cần nhập lý do để sinh viên biết.
                 </div>
               </div>
             </div>
@@ -578,8 +582,8 @@ export const StaffOperationsPageKT: React.FC = () => {
       {/* Modals */}
       <ConfirmDialog
         isOpen={approveConfirmOpen}
-        title={`Xác nhận duyệt yêu cầu đặt phòng #${approvingBooking?.id || ''}`}
-        message={`Bạn có chắc chắn muốn duyệt yêu cầu đặt phòng "${approvingBooking?.spaceName}" của sinh viên ${approvingBooking?.studentName}? Trạng thái sẽ chuyển sang CONFIRMED.`}
+        title="Xác nhận duyệt yêu cầu đặt chỗ"
+        message={`Bạn có chắc chắn muốn duyệt yêu cầu đặt chỗ tại "${approvingBooking?.spaceName}" của sinh viên ${approvingBooking?.studentName}? Sau khi duyệt, sinh viên có thể check-in trong thời gian quy định.`}
         confirmText="✓ Xác nhận duyệt"
         cancelText="Hủy bỏ"
         isLoading={actionLoading}

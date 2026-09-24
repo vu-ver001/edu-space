@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { MaintenanceBlock, MaintenanceCreateRequest, MaintenanceUpdateRequest } from '../types/staff';
 import type { Space } from '../../space/types/space';
+import { readStaffApiError } from '../api/staffApiError';
 
 interface MaintenanceFormModalKTProps {
   isOpen: boolean;
@@ -72,8 +73,23 @@ export const MaintenanceFormModalKT: React.FC<MaintenanceFormModalKTProps> = ({
         endTime: endTime ? new Date(endTime).toISOString() : ('' as any),
         description: description.trim() ? description.trim() : undefined,
       });
-    } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || 'Có lỗi xảy ra khi lưu thông tin bảo trì.');
+    } catch (error: unknown) {
+      const apiError = readStaffApiError(error, 'Có lỗi xảy ra khi lưu thông tin bảo trì.');
+
+      if (apiError.code === 'SPACE_HAS_OCCUPYING_BOOKING') {
+        const conflictCount = apiError.details.length;
+        setError(conflictCount > 0
+          ? `${apiError.message} Có ${conflictCount} yêu cầu đặt chỗ bị trùng.`
+          : apiError.message);
+        return;
+      }
+
+      if (apiError.code === 'MAINTENANCE_TIME_CONFLICT') {
+        setError(apiError.message);
+        return;
+      }
+
+      setError(apiError.message);
     }
   };
 

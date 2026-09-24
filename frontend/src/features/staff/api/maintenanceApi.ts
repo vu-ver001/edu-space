@@ -4,6 +4,7 @@ import type {
   MaintenanceCreateRequest,
   MaintenanceUpdateRequest,
 } from '../types/staff';
+import type { StaffActionResponse } from '../types/api';
 
 export const maintenanceApi = {
   /**
@@ -31,8 +32,8 @@ export const maintenanceApi = {
   createMaintenance: async (
     spaceId: number,
     data: MaintenanceCreateRequest
-  ): Promise<MaintenanceBlock> => {
-    const res = await api.post<MaintenanceBlock>(
+  ): Promise<StaffActionResponse<MaintenanceBlock>> => {
+    const res = await api.post<StaffActionResponse<MaintenanceBlock>>(
       `/api/staff/spaces/${spaceId}/maintenance`,
       data
     );
@@ -46,8 +47,8 @@ export const maintenanceApi = {
   updateMaintenance: async (
     maintenanceId: number,
     data: MaintenanceUpdateRequest
-  ): Promise<MaintenanceBlock> => {
-    const res = await api.put<MaintenanceBlock>(
+  ): Promise<StaffActionResponse<MaintenanceBlock>> => {
+    const res = await api.put<StaffActionResponse<MaintenanceBlock>>(
       `/api/staff/maintenance/${maintenanceId}`,
       data
     );
@@ -58,7 +59,8 @@ export const maintenanceApi = {
    * DELETE /api/staff/maintenance/{maintenanceId}
    * Xóa mềm khoảng bảo trì
    */
-  deleteMaintenance: async (maintenanceId: number): Promise<void> => {
-    await api.delete(`/api/staff/maintenance/${maintenanceId}`);
+  deleteMaintenance: async (maintenanceId: number): Promise<StaffActionResponse<null>> => {
+    const res = await api.delete<StaffActionResponse<null>>(`/api/staff/maintenance/${maintenanceId}`);
+    return res.data;
   },
 };

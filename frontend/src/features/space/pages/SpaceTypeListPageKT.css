@@ -13,6 +13,19 @@
   flex-direction: column;
 }
 
+/* Giữ toàn bộ trang trong phần chiều rộng còn lại khi layout có sidebar. */
+.space-type-list-page {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.space-type-list-page .kt-main-content {
+  width: 100%;
+  min-width: 0;
+}
+
 /* Sub-Navigation Bar */
 .kt-subnav-bar {
   display: flex;
@@ -141,6 +154,7 @@
 /* Page Main Container */
 .kt-main-content {
   flex: 1;
+  min-width: 0;
   max-width: 1400px;
   width: 100%;
   margin: 0 auto;
@@ -530,6 +544,10 @@
 
 /* 4. Table Container Card (Unified Header + Table + Pagination) */
 .table-container-card {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 16px;
@@ -538,6 +556,7 @@
   flex-direction: column;
   padding: 24px;
   gap: 20px;
+  overflow: hidden;
 }
 
 .table-card-header-bar {
@@ -634,7 +653,26 @@
   padding: 0;
   margin: 0;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-gutter: stable;
+  -webkit-overflow-scrolling: touch;
+}
+
+.space-type-list-page .table-responsive-wrapper::-webkit-scrollbar {
+  height: 9px;
+}
+
+.space-type-list-page .table-responsive-wrapper::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.space-type-list-page .table-responsive-wrapper::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border: 2px solid #f1f5f9;
+  border-radius: 999px;
 }
 
 .table-container-card .table-pagination-footer {
@@ -650,7 +688,11 @@
 }
 
 .table-responsive-wrapper {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
   overflow-x: auto;
+  overflow-y: hidden;
   width: 100%;
   background: #ffffff;
   border: 1px solid #e2e8f0;
@@ -660,8 +702,9 @@
 
 .custom-space-types-table {
   width: 100%;
-  min-width: 950px;
+  min-width: 900px;
   border-collapse: collapse;
+  table-layout: fixed;
   text-align: left;
   font-size: 13.5px;
 }
@@ -1220,4 +1263,3 @@
   color: #94a3b8;
   font-size: 13px;
 }
-

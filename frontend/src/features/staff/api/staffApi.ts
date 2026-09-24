@@ -1,7 +1,22 @@
 import api from '../../../services/api';
-import type { PendingBooking, StaffTimeline } from '../types/staff';
+import type {
+  BookingStatus,
+  PendingBooking,
+  StaffBooking,
+  StaffTimeline,
+} from '../types/staff';
 
 export const staffApi = {
+  /**
+   * GET /api/staff/bookings?status={optional}
+   * Danh sách quản lý booking dành cho Staff/Admin
+   */
+  getBookings: async (status?: BookingStatus): Promise<StaffBooking[]> => {
+    const params = status ? { status } : {};
+    const res = await api.get<StaffBooking[]>('/api/staff/bookings', { params });
+    return res.data;
+  },
+
   /**
    * GET /api/staff/bookings/pending?spaceId={optional}
    * Danh sách đặt phòng chờ Staff duyệt
@@ -13,29 +28,29 @@ export const staffApi = {
   },
 
   /**
-   * POST /api/staff/bookings/{bookingId}/approve
-   * Duyệt booking sang CONFIRMED
+   * POST /api/bookings/{bookingId}/approve
+   * Gọi trực tiếp API lõi booking do phân hệ Booking cung cấp.
    */
-  approveBooking: async (bookingId: number): Promise<any> => {
-    const res = await api.post(`/api/staff/bookings/${bookingId}/approve`);
+  approveBooking: async (bookingId: number): Promise<StaffBooking> => {
+    const res = await api.post<StaffBooking>(`/api/bookings/${bookingId}/approve`);
     return res.data;
   },
 
   /**
-   * POST /api/staff/bookings/{bookingId}/reject
-   * Từ chối booking (bắt buộc lý do R-20)
+   * POST /api/bookings/{bookingId}/reject
+   * Gọi trực tiếp API lõi booking; rejectReason là tên trường backend yêu cầu.
    */
-  rejectBooking: async (bookingId: number, reason: string): Promise<any> => {
-    const res = await api.post(`/api/staff/bookings/${bookingId}/reject`, { reason });
+  rejectBooking: async (bookingId: number, reason: string): Promise<StaffBooking> => {
+    const res = await api.post<StaffBooking>(`/api/bookings/${bookingId}/reject`, { rejectReason: reason });
     return res.data;
   },
 
   /**
-   * POST /api/staff/bookings/{bookingId}/check-in
-   * Staff hỗ trợ Check-in tại quầy cho sinh viên
+   * POST /api/bookings/{bookingId}/check-in
+   * Dùng chung API check-in lõi cho Student/Staff/Admin.
    */
-  staffAssistedCheckIn: async (bookingId: number): Promise<any> => {
-    const res = await api.post(`/api/staff/bookings/${bookingId}/check-in`);
+  staffAssistedCheckIn: async (bookingId: number): Promise<StaffBooking> => {
+    const res = await api.post<StaffBooking>(`/api/bookings/${bookingId}/check-in`);
     return res.data;
   },
 

@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 @Builder
 public class BookingRejectRequestKT {
 
-    @NotBlank(message = "Lý do từ chối không được để trống theo quy tắc R-20")
+    @NotBlank(message = "Vui lòng nhập lý do từ chối")
     @Size(max = 500, message = "Lý do từ chối không được vượt quá 500 ký tự")
     private String reason;
 }

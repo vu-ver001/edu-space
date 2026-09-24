@@ -14,3 +14,4 @@ export * from './components/MaintenanceFormModalKT';
 export * from './components/StaffAuditLogTableKT';
 
 export * from './pages/StaffOperationsPageKT';
+export * from './pages/BookingManagementPageKT';
