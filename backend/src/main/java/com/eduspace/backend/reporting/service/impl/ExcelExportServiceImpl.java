@@ -13,6 +13,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -141,11 +142,26 @@ public class ExcelExportServiceImpl implements ExcelExportService {
             orgCell.setCellValue("HỆ THỐNG QUẢN LÝ KHÔNG GIAN HỌC TẬP EDUSPACE");
             orgCell.setCellStyle(orgHeaderStyle);
 
+            // Determine if full month
+            boolean isFullMonth = false;
+            String monthYearLabel = "";
+            if (stats.getFromDate() != null && stats.getToDate() != null) {
+                LocalDate start = stats.getFromDate().toLocalDate();
+                LocalDate end = stats.getToDate().toLocalDate();
+                if (start.getYear() == end.getYear() && start.getMonth() == end.getMonth()
+                        && start.getDayOfMonth() == 1 && end.getDayOfMonth() == end.lengthOfMonth()) {
+                    isFullMonth = true;
+                    monthYearLabel = String.format("%02d/%d", start.getMonthValue(), start.getYear());
+                }
+            }
+
             // Row 1: Main Title Banner
             Row titleRow = sheet.createRow(rowIdx++);
             titleRow.setHeightInPoints(36);
             Cell titleCell = titleRow.createCell(0);
-            titleCell.setCellValue("BÁO CÁO THỐNG KÊ VẬN HÀNH & HIỆU SUẤT ĐẶT CHỖ");
+            titleCell.setCellValue(isFullMonth
+                    ? "BÁO CÁO THỐNG KÊ VẬN HÀNH THÁNG " + monthYearLabel
+                    : "BÁO CÁO THỐNG KÊ VẬN HÀNH & HIỆU SUẤT ĐẶT CHỖ");
             titleCell.setCellStyle(titleStyle);
             sheet.addMergedRegion(new CellRangeAddress(1, 1, 0, 8));
 
@@ -158,7 +174,12 @@ public class ExcelExportServiceImpl implements ExcelExportService {
             String calculatedAtStr = stats.getCalculatedAt() != null ? stats.getCalculatedAt().format(DATE_TIME_FMT)
                     : exportedAtStr;
 
-            createMetaRow(sheet, rowIdx++, "Khoảng thời gian thống kê:", fromStr + "  đến  " + toStr, boldDataFont);
+            if (isFullMonth) {
+                createMetaRow(sheet, rowIdx++, "Kỳ báo cáo thống kê:",
+                        "Tháng " + monthYearLabel + " (" + fromStr + "  đến  " + toStr + ")", boldDataFont);
+            } else {
+                createMetaRow(sheet, rowIdx++, "Khoảng thời gian thống kê:", fromStr + "  đến  " + toStr, boldDataFont);
+            }
             createMetaRow(sheet, rowIdx++, "Thời điểm tính toán dữ liệu gần nhất:", calculatedAtStr, dataFont);
             createMetaRow(sheet, rowIdx++, "Thời điểm xuất báo cáo:", exportedAtStr, dataFont);
             createMetaRow(sheet, rowIdx++, "Người tạo báo cáo:", "Ban Quản lý Hệ thống EduSpace (Admin/Staff)",
@@ -228,7 +249,7 @@ public class ExcelExportServiceImpl implements ExcelExportService {
                             "Đã được duyệt/giữ chỗ thành công, chờ đến giờ" },
                     { 4, "Chờ phê duyệt", "PENDING_APPROVAL", stats.getPendingApprovalCount(),
                             calcPercent(stats.getPendingApprovalCount(), total), "Đang chờ nhân viên vận hành duyệt" },
-                    { 5, "Không đến (No-Show)", "NO_SHOW", stats.getNoShowCount(),
+                    { 5, "Không đến", "NO_SHOW", stats.getNoShowCount(),
                             calcPercent(stats.getNoShowCount(), total), "Không đến check-in trong khung giờ quy định" },
                     { 6, "Đã hủy", "CANCELLED", stats.getCancelledCount(),
                             calcPercent(stats.getCancelledCount(), total),

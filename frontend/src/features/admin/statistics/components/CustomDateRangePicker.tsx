@@ -342,13 +342,13 @@ export const CustomDateRangePicker: React.FC<CustomDateRangePickerProps> = ({
 
           {/* Footer with Selected Summary & Actions */}
           <div className="popover-footer">
-            {/* <div className="popover-summary-text">
+            <div className="popover-summary-text">
               <span>Đã chọn:</span>
               <strong>
                 {tempStart && tempEnd ? `${formatDisplay(tempStart)} - ${formatDisplay(tempEnd)}` : tempStart ? `${formatDisplay(tempStart)} - (Chọn ngày đến)` : 'Chưa chọn'}
                 {selectedDaysCount > 0 && ` (${selectedDaysCount} ngày)`}
               </strong>
-            </div> */}
+            </div>
 
             <div className="popover-footer-actions">
               <button type="button" className="popover-btn-clear" onClick={handleClear}>

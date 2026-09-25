@@ -98,7 +98,7 @@
 
 .stats-header-actions {
   position: relative;
-  z-index: 1;
+  z-index: 10;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -139,9 +139,41 @@
   background: #1d4ed8;
 }
 
+.stats-action-btn.icon-only {
+  padding: 8px 10px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.stats-action-btn.icon-only:hover:not(:disabled) {
+  background: #f8fafc;
+  color: #2563eb;
+  border-color: #93c5fd;
+  transform: translateY(-1px);
+}
+
 .stats-action-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.spin-icon {
+  animation: statsSpin 1s linear infinite;
+}
+
+@keyframes statsSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ==========================================================================
@@ -678,3 +710,104 @@
 .status-badge-pill.cancelled { background: #f1f5f9; color: #475569; }
 .status-badge-pill.rejected { background: #fee2e2; color: #b91c1c; }
 .status-badge-pill.expired { background: #fae8ff; color: #86198f; }
+
+/* Maintenance Collapsible Dropdown & Cards */
+.maintenance-expand-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.maintenance-expand-btn:hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+}
+
+.maintenance-expand-btn.active {
+  background: #eff6ff;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+}
+
+.row-expandable {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.row-expandable:hover td {
+  background: #f8fafc !important;
+}
+
+.row-expanded-active td {
+  background: #f8fafc !important;
+  border-bottom-color: transparent !important;
+}
+
+.maintenance-detail-card {
+  display: grid;
+  grid-template-columns: 110px 1.5fr 1.2fr 1.5fr;
+  gap: 14px;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-left-width: 4px;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 12.5px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.maintenance-card-code code {
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+
+.maintenance-card-info strong {
+  color: #0f172a;
+}
+
+.maintenance-card-sub {
+  font-size: 11.5px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.maintenance-card-time {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #475569;
+  font-size: 12px;
+}
+
+.maintenance-card-status .status-text-red {
+  font-weight: 600;
+  color: #b91c1c;
+}
+
+.maintenance-card-reason {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 1px;
+}
+
+@media (max-width: 768px) {
+  .maintenance-detail-card {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}
+
