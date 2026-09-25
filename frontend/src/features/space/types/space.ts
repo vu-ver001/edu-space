@@ -78,6 +78,18 @@ export interface SpaceImage {
   updatedAt?: string;
 }
 
+/** Ảnh đang được chỉnh sửa trong form quản lý không gian. */
+export interface SpaceFormImage {
+  id: string;
+  type: 'file' | 'url' | 'existing';
+  spaceImageId?: number;
+  file?: File;
+  url?: string;
+  previewUrl: string;
+  isPrimary: boolean;
+  sortOrder: number;
+}
+
 export interface Space {
   id: number;
   name: string;
@@ -116,7 +128,6 @@ export interface SpaceCreateRequest {
   status: 'AVAILABLE' | 'MAINTENANCE' | 'INACTIVE';
   description?: string;
   facilityIds?: number[];
-  imageUrl?: string;
 }
 
 export interface SpaceUpdateRequest {
@@ -129,7 +140,4 @@ export interface SpaceUpdateRequest {
   status: 'AVAILABLE' | 'MAINTENANCE' | 'INACTIVE';
   description?: string;
   facilityIds?: number[];
-  imageUrl?: string;
 }
-
-

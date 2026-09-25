@@ -39,9 +39,6 @@ public class SpaceCreateRequestKT {
 
     private String description;
 
-    @NotBlank(message = "Hình ảnh không gian không được để trống")
-    private String imageUrl;
-
     @Builder.Default
     private List<Long> facilityIds = new ArrayList<>();
 }

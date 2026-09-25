@@ -281,33 +281,41 @@ export const FacilityListPageKT: React.FC = () => {
           </div>
         </div>
 
-        {/* Filter & Search Bar */}
-        <div className="facility-filter-bar">
-          <div className="facility-search-box">
-            <Search size={17} className="facility-search-icon" />
-            <input
-              type="text"
-              className="facility-search-input"
-              placeholder="Tìm kiếm tiện ích theo tên, mô tả..."
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-            />
+        <div className="facility-list-card">
+          <div className="facility-list-card-header">
+            <div className="facility-list-card-title-group">
+              <h2>Danh sách tiện ích</h2>
+              <span>{filteredFacilities.length} tiện ích</span>
+            </div>
+
+            {/* Filter & Search Bar */}
+            <div className="facility-filter-bar">
+              <div className="facility-search-box">
+                <Search size={17} className="facility-search-icon" />
+                <input
+                  type="text"
+                  className="facility-search-input"
+                  placeholder="Tìm kiếm tiện ích theo tên, mô tả..."
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                />
+              </div>
+
+              <select
+                className="facility-filter-select"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as any)}
+              >
+                <option value="ALL">Tất cả trạng thái</option>
+                <option value="IN_USE">Đang sử dụng</option>
+                <option value="UNUSED">Chưa sử dụng</option>
+              </select>
+            </div>
           </div>
 
-          <select
-            className="facility-filter-select"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as any)}
-          >
-            <option value="ALL">Tất cả trạng thái</option>
-            <option value="IN_USE">Đang sử dụng</option>
-            <option value="UNUSED">Chưa sử dụng</option>
-          </select>
-        </div>
-
-        {/* Content Layout: Master Table + Detail Sidebar */}
-        <div className="facility-content-layout">
-          <div className="facility-table-container">
+          {/* Content Layout: Master Table + Detail Sidebar */}
+          <div className="facility-content-layout">
+            <div className="facility-table-container">
             {loading ? (
               <div className="facility-empty-state">
                 <p>Đang tải danh sách tiện ích từ hệ thống...</p>
@@ -397,11 +405,11 @@ export const FacilityListPageKT: React.FC = () => {
                 </tbody>
               </table>
             )}
-          </div>
+            </div>
 
-          {/* Right Detail Sidebar Panel */}
-          {selectedFacility && (
-            <div className="facility-detail-sidebar">
+            {/* Right Detail Sidebar Panel */}
+            {selectedFacility && (
+              <div className="facility-detail-sidebar">
               <div className="facility-detail-header">
                 <h3 className="facility-detail-title">Chi tiết tiện ích</h3>
                 <button
@@ -473,8 +481,9 @@ export const FacilityListPageKT: React.FC = () => {
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Floating Toast */}

@@ -13,6 +13,7 @@ dist-ssr/
 # Env (mau .env da commit, file cuc bo thi ignore)
 frontend/.env.local
 backend/src/main/resources/application-local.yml
+backend/uploads/
 
 # IDE / OS
 .idea/

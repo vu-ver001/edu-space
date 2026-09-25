@@ -33,7 +33,15 @@ import {
   Plus,
   AlertTriangle,
 } from 'lucide-react';
-import type { Space, SpaceSeat, SpaceTable, Facility, SpaceUpdateRequest, SpaceImage } from '../types/space';
+import type {
+  Space,
+  SpaceSeat,
+  SpaceTable,
+  Facility,
+  SpaceUpdateRequest,
+  SpaceImage,
+  SpaceFormImage,
+} from '../types/space';
 import type { SpaceType } from '../types/spaceType';
 import type { MaintenanceBlock } from '../../staff/types/staff';
 import { spaceApi } from '../api/spaceApi';
@@ -46,6 +54,7 @@ import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
 import { bookingService } from '../../../services/bookingService';
 import { formatImageUrl } from '../../../utils/imageUrl';
 import { staffApi } from '../../staff/api/staffApi';
+import { syncSpaceImages } from '../utils/syncSpaceImages';
 import './SpaceDetailPageKT.css';
 
 const PLACEHOLDER_SPACE_IMAGE = 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1000&auto=format&fit=crop&q=80';
@@ -772,12 +781,17 @@ export const SpaceDetailPageKT: React.FC = () => {
     return <Sparkles size={17} strokeWidth={2.2} />;
   };
 
-  const handleUpdate = async (data: SpaceUpdateRequest) => {
+  const handleUpdate = async (
+    data: SpaceUpdateRequest,
+    images: SpaceFormImage[] = [],
+  ) => {
     if (!space) return;
     setIsSubmitting(true);
     try {
       const response = await spaceApi.updateSpace(space.id, data);
-      setSpace(response.data);
+      const originalImages = space.images?.length ? space.images : spaceImages;
+      await syncSpaceImages(space.id, images, originalImages);
+
       setIsEditOpen(false);
       showToast(response.message);
       fetchDetail();

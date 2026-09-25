@@ -137,6 +137,14 @@ textarea {
   box-sizing: border-box;
 }
 
+/* Operations screens use the same quiet, light-blue active state as the supplied
+   audit/timeline references. */
+.portal-sidebar-wide .sidebar-wide-item.active {
+  background: #e8f2ff;
+  color: #1269db;
+  box-shadow: none;
+}
+
 /* Brand / Logo Top (Ảnh 2) */
 .sidebar-brand-box {
   display: flex;
@@ -4532,4 +4540,4 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   background: #1E293B;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
-}
+}

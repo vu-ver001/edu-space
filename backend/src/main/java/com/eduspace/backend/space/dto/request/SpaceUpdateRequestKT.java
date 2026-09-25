@@ -38,8 +38,5 @@ public class SpaceUpdateRequestKT {
 
     private String description;
 
-    @NotBlank(message = "Hình ảnh không gian không được để trống")
-    private String imageUrl;
-
     private List<Long> facilityIds;
 }

@@ -84,4 +84,5 @@ public class SpaceControllerKT {
     public ResponseEntity<List<SpaceImageResponseKT>> getImagesBySpace(@PathVariable Long spaceId) {
         return ResponseEntity.ok(spaceImageService.getImagesBySpace(spaceId));
     }
+
 }

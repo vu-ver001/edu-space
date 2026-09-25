@@ -7,13 +7,13 @@ import { PortalLayout } from './components/layouts/PortalLayout.tsx';
 // Import các trang chính thức của dự án
 import LoginPage from './features/auth/pages/LoginPage';
 import Placeholder from './pages/Placeholder';
-import CheckInDemoPage from './features/bookings/checkin/pages/CheckInDemoPage';
 import { GeneralSettingsPage } from "./features/admin/settings-general/pages/GeneralSettingsPage.tsx";
-import StudentCheckInPage from './features/bookings/checkin/pages/StudentCheckInPage';
 import { SpaceTypeDetailPageKT, SpaceTypeListPageKT, SpaceListPageKT, SpaceDetailPageKT, FacilityListPageKT } from "./features/space";
-import { BookingManagementPageKT, StaffOperationsPageKT } from "./features/staff";
+import { BookingManagementPageKT } from "./features/staff";
 import PolicyManagementPage from './features/admin/policy/pages/PolicyManagementPage';
 import PolicyHistoryPage from './features/admin/policy/pages/PolicyHistoryPage';
+import { TimelinePage } from './features/operations/pages/TimelinePage';
+import { AuditLogPage } from './features/operations/pages/AuditLogPage';
 import { StatisticsDashboardPage } from './features/admin/statistics';
 import { SearchSpacesPage, SpaceDetailPage, MyBookingsPage } from './features/bookings/core';
 import { UserManagementPage } from './features/admin/auth/UserManagementPage.tsx';
@@ -66,19 +66,6 @@ export default function App() {
     return (
         <BrowserRouter>
             <Routes>
-                {/* 1. Các trang Quản lý Không gian, Tiện ích & Vận hành của Kim Tuyến */}
-                {/* Truy cập trực tiếp qua URL, hiển thị nguyên bản toàn màn hình, không bọc menu */}
-                <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
-                    <Route path="/admin/space-types" element={<SpaceTypeListPageKT />} />
-                    <Route path="/admin/space-types/:id" element={<SpaceTypeDetailPageKT />} />
-                    <Route path="/admin/spaces" element={<SpaceListPageKT />} />
-                    <Route path="/admin/spaces/:id" element={<SpaceDetailPageKT />} />
-                    <Route path="/admin/facilities" element={<FacilityListPageKT />} />
-                    <Route path="/staff" element={<BookingManagementPageKT />} />
-                    <Route path="/staff/bookings" element={<BookingManagementPageKT />} />
-                    <Route path="/staff/operations" element={<StaffOperationsPageKT />} />
-                </Route>
-
                 {/* 3. Đăng nhập */}
                 <Route path="/login" element={<LoginPage />} />
 
@@ -98,12 +85,17 @@ export default function App() {
                         <Route path={`${ADMIN_BASE}/space-types/:id`} element={<SpaceTypeDetailPageKT />} />
                         <Route path={`${ADMIN_BASE}/settings-general`} element={<GeneralSettingsPage />} />
                         <Route path={`${ADMIN_BASE}/users`} element={<UserManagementPage />} />
+
                     </Route>
 
                     {/* STAFF */}
                     <Route element={<ProtectedRoute allowedRoles={['STAFF', 'ADMIN']} />}>
-                        <Route path={STAFF_BASE} element={<StaffOperationsPageKT />} />
-                        <Route path={`${STAFF_BASE}/checkin-demo`} element={<CheckInDemoPage />} />
+                        <Route path={STAFF_BASE} element={<BookingManagementPageKT />} />
+                        <Route path={`${STAFF_BASE}/bookings`} element={<BookingManagementPageKT />} />
+                        <Route path={`${STAFF_BASE}/approvals`} element={<BookingManagementPageKT />} />
+                        <Route path={`${STAFF_BASE}/checkin`} element={<BookingManagementPageKT />} />
+                        <Route path={`${STAFF_BASE}/timeline`} element={<TimelinePage />} />
+                        <Route path={`${STAFF_BASE}/audit-logs`} element={<AuditLogPage />} />
                         <Route path={`${STAFF_BASE}/qr`} element={<Placeholder title="Check-in QR" owner="Vũ" />} />
                         <Route path={`${STAFF_BASE}/equipment`} element={<Placeholder title="Thiết bị" owner="Vũ" />} />
                     </Route>
@@ -119,7 +111,6 @@ export default function App() {
                         <Route path="/spaces" element={<Navigate to="/student/spaces" replace />} />
                         <Route path="/spaces/:id" element={<Navigate to="/student/spaces" replace />} />
                         <Route path="/my-bookings" element={<Navigate to="/student/my-bookings" replace />} />
-                        <Route path="/checkin" element={<StudentCheckInPage />} />
                         <Route path="/space-types" element={<SpaceTypeListPageKT />} />
                         <Route path="/space-types/:id" element={<SpaceTypeDetailPageKT />} />
                     </Route>
