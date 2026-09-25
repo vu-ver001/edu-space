@@ -52,9 +52,10 @@ public class AvailabilityService {
     private final BookingAuditLogRepository auditLogRepository;
     private final SpaceRepository spaceRepository;
     private final PolicyService policyService;
-    // ================= BEGIN KT =================
     private final com.eduspace.backend.staff.repository.MaintenanceBlockRepository maintenanceBlockRepository;
-    // ================= END KT =================
+
+    @Autowired(required = false)
+    private com.eduspace.backend.booking.repository.BookingMaintenanceRepository bookingMaintenanceRepository;
 
     // Repositories tùy chọn từ module Kim Tuyến - tự động inject khi ứng dụng khởi chạy
     @Autowired(required = false)
@@ -117,6 +118,7 @@ public class AvailabilityService {
         private String imageUrl;
         private String description;
         private List<String> facilities;
+        private List<Long> facilityIds;
     }
 
     // Danh mục phòng học chuẩn EduSpace đồng bộ hoàn toàn với CSDL của Kim Tuyến
@@ -129,7 +131,9 @@ public class AvailabilityService {
                 .requiresApproval(true).building("Tòa A").floor("1").capacity(6).status("AVAILABLE")
                 .imageUrl("https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&auto=format&fit=crop")
                 .description("Phòng học nhóm tầng 1, gần sảnh chờ (WHOLE_SPACE, cần duyệt)")
-                .facilities(List.of("Bảng trắng & Bút dạ", "Ổ cắm điện đa năng", "Điều hòa không khí 2 chiều")).build());
+                .facilities(List.of("Bảng trắng & Bút dạ", "Ổ cắm điện đa năng", "Điều hòa không khí 2 chiều"))
+                .facilityIds(List.of(1L, 4L, 5L))
+                .build());
 
         SPACE_CATALOG.put(2L, SpaceCatalogItem.builder()
                 .id(2L).name("Phòng G-102").spaceCode("G-102").spaceTypeId(1L).spaceTypeName("Phòng học nhóm tiêu chuẩn")
@@ -137,7 +141,9 @@ public class AvailabilityService {
                 .requiresApproval(true).building("Tòa A").floor("1").capacity(8).status("AVAILABLE")
                 .imageUrl("https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&auto=format&fit=crop")
                 .description("Phòng học nhóm cỡ vừa, trang bị bảng và màn hình lớn (WHOLE_SPACE, cần duyệt)")
-                .facilities(List.of("Bảng trắng & Bút dạ", "Màn hình TV thông minh 65 inch", "Ổ cắm điện đa năng", "Điều hòa không khí 2 chiều")).build());
+                .facilities(List.of("Bảng trắng & Bút dạ", "Màn hình TV thông minh 65 inch", "Ổ cắm điện đa năng", "Điều hòa không khí 2 chiều"))
+                .facilityIds(List.of(1L, 3L, 4L, 5L))
+                .build());
 
         SPACE_CATALOG.put(3L, SpaceCatalogItem.builder()
                 .id(3L).name("Phòng P-201").spaceCode("P-201").spaceTypeId(2L).spaceTypeName("Phòng thuyết trình & Hội thảo")
@@ -145,7 +151,9 @@ public class AvailabilityService {
                 .requiresApproval(true).building("Tòa A").floor("2").capacity(20).status("AVAILABLE")
                 .imageUrl("https://images.unsplash.com/photo-1431540015161-0bf868a2d407?w=800&auto=format&fit=crop")
                 .description("Phòng thuyết trình chuyên dụng, cách âm. Bắt buộc Staff duyệt (WHOLE_SPACE)")
-                .facilities(List.of("Bảng trắng & Bút dạ", "Máy chiếu Full HD", "Màn hình TV thông minh 65 inch", "Ổ cắm điện đa năng", "Điều hòa không khí 2 chiều")).build());
+                .facilities(List.of("Bảng trắng & Bút dạ", "Máy chiếu Full HD", "Màn hình TV thông minh 65 inch", "Ổ cắm điện đa năng", "Điều hòa không khí 2 chiều"))
+                .facilityIds(List.of(1L, 2L, 3L, 4L, 5L))
+                .build());
 
         SPACE_CATALOG.put(4L, SpaceCatalogItem.builder()
                 .id(4L).name("Khu tự học S-201").spaceCode("S-201").spaceTypeId(3L).spaceTypeName("Khu tự học chung (Mở)")
@@ -153,7 +161,9 @@ public class AvailabilityService {
                 .requiresApproval(false).building("Tòa B").floor("2").capacity(10).status("AVAILABLE")
                 .imageUrl("https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=800&auto=format&fit=crop")
                 .description("Khu tự học chung tầng 2, sức chứa 10 chỗ ngồi độc lập. Hỗ trợ chọn theo từng ghế (PER_SEAT, duyệt tức thì)")
-                .facilities(List.of("Ổ cắm điện đa năng", "Điều hòa không khí 2 chiều")).build());
+                .facilities(List.of("Ổ cắm điện đa năng", "Điều hòa không khí 2 chiều"))
+                .facilityIds(List.of(4L, 5L))
+                .build());
 
         SPACE_CATALOG.put(5L, SpaceCatalogItem.builder()
                 .id(5L).name("Study Booth B-01").spaceCode("B-01").spaceTypeId(4L).spaceTypeName("Study Booth cá nhân")
@@ -161,7 +171,9 @@ public class AvailabilityService {
                 .requiresApproval(true).building("Tòa B").floor("3").capacity(2).status("AVAILABLE")
                 .imageUrl("https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=800&auto=format&fit=crop")
                 .description("Khoang tự học yên tĩnh, bàn đôi, đặt trọn phòng (WHOLE_SPACE, cần duyệt)")
-                .facilities(List.of("Ổ cắm điện đa năng", "Điều hòa không khí 2 chiều")).build());
+                .facilities(List.of("Ổ cắm điện đa năng", "Điều hòa không khí 2 chiều"))
+                .facilityIds(List.of(4L, 5L))
+                .build());
 
         SPACE_CATALOG.put(6L, SpaceCatalogItem.builder()
                 .id(6L).name("Phòng G-103 (Bảo trì)").spaceCode("G-103").spaceTypeId(1L).spaceTypeName("Phòng học nhóm tiêu chuẩn")
@@ -169,7 +181,9 @@ public class AvailabilityService {
                 .requiresApproval(true).building("Tòa A").floor("1").capacity(6).status("MAINTENANCE")
                 .imageUrl("https://images.unsplash.com/photo-1517502884422-41eaead166d4?w=800&auto=format&fit=crop")
                 .description("Phòng đang cải tạo hệ thống điện, tạm ngừng phục vụ")
-                .facilities(List.of("Bảng trắng & Bút dạ")).build());
+                .facilities(List.of("Bảng trắng & Bút dạ"))
+                .facilityIds(List.of(1L))
+                .build());
 
         SPACE_CATALOG.put(7L, SpaceCatalogItem.builder()
                 .id(7L).name("Phòng D-201").spaceCode("D-201").spaceTypeId(5L).spaceTypeName("Phòng thảo luận theo bàn")
@@ -177,7 +191,9 @@ public class AvailabilityService {
                 .requiresApproval(true).building("Tòa D").floor("2").capacity(24).status("AVAILABLE")
                 .imageUrl("https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&auto=format&fit=crop")
                 .description("Phòng thảo luận nhóm tầng 2, sức chứa 24 chỗ chia thành 4 bàn. Hỗ trợ chọn theo bàn (PER_TABLE, cần duyệt)")
-                .facilities(List.of("Bảng trắng & Bút dạ", "Ổ cắm điện đa năng", "Điều hòa không khí 2 chiều")).build());
+                .facilities(List.of("Bảng trắng & Bút dạ", "Ổ cắm điện đa năng", "Điều hòa không khí 2 chiều"))
+                .facilityIds(List.of(1L, 4L, 5L))
+                .build());
     }
 
     private SpaceCatalogItem mapSpaceToCatalogItem(Space space) {
@@ -186,6 +202,13 @@ public class AvailabilityService {
                 ? space.getFacilities().stream()
                         .filter(f -> f != null && f.getDeletedAt() == null)
                         .map(Facility::getName)
+                        .collect(Collectors.toList())
+                : Collections.emptyList();
+
+        List<Long> facilityIds = (space.getFacilities() != null)
+                ? space.getFacilities().stream()
+                        .filter(f -> f != null && f.getDeletedAt() == null && f.getId() != null)
+                        .map(Facility::getId)
                         .collect(Collectors.toList())
                 : Collections.emptyList();
 
@@ -240,6 +263,7 @@ public class AvailabilityService {
                 .imageUrl(img)
                 .description(space.getDescription())
                 .facilities(facilityNames)
+                .facilityIds(facilityIds)
                 .build();
     }
 
@@ -433,24 +457,37 @@ public class AvailabilityService {
                             && !space.getBuilding().equalsIgnoreCase(filter.getBuilding())) {
                         return false;
                     }
-                    return true;
-                })
-                .map(space -> {
-                    boolean isAvailable = true;
+                    if (filter.getFacilityIds() != null && !filter.getFacilityIds().isEmpty()) {
+                        if (space.getFacilityIds() == null || !space.getFacilityIds().containsAll(filter.getFacilityIds())) {
+                            return false;
+                        }
+                    }
+
+                    // Ẩn hoàn toàn phòng nếu có lịch bảo trì trong khoảng thời gian tìm kiếm
                     if (effectiveStart != null && effectiveEnd != null) {
+                        boolean hasMaintenance = (bookingMaintenanceRepository != null)
+                                ? !bookingMaintenanceRepository.findOverlappingBlocks(space.getId(), effectiveStart, effectiveEnd).isEmpty()
+                                : (maintenanceBlockRepository != null && !maintenanceBlockRepository.findOverlappingBlocks(space.getId(), effectiveStart, effectiveEnd).isEmpty());
+                        if (hasMaintenance) {
+                            return false; // Ẩn phòng bị bảo trì trong khung giờ tìm kiếm
+                        }
+
+                        // Đối với phòng đặt trọn gói (WHOLE_SPACE): Ẩn nếu đã có người đặt trong khung giờ này
                         boolean hasBooking = !bookingRepository.findOverlappingSpaceBookings(
                                 space.getId(), effectiveStart, effectiveEnd, OCCUPYING_STATUSES
                         ).isEmpty();
-                        // ================= BEGIN KT =================
-                        boolean hasMaintenance = (maintenanceBlockRepository != null)
-                                && !maintenanceBlockRepository.findOverlappingBlocks(
-                                        space.getId(), effectiveStart, effectiveEnd
-                                ).isEmpty();
-                        isAvailable = !hasBooking && !hasMaintenance;
-                        // ================= END KT =================
+                        if ("WHOLE_SPACE".equalsIgnoreCase(space.getBookingMode()) && hasBooking) {
+                            return false;
+                        }
                     }
+
+                    return true;
+                })
+                .map(space -> {
                     boolean isPerSeat = "PER_SEAT".equalsIgnoreCase(space.getBookingMode());
                     boolean isPerTable = "PER_TABLE".equalsIgnoreCase(space.getBookingMode());
+                    List<com.eduspace.backend.staff.dto.response.MaintenanceResponseKT> mDtos = getUpcomingMaintenanceDtos(space.getId());
+                    com.eduspace.backend.staff.dto.response.MaintenanceResponseKT nextM = mDtos.isEmpty() ? null : mDtos.get(0);
 
                     return SpaceResponse.builder()
                             .id(space.getId())
@@ -465,11 +502,44 @@ public class AvailabilityService {
                             .imageUrl(space.getImageUrl())
                             .description(space.getDescription())
                             .facilities(space.getFacilities())
+                            .facilityIds(space.getFacilityIds())
+                            .nextMaintenance(nextM)
+                            .upcomingMaintenances(mDtos)
+                            .isAvailable(true)
                             .allowSeatSelection(isPerSeat)
                             .allowTableSelection(isPerTable)
                             .build();
                 })
                 .collect(Collectors.toList());
+    }
+
+    private List<com.eduspace.backend.staff.dto.response.MaintenanceResponseKT> getUpcomingMaintenanceDtos(Long spaceId) {
+        if (bookingMaintenanceRepository == null || spaceId == null) {
+            return Collections.emptyList();
+        }
+        try {
+            LocalDateTime now = getCurrentDateTime();
+            List<com.eduspace.backend.space.entity.MaintenanceBlock> blocks =
+                    bookingMaintenanceRepository.findUpcomingBlocks(spaceId, now);
+            return blocks.stream()
+                    .filter(m -> m.getEndTime() != null && !m.getEndTime().isBefore(now))
+                    .map(m -> com.eduspace.backend.staff.dto.response.MaintenanceResponseKT.builder()
+                            .id(m.getId())
+                            .spaceId(spaceId)
+                            .spaceName(m.getSpace() != null ? m.getSpace().getName() : null)
+                            .startTime(m.getStartTime())
+                            .endTime(m.getEndTime())
+                            .reason(m.getReason())
+                            .active(m.isActive())
+                            .build())
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            return Collections.emptyList();
+        }
+    }
+
+    public List<com.eduspace.backend.staff.dto.response.MaintenanceResponseKT> getUpcomingMaintenancesBySpace(Long spaceId) {
+        return getUpcomingMaintenanceDtos(spaceId);
     }
 
     public List<SpaceResponse> getAllSpaces() {
@@ -507,6 +577,8 @@ public class AvailabilityService {
     private SpaceResponse mapToResponse(SpaceCatalogItem space) {
         boolean isPerSeat = "PER_SEAT".equalsIgnoreCase(space.getBookingMode());
         boolean isPerTable = "PER_TABLE".equalsIgnoreCase(space.getBookingMode());
+        List<com.eduspace.backend.staff.dto.response.MaintenanceResponseKT> mDtos = getUpcomingMaintenanceDtos(space.getId());
+        com.eduspace.backend.staff.dto.response.MaintenanceResponseKT nextM = mDtos.isEmpty() ? null : mDtos.get(0);
 
         return SpaceResponse.builder()
                 .id(space.getId())
@@ -521,6 +593,9 @@ public class AvailabilityService {
                 .imageUrl(space.getImageUrl())
                 .description(space.getDescription())
                 .facilities(space.getFacilities())
+                .facilityIds(space.getFacilityIds())
+                .nextMaintenance(nextM)
+                .upcomingMaintenances(mDtos)
                 .allowSeatSelection(isPerSeat)
                 .allowTableSelection(isPerTable)
                 .build();

@@ -31,10 +31,70 @@ export const SearchSpacesPage: React.FC = () => {
       return;
     }
 
+    const toIso = (dateStr: string, timeStr: string) => {
+      const parts = (timeStr || '').trim().split(':');
+      const h = (parts[0] || '08').padStart(2, '0');
+      const m = (parts[1] || '00').padStart(2, '0');
+      const sec = (parts[2] || '00').padStart(2, '0');
+      return `${dateStr}T${h}:${m}:${sec}`;
+    };
+
+    const parseMs = (timeStr?: string) => {
+      if (!timeStr) return 0;
+      const formatted = timeStr.includes('T') ? timeStr : timeStr.replace(' ', 'T');
+      const d = new Date(formatted);
+      return isNaN(d.getTime()) ? 0 : d.getTime();
+    };
+
+    // Kiểm tra xem phòng có lịch bảo trì trùng với khoảng thời gian tìm kiếm không
+    const isMaintenanceConflict = (s: Space): boolean => {
+      if (s.status === 'MAINTENANCE') return true;
+      if (!filter.date || !filter.startTime || !filter.endTime) return false;
+
+      const searchStartMs = parseMs(toIso(filter.date, filter.startTime));
+      const searchEndMs = parseMs(toIso(filter.date, filter.endTime));
+
+      if (!searchStartMs || !searchEndMs || searchStartMs >= searchEndMs) {
+        return false;
+      }
+
+      // 1. Kiểm tra nextMaintenance
+      if (s.nextMaintenance) {
+        const mStart = parseMs(s.nextMaintenance.startTime);
+        const mEnd = parseMs(s.nextMaintenance.endTime);
+        if (mStart && mEnd && searchStartMs < mEnd && searchEndMs > mStart) {
+          return true;
+        }
+      }
+
+      // 2. Kiểm tra danh sách upcomingMaintenances
+      if (s.upcomingMaintenances && s.upcomingMaintenances.length > 0) {
+        const hasOverlap = s.upcomingMaintenances.some((m) => {
+          const mStart = parseMs(m.startTime);
+          const mEnd = parseMs(m.endTime);
+          return mStart && mEnd && searchStartMs < mEnd && searchEndMs > mStart;
+        });
+        if (hasOverlap) return true;
+      }
+
+      return false;
+    };
+
     spaceService
       .searchAvailableSpaces(filter)
       .then((data) => {
-        setSpaces(data);
+        // Ẩn hoàn toàn các phòng đang hoặc có lịch bảo trì trong khoảng thời gian tìm kiếm
+        let filtered = data.filter((s) => !isMaintenanceConflict(s));
+
+        if (filter.facilityIds && filter.facilityIds.length > 0) {
+          filtered = filtered.filter((s) => {
+            if (s.facilityIds && s.facilityIds.length > 0) {
+              return filter.facilityIds!.every((fid) => s.facilityIds!.includes(fid));
+            }
+            return true;
+          });
+        }
+        setSpaces(filtered);
       })
       .catch((err) => {
         const serverMsg = err?.response?.data?.message;
@@ -51,7 +111,15 @@ export const SearchSpacesPage: React.FC = () => {
         spaceService
           .getAllSpaces()
           .then((allData) => {
-            setSpaces(allData);
+            // Lọc loại bỏ phòng bảo trì trong khoảng tìm kiếm
+            let res = allData.filter((s) => !isMaintenanceConflict(s));
+            if (filter.spaceTypeId) {
+              res = res.filter((s) => s.spaceTypeId === filter.spaceTypeId || s.spaceType?.id === filter.spaceTypeId);
+            }
+            if (filter.facilityIds && filter.facilityIds.length > 0) {
+              res = res.filter((s) => s.facilityIds && filter.facilityIds!.every((fid) => s.facilityIds!.includes(fid)));
+            }
+            setSpaces(res);
           })
           .catch(() => {
             setError(serverMsg || 'Không thể kết nối đến máy chủ');

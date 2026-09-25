@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Armchair } from 'lucide-react';
+import { TableMeetingIcon } from './RoomCard';
 import type { Space, SpaceTable, SpaceSeat } from '../services/spaceService';
 import { spaceService } from '../services/spaceService';
 import { bookingService } from '../services/bookingService';
@@ -193,7 +195,7 @@ export const SeatSelectionModal: React.FC<Props> = ({
       >
         <div className="table-card-top">
           <div className="table-card-code">
-            <span>🪑</span>
+            <TableMeetingIcon size={16} strokeWidth={2.2} style={{ color: '#2563EB', marginRight: '6px' }} />
             <span>Bàn {tbl.tableCode}</span>
           </div>
           <span className="table-card-capacity">
@@ -258,7 +260,9 @@ export const SeatSelectionModal: React.FC<Props> = ({
         <div className="cinema-modal-header">
           <div>
             <h3 className="cinema-title">
-              <span style={{ fontSize: '1.25rem' }}>{isTableMode ? '🪑' : '💺'}</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', marginRight: '8px', color: '#2563EB' }}>
+                {isTableMode ? <TableMeetingIcon size={22} strokeWidth={2.2} /> : <Armchair size={22} strokeWidth={2.2} />}
+              </span>
               {isTableMode ? 'Sơ đồ chọn bàn thảo luận nhóm' : 'Sơ đồ chọn vị trí chỗ ngồi cá nhân'}
             </h3>
             <div className="cinema-subtitle">
@@ -378,7 +382,15 @@ export const SeatSelectionModal: React.FC<Props> = ({
               <span>{isTableMode ? 'Bàn đã chọn: ' : 'Chỗ ngồi đã chọn: '}</span>
               {selectedItems.length > 0 ? (
                 <span className="selected-seats-badge">
-                  {isTableMode ? `🪑 Bàn ${selectedItems.join(', ')}` : `💺 Ghế ${selectedItems.sort().join(', ')} (${selectedItems.length} chỗ)`}
+                  {isTableMode ? (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <TableMeetingIcon size={14} strokeWidth={2.2} /> Bàn {selectedItems.join(', ')}
+                    </span>
+                  ) : (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <Armchair size={14} strokeWidth={2.2} /> Ghế {selectedItems.sort().join(', ')} ({selectedItems.length} chỗ)
+                    </span>
+                  )}
                 </span>
               ) : (
                 <span className="no-seats-text">

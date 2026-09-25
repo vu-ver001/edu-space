@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Armchair, Building2 } from 'lucide-react';
 import type { Space } from '../services/spaceService';
 
 interface Props {
@@ -25,10 +26,140 @@ const ROOM_IMAGES: Record<number, string> = {
 
 const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&auto=format&fit=crop&q=80';
 
+export const formatMaintenanceTime = (startStr: string, endStr: string): string => {
+  try {
+    const start = new Date(startStr);
+    const end = new Date(endStr);
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      return '';
+    }
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const startHours = pad(start.getHours());
+    const startMinutes = pad(start.getMinutes());
+    const endHours = pad(end.getHours());
+    const endMinutes = pad(end.getMinutes());
+    const day = pad(start.getDate());
+    const month = pad(start.getMonth() + 1);
+
+    const isSameDay = start.toDateString() === end.toDateString();
+    if (isSameDay) {
+      return `${startHours}:${startMinutes}-${endHours}:${endMinutes} ${day}/${month}`;
+    } else {
+      const endDay = pad(end.getDate());
+      const endMonth = pad(end.getMonth() + 1);
+      return `${startHours}:${startMinutes} ${day}/${month} - ${endHours}:${endMinutes} ${endDay}/${endMonth}`;
+    }
+  } catch {
+    return '';
+  }
+};
+
+const formatDisplayName = (f: any): string => {
+  const rawName = typeof f === 'string' ? f : f?.name || '';
+  if (rawName.toLowerCase().includes('bảng trắng')) return 'Bảng trắng';
+  if (rawName.toLowerCase().includes('máy chiếu')) return 'Máy chiếu';
+  if (rawName.toLowerCase().includes('điều hòa')) return 'Điều hòa';
+  if (rawName.toLowerCase().includes('ổ cắm')) return 'Ổ cắm điện';
+  if (rawName.toLowerCase().includes('tv') || rawName.toLowerCase().includes('màn hình')) return 'Màn hình TV';
+  if (rawName.toLowerCase().includes('âm thanh') || rawName.toLowerCase().includes('micro')) return 'Âm thanh';
+  if (rawName.toLowerCase().includes('wifi')) return 'Wifi';
+  if (rawName.toLowerCase().includes('đèn')) return 'Đèn học';
+  if (rawName.toLowerCase().includes('lọc không khí')) return 'Lọc không khí';
+  if (rawName.toLowerCase().includes('công thái học')) return 'Ghế ergonomic';
+  return rawName;
+};
+
+// Icon bàn thảo luận nhóm sang trọng thay thế emoji 🪑
+export const TableMeetingIcon = ({ size = 14, strokeWidth = 2.2, style }: { size?: number; strokeWidth?: number; style?: React.CSSProperties }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={strokeWidth}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    style={{ display: 'inline-block', verticalAlign: 'middle', flexShrink: 0, ...style }}
+  >
+    <rect x="3" y="9" width="18" height="3" rx="1" />
+    <path d="M6 12v7" />
+    <path d="M18 12v7" />
+    <path d="M8 5h2a1 1 0 0 1 1 1v3H7V6a1 1 0 0 1 1-1z" />
+    <path d="M14 5h2a1 1 0 0 1 1 1v3h-4V6a1 1 0 0 1 1-1z" />
+  </svg>
+);
+
 export const RoomCard: React.FC<Props> = ({ space, searchParams }) => {
   const navigate = useNavigate();
   const isAvailable = space.isAvailable ?? (space.status === 'AVAILABLE');
-  const imageUrl = space.imageUrl || ROOM_IMAGES[space.id] || DEFAULT_IMAGE;
+  // Ưu tiên ảnh có is_primary = true từ bảng space_images
+  const imageUrl = space.primaryImageUrl || space.imageUrl || ROOM_IMAGES[space.id] || DEFAULT_IMAGE;
+
+  // Đo đạc để tiện ích luôn hiển thị đúng 1 dòng, nếu không đủ chỗ thì +N ở cuối dòng
+  const amenitiesContainerRef = useRef<HTMLDivElement>(null);
+  const measureContainerRef = useRef<HTMLDivElement>(null);
+  const facilitiesList = space.facilities || [];
+  const [visibleCount, setVisibleCount] = useState<number>(facilitiesList.length);
+
+  const updateVisibleChips = useCallback(() => {
+    if (!amenitiesContainerRef.current || !measureContainerRef.current || facilitiesList.length === 0) {
+      setVisibleCount(facilitiesList.length);
+      return;
+    }
+
+    const containerWidth = amenitiesContainerRef.current.clientWidth;
+    if (containerWidth <= 0) return;
+
+    const measureEl = measureContainerRef.current;
+    const chips = Array.from(measureEl.querySelectorAll<HTMLElement>('.amenity-chip-measure'));
+    const moreEl = measureEl.querySelector<HTMLElement>('.amenity-chip-more-measure');
+    const moreWidth = moreEl ? moreEl.offsetWidth : 36;
+    const gap = 6;
+
+    // Kiểm tra nếu tất cả chip vừa trên 1 dòng
+    let totalAllWidth = 0;
+    for (let i = 0; i < chips.length; i++) {
+      totalAllWidth += chips[i].offsetWidth + (i > 0 ? gap : 0);
+    }
+
+    if (totalAllWidth <= containerWidth) {
+      setVisibleCount(chips.length);
+      return;
+    }
+
+    // Nếu không vừa toàn bộ, tính số chip tối đa để vừa cả badge +N ở cuối dòng
+    let currentWidth = 0;
+    let fitCount = 0;
+    for (let i = 0; i < chips.length; i++) {
+      const chipWidth = chips[i].offsetWidth;
+      const nextWidth = currentWidth + (i > 0 ? gap : 0) + chipWidth;
+      if (nextWidth + gap + moreWidth <= containerWidth) {
+        currentWidth = nextWidth;
+        fitCount = i + 1;
+      } else {
+        break;
+      }
+    }
+
+    setVisibleCount(Math.max(1, fitCount));
+  }, [facilitiesList]);
+
+  useEffect(() => {
+    updateVisibleChips();
+
+    const container = amenitiesContainerRef.current;
+    if (!container) return;
+
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver(() => updateVisibleChips());
+      ro.observe(container);
+    }
+    return () => {
+      if (ro) ro.disconnect();
+    };
+  }, [updateVisibleChips]);
 
   const handleViewAndBook = () => {
     const params = new URLSearchParams();
@@ -89,16 +220,19 @@ export const RoomCard: React.FC<Props> = ({ space, searchParams }) => {
           <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
             <span className="room-card-type-label">{space.spaceTypeName}</span>
             {isPerSeat ? (
-              <span style={{ fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '4px', background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0' }}>
-                💺 Chọn chỗ ngồi
+              <span style={{ fontSize: '11px', fontWeight: 600, padding: '3px 8px', borderRadius: '4px', background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                <Armchair size={13} strokeWidth={2.2} />
+                <span>Chọn chỗ ngồi</span>
               </span>
             ) : isPerTable ? (
-              <span style={{ fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '4px', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>
-                🪑 Chọn bàn nhóm
+              <span style={{ fontSize: '11px', fontWeight: 600, padding: '3px 8px', borderRadius: '4px', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                <TableMeetingIcon size={13} strokeWidth={2.2} />
+                <span>Chọn bàn nhóm</span>
               </span>
             ) : (
-              <span style={{ fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '4px', background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1' }}>
-                🏢 Đặt trọn phòng
+              <span style={{ fontSize: '11px', fontWeight: 600, padding: '3px 8px', borderRadius: '4px', background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                <Building2 size={13} strokeWidth={2.2} />
+                <span>Đặt trọn phòng</span>
               </span>
             )}
           </div>
@@ -123,29 +257,57 @@ export const RoomCard: React.FC<Props> = ({ space, searchParams }) => {
           </span>
         </div>
 
-        {/* Amenities Pills */}
-        <div className="room-card-amenities">
-          {space.facilities && space.facilities.slice(0, 3).map((f: any, idx: number) => {
+        {/* Amenities Pills - Đúng 1 dòng duy nhất, nếu không đủ chỗ thì +N ở cuối dòng */}
+        <div ref={amenitiesContainerRef} className="room-card-amenities">
+          {facilitiesList.slice(0, visibleCount).map((f: any, idx: number) => {
             const rawName = typeof f === 'string' ? f : f?.name || '';
-            const displayName =
-              rawName.toLowerCase().includes('bảng trắng') ? 'Bảng trắng' :
-              rawName.toLowerCase().includes('máy chiếu') ? 'Máy chiếu' :
-              rawName.toLowerCase().includes('điều hòa') ? 'Điều hòa' :
-              rawName.toLowerCase().includes('ổ cắm') ? 'Ổ cắm điện' :
-              rawName.toLowerCase().includes('tv') || rawName.toLowerCase().includes('màn hình') ? 'Màn hình TV' :
-              rawName;
+            const displayName = formatDisplayName(f);
 
             return (
-              <span key={f?.id || `${rawName}-${idx}`} className="amenity-chip">
+              <span key={f?.id || `${rawName}-${idx}`} className="amenity-chip" title={rawName}>
                 {displayName}
               </span>
             );
           })}
-          {space.facilities && space.facilities.length > 3 && (
-            <span className="amenity-chip more">
-              +{space.facilities.length - 3}
+          {facilitiesList.length > visibleCount && (
+            <span
+              className="amenity-chip more"
+              title={`Còn ${facilitiesList.length - visibleCount} tiện ích: ${facilitiesList
+                .slice(visibleCount)
+                .map((f: any) => (typeof f === 'string' ? f : f?.name || ''))
+                .join(', ')}`}
+            >
+              +{facilitiesList.length - visibleCount}
             </span>
           )}
+        </div>
+
+        {/* Invisible measuring clone container để đo chính xác theo pixel */}
+        <div
+          ref={measureContainerRef}
+          style={{
+            position: 'absolute',
+            top: -9999,
+            left: -9999,
+            visibility: 'hidden',
+            pointerEvents: 'none',
+            display: 'flex',
+            gap: '6px',
+            alignItems: 'center',
+          }}
+          aria-hidden="true"
+        >
+          {facilitiesList.map((f: any, idx: number) => {
+            const displayName = formatDisplayName(f);
+            return (
+              <span key={`measure-${idx}`} className="amenity-chip amenity-chip-measure">
+                {displayName}
+              </span>
+            );
+          })}
+          <span className="amenity-chip more amenity-chip-more-measure">
+            +99
+          </span>
         </div>
 
         {/* Action Button full-width */}
@@ -162,3 +324,4 @@ export const RoomCard: React.FC<Props> = ({ space, searchParams }) => {
     </div>
   );
 };
+

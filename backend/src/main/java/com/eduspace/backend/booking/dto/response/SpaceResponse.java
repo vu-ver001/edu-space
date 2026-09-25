@@ -22,7 +22,11 @@ public class SpaceResponse {
     private String imageUrl;
     private String description;
     private List<String> facilities;
+    private List<Long> facilityIds;
+    private com.eduspace.backend.staff.dto.response.MaintenanceResponseKT nextMaintenance;
+    private List<com.eduspace.backend.staff.dto.response.MaintenanceResponseKT> upcomingMaintenances;
     private String bookingMode;
+    private Boolean isAvailable;
     private Boolean allowSeatSelection;
     private Boolean allowTableSelection;
 }
