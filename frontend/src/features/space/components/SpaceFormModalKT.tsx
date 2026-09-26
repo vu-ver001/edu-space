@@ -18,6 +18,7 @@ import type {
   SpaceFormImage,
 } from '../types/space';
 import type { SpaceType } from '../types/spaceType';
+import { FilterSelect } from '../../../components/common/FilterSelect';
 import './SpaceTypeFormModalKT.css';
 import './SpaceFormModalKT.css';
 import { formatImageUrl } from '../../../utils/imageUrl';
@@ -153,8 +154,11 @@ export const SpaceFormModalKT: React.FC<Props> = ({
     if (!errorField) return;
 
     errorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    if (typeof errorField.focus === 'function') {
-      errorField.focus({ preventScroll: true });
+    const focusTarget = errorField.classList.contains('filter-select-control')
+      ? errorField.querySelector<HTMLElement>('.filter-select-trigger')
+      : errorField;
+    if (typeof focusTarget?.focus === 'function') {
+      focusTarget.focus({ preventScroll: true });
     }
   }, [fieldErrors]);
 
@@ -455,27 +459,26 @@ export const SpaceFormModalKT: React.FC<Props> = ({
               <label className="astp-form-label">
                 Loại không gian <span className="text-danger">*</span>
               </label>
-              <select
+              <FilterSelect
                 className={`astp-form-select ${fieldErrors.spaceTypeId ? 'input-error' : ''}`}
-                value={spaceTypeId}
-                onChange={(e) => {
-                  setSpaceTypeId(Number(e.target.value));
+                value={String(spaceTypeId)}
+                ariaLabel="Chọn loại không gian"
+                options={[
+                  { value: '0', label: '-- Chọn loại phòng --', disabled: true },
+                  ...spaceTypes.map((spaceType) => ({
+                    value: String(spaceType.id),
+                    label: `${spaceType.name} (${spaceType.bookingMode === 'WHOLE_SPACE' ? 'Nguyên phòng' : spaceType.bookingMode === 'PER_SEAT' ? 'Chỗ ngồi' : 'Theo bàn'})`,
+                  })),
+                ]}
+                onChange={(value) => {
+                  setSpaceTypeId(Number(value));
                   if (fieldErrors.spaceTypeId) {
                     setFieldErrors((prev) => ({ ...prev, spaceTypeId: '' }));
                   }
                   if (validationError) setValidationError(null);
                 }}
                 disabled={isLoading}
-              >
-                <option value={0} disabled>
-                  -- Chọn loại phòng --
-                </option>
-                {spaceTypes.map((st) => (
-                  <option key={st.id} value={st.id}>
-                    {st.name} ({st.bookingMode === 'WHOLE_SPACE' ? 'Nguyên phòng' : st.bookingMode === 'PER_SEAT' ? 'Chỗ ngồi' : 'Theo bàn'})
-                  </option>
-                ))}
-              </select>
+              />
               {fieldErrors.spaceTypeId && (
                 <span className="astp-field-error-msg">{fieldErrors.spaceTypeId}</span>
               )}
@@ -486,16 +489,18 @@ export const SpaceFormModalKT: React.FC<Props> = ({
               <label className="astp-form-label">
                 Trạng thái <span className="text-danger">*</span>
               </label>
-              <select
+              <FilterSelect
                 className="astp-form-select"
                 value={status}
-                onChange={(e) => setStatus(e.target.value as Space['status'])}
+                ariaLabel="Chọn trạng thái không gian"
+                options={[
+                  { value: 'AVAILABLE', label: 'Đang hoạt động (Sẵn sàng)' },
+                  { value: 'MAINTENANCE', label: 'Đang bảo trì' },
+                  { value: 'INACTIVE', label: 'Tạm ngưng' },
+                ]}
+                onChange={(value) => setStatus(value as Space['status'])}
                 disabled={isLoading}
-              >
-                <option value="AVAILABLE">Đang hoạt động (Sẵn sàng)</option>
-                <option value="MAINTENANCE">Đang bảo trì</option>
-                <option value="INACTIVE">Tạm ngưng</option>
-              </select>
+              />
             </div>
 
             {/* Tòa nhà, Tầng, Sức chứa */}

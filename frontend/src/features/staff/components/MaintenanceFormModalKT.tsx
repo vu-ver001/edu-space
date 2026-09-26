@@ -1,14 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   AlertCircle,
-  Building2,
-  CalendarClock,
-  Clock3,
   Save,
   UserRound,
-  Wrench,
   X,
 } from 'lucide-react';
+import { FilterSelect } from '../../../components/common/FilterSelect';
 import type { Space } from '../../space/types/space';
 import type {
   MaintenanceBlock,
@@ -30,6 +27,19 @@ interface Props {
 type FieldErrors = Partial<Record<'spaceId' | 'startTime' | 'endTime' | 'reason', string>>;
 
 const toInputDateTime = (value?: string) => value ? value.slice(0, 16) : '';
+
+const toLocalInputDateTime = (value: Date) => {
+  const pad = (part: number) => String(part).padStart(2, '0');
+  return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`
+    + `T${pad(value.getHours())}:${pad(value.getMinutes())}`;
+};
+
+const getEarliestSelectableTime = () => {
+  const value = new Date();
+  value.setSeconds(0, 0);
+  value.setMinutes(value.getMinutes() + 1);
+  return toLocalInputDateTime(value);
+};
 
 const formatConflictTime = (value?: string) => {
   if (!value) return '—';
@@ -76,8 +86,25 @@ export const MaintenanceFormModalKT = ({
     if (Object.keys(fieldErrors).length === 0) return;
     const firstError = formRef.current?.querySelector<HTMLElement>('.maintenance-input-error');
     firstError?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    firstError?.focus({ preventScroll: true });
+    const focusTarget = firstError?.classList.contains('filter-select-control')
+      ? firstError.querySelector<HTMLElement>('.filter-select-trigger')
+      : firstError;
+    focusTarget?.focus({ preventScroll: true });
   }, [fieldErrors]);
+
+  const currentTime = Date.now();
+  const isInProgressEdit = mode === 'edit'
+    && Boolean(maintenance)
+    && new Date(maintenance!.startTime).getTime() <= currentTime
+    && new Date(maintenance!.endTime).getTime() > currentTime;
+  const earliestSelectableTime = getEarliestSelectableTime();
+  const endTimeMinimum = (() => {
+    if (!startTime || isInProgressEdit) return earliestSelectableTime;
+    const afterStart = new Date(startTime);
+    afterStart.setMinutes(afterStart.getMinutes() + 1);
+    const oneMinuteAfterStart = toLocalInputDateTime(afterStart);
+    return oneMinuteAfterStart > earliestSelectableTime ? oneMinuteAfterStart : earliestSelectableTime;
+  })();
 
   if (!isOpen) return null;
 
@@ -96,6 +123,12 @@ export const MaintenanceFormModalKT = ({
     if (!spaceId) errors.spaceId = 'Vui lòng chọn không gian cần bảo trì.';
     if (!startTime) errors.startTime = 'Vui lòng chọn thời gian bắt đầu.';
     if (!endTime) errors.endTime = 'Vui lòng chọn thời gian kết thúc.';
+    if (!isInProgressEdit && startTime && new Date(startTime).getTime() < Date.now()) {
+      errors.startTime = 'Thời gian bắt đầu không được nằm trong quá khứ.';
+    }
+    if (endTime && new Date(endTime).getTime() <= Date.now()) {
+      errors.endTime = 'Thời gian kết thúc phải sau thời điểm hiện tại.';
+    }
     if (startTime && endTime && new Date(startTime) >= new Date(endTime)) {
       errors.endTime = 'Thời gian kết thúc phải sau thời gian bắt đầu.';
     }
@@ -150,10 +183,13 @@ export const MaintenanceFormModalKT = ({
       <section className="maintenance-modal" role="dialog" aria-modal="true" aria-labelledby="maintenance-form-title">
         <header className="maintenance-modal-header">
           <div className="maintenance-modal-heading">
-            <span className="maintenance-modal-icon"><Wrench size={22} /></span>
             <div>
               <h2 id="maintenance-form-title">{mode === 'create' ? 'Tạo lịch bảo trì' : 'Chỉnh sửa lịch bảo trì'}</h2>
-              <p>{mode === 'create' ? 'Khóa không gian trong một khoảng thời gian cụ thể' : 'Cập nhật thời gian và lý do bảo trì'}</p>
+              <p>{mode === 'create'
+                ? 'Khóa không gian trong một khoảng thời gian cụ thể'
+                : isInProgressEdit
+                  ? 'Lịch đang diễn ra, được cập nhật thời gian kết thúc và lý do'
+                  : 'Cập nhật thời gian và lý do bảo trì'}</p>
             </div>
           </div>
           <button type="button" className="maintenance-modal-close" onClick={onClose} disabled={isSubmitting} aria-label="Đóng">
@@ -170,42 +206,50 @@ export const MaintenanceFormModalKT = ({
               </div>
             )}
 
+            {isInProgressEdit && (
+              <div className="maintenance-form-info">
+                <span>Không gian và thời gian bắt đầu đã được khóa. Bạn có thể thay đổi thời gian kết thúc và lý do bảo trì.</span>
+              </div>
+            )}
+
             <label className="maintenance-form-field maintenance-form-full">
-              <span><Building2 size={16} /> Không gian <b>*</b></span>
-              <select
-                value={spaceId}
+              <span>Không gian <b>*</b></span>
+              <FilterSelect
+                value={String(spaceId)}
                 disabled={mode === 'edit' || isSubmitting}
                 className={fieldErrors.spaceId ? 'maintenance-input-error' : ''}
-                onChange={(event) => { setSpaceId(Number(event.target.value)); clearFieldError('spaceId'); }}
-              >
-                <option value={0}>Chọn không gian cần bảo trì</option>
-                {spaces.map((space) => (
-                  <option key={space.id} value={space.id}>
-                    {space.spaceCode} — {space.name} ({space.building}, tầng {space.floor})
-                  </option>
-                ))}
-              </select>
+                ariaLabel="Chọn không gian cần bảo trì"
+                options={[
+                  { value: '0', label: 'Chọn không gian cần bảo trì' },
+                  ...spaces.map((space) => ({
+                    value: String(space.id),
+                    label: `${space.spaceCode} — ${space.name} (${space.building}, tầng ${space.floor})`,
+                  })),
+                ]}
+                onChange={(value) => { setSpaceId(Number(value)); clearFieldError('spaceId'); }}
+              />
               {fieldErrors.spaceId && <small>{fieldErrors.spaceId}</small>}
             </label>
 
             <div className="maintenance-form-time-grid">
               <label className="maintenance-form-field">
-                <span><CalendarClock size={16} /> Bắt đầu <b>*</b></span>
+                <span>Bắt đầu <b>*</b></span>
                 <input
                   type="datetime-local"
                   value={startTime}
-                  disabled={isSubmitting}
+                  min={isInProgressEdit ? undefined : earliestSelectableTime}
+                  disabled={isSubmitting || isInProgressEdit}
                   className={fieldErrors.startTime ? 'maintenance-input-error' : ''}
                   onChange={(event) => { setStartTime(event.target.value); clearFieldError('startTime'); }}
                 />
                 {fieldErrors.startTime && <small>{fieldErrors.startTime}</small>}
               </label>
               <label className="maintenance-form-field">
-                <span><Clock3 size={16} /> Kết thúc <b>*</b></span>
+                <span>Kết thúc <b>*</b></span>
                 <input
                   type="datetime-local"
                   value={endTime}
-                  min={startTime || undefined}
+                  min={endTimeMinimum}
                   disabled={isSubmitting}
                   className={fieldErrors.endTime ? 'maintenance-input-error' : ''}
                   onChange={(event) => { setEndTime(event.target.value); clearFieldError('endTime'); }}
@@ -215,7 +259,7 @@ export const MaintenanceFormModalKT = ({
             </div>
 
             <label className="maintenance-form-field maintenance-form-full">
-              <span><Wrench size={16} /> Lý do bảo trì <b>*</b></span>
+              <span>Lý do bảo trì <b>*</b></span>
               <textarea
                 value={reason}
                 rows={4}

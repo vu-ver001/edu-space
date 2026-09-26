@@ -39,18 +39,6 @@
 .maintenance-modal-heading {
   display: flex;
   align-items: center;
-  gap: 13px;
-}
-
-.maintenance-modal-icon {
-  width: 44px;
-  height: 44px;
-  flex: 0 0 44px;
-  display: grid;
-  place-items: center;
-  color: #2563eb;
-  background: #eaf2ff;
-  border-radius: 12px;
 }
 
 .maintenance-modal-heading h2 {
@@ -107,6 +95,19 @@
 
 .maintenance-form-alert svg { flex: 0 0 auto; margin-top: 1px; }
 
+.maintenance-form-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 13px 14px;
+  color: #1d4ed8;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 11px;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
 .maintenance-form-time-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -124,7 +125,6 @@
   font-weight: 700;
 }
 
-.maintenance-form-field > span svg { color: #64748b; }
 .maintenance-form-field > span b { color: #ef4444; }
 
 .maintenance-form-field input,
@@ -141,6 +141,30 @@
   font: inherit;
   font-size: 14px;
   transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.maintenance-form-field .filter-select-control {
+  width: 100%;
+  height: 44px;
+  color: #1e293b;
+  border: 1.5px solid #d9e2ee;
+  border-radius: 9px;
+  font-size: 14px;
+}
+
+.maintenance-form-field .filter-select-control:focus-within {
+  border-color: #3b82f6;
+}
+
+.maintenance-form-field .filter-select-control.maintenance-input-error {
+  border-color: #ef4444;
+  background: #fffafa !important;
+}
+
+.maintenance-form-field .filter-select-control.disabled {
+  color: #64748b;
+  background: #f5f7fb !important;
+  cursor: not-allowed;
 }
 
 .maintenance-form-field textarea { resize: vertical; min-height: 100px; line-height: 1.5; }

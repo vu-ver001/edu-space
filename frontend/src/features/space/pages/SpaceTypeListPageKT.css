@@ -747,11 +747,12 @@
 }
 
 .custom-space-types-table tbody tr {
-  transition: background-color 0.15s ease;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .custom-space-types-table tbody tr:hover {
-  background-color: #f8fafc;
+  background-color: #f7faff;
+  box-shadow: inset 4px 0 0 #3b82f6;
 }
 
 .custom-space-types-table tbody tr:last-child td {

@@ -25,6 +25,7 @@ import { spaceApi } from '../api/spaceApi';
 import { readSpaceApiError } from '../api/spaceApiError';
 import { SpaceTypeFormModalKT } from '../components/SpaceTypeFormModalKT';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
+import { Tooltip } from '../../../components/common/Tooltip';
 import './SpaceTypeDetailPageKT.css';
 
 const DEFAULT_SPACE_IMAGES = [
@@ -566,8 +567,12 @@ export const SpaceTypeDetailPageKT: React.FC = () => {
                           }}
                         />
                         <div className="space-card-info">
-                          <h4 className="space-card-name">{space.name}</h4>
-                          <p className="space-card-location">{formatLocation(space)}</p>
+                          <Tooltip content={space.name} maxWidth={340} onlyWhenOverflow>
+                            <h4 className="space-card-name">{space.name}</h4>
+                          </Tooltip>
+                          <Tooltip content={formatLocation(space)} maxWidth={340} onlyWhenOverflow>
+                            <p className="space-card-location">{formatLocation(space)}</p>
+                          </Tooltip>
                         </div>
                       </div>
 

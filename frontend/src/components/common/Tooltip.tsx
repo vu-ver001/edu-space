@@ -8,6 +8,7 @@ interface TooltipProps {
   maxWidth?: number;
   placement?: 'top' | 'bottom' | 'auto';
   disabled?: boolean;
+  onlyWhenOverflow?: boolean;
 }
 
 export const Tooltip: React.FC<TooltipProps> = ({
@@ -16,6 +17,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
   maxWidth = 360,
   placement = 'auto',
   disabled = false,
+  onlyWhenOverflow = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [coords, setCoords] = useState<{ top: number; left: number; actualPlacement: 'top' | 'bottom' }>({
@@ -57,6 +59,12 @@ export const Tooltip: React.FC<TooltipProps> = ({
 
   const handleMouseEnter = () => {
     if (disabled || !content) return;
+    if (
+      onlyWhenOverflow
+      && triggerRef.current
+      && triggerRef.current.scrollWidth <= triggerRef.current.clientWidth + 1
+      && triggerRef.current.scrollHeight <= triggerRef.current.clientHeight + 1
+    ) return;
     calculatePosition();
     setIsOpen(true);
   };
