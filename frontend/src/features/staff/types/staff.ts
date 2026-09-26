@@ -109,8 +109,10 @@ export interface MaintenanceBlock {
   reason: string;
   startTime: string;
   endTime: string;
-  status: string;
   createdAt: string;
+  updatedAt?: string;
+  deletedAt?: string | null;
+  active: boolean;
   createdBy?: number;
   creatorEmail?: string;
 }
@@ -119,14 +121,12 @@ export interface MaintenanceCreateRequest {
   reason: string;
   startTime: string;
   endTime: string;
-  description?: string;
 }
 
 export interface MaintenanceUpdateRequest {
   reason: string;
   startTime: string;
   endTime: string;
-  description?: string;
 }
 
 export type StaffAuditAction =
