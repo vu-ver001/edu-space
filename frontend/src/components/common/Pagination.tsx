@@ -1,5 +1,6 @@
 import React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { FilterSelect } from './FilterSelect';
 
 interface PaginationProps {
   totalItems: number;
@@ -46,17 +47,16 @@ export const Pagination: React.FC<PaginationProps> = ({
       {/* Left side: Page Size selector + Info Text */}
       <div className="pagination-left-group">
         {onPageSizeChange && (
-          <select
+          <FilterSelect
             className="pagination-pagesize-select-v2"
-            value={pageSize}
-            onChange={(e) => onPageSizeChange(Number(e.target.value))}
-          >
-            {pageSizeOptions.map((opt) => (
-              <option key={opt} value={opt}>
-                {opt} / trang
-              </option>
-            ))}
-          </select>
+            value={String(pageSize)}
+            ariaLabel="Số mục hiển thị trên mỗi trang"
+            options={pageSizeOptions.map((option) => ({
+              value: String(option),
+              label: `${option} / trang`,
+            }))}
+            onChange={(value) => onPageSizeChange(Number(value))}
+          />
         )}
 
         <span className="pagination-info-text-v2">

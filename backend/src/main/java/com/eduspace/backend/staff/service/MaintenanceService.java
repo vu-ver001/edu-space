@@ -51,6 +51,7 @@ public class MaintenanceService {
                         "Không tìm thấy không gian yêu cầu."));
 
         validateTimeRange(request.getStartTime(), request.getEndTime());
+        validateStartTimeNotInPast(request.getStartTime(), LocalDateTime.now());
 
         // 1. Kiểm tra Hard-block: Booking đang chiếm chỗ (WHOLE_SPACE, PER_SEAT, PER_TABLE)
         checkOccupyingBookingConflict(spaceId, request.getStartTime(), request.getEndTime());
@@ -91,29 +92,52 @@ public class MaintenanceService {
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "MAINTENANCE_NOT_FOUND",
                         "Không tìm thấy khoảng bảo trì yêu cầu."));
 
-        validateTimeRange(request.getStartTime(), request.getEndTime());
+        LocalDateTime now = LocalDateTime.now();
+        if (!now.isBefore(block.getEndTime())) {
+            throw new AppException(HttpStatus.CONFLICT, "MAINTENANCE_ALREADY_COMPLETED",
+                    "Lịch bảo trì đã kết thúc nên không thể chỉnh sửa.");
+        }
+
+        boolean inProgress = !now.isBefore(block.getStartTime());
+        LocalDateTime effectiveStartTime = inProgress ? block.getStartTime() : request.getStartTime();
+        String effectiveReason = request.getReason().trim();
+
+        if (!inProgress) {
+            validateStartTimeNotInPast(effectiveStartTime, now);
+        }
+
+        if (inProgress && !request.getEndTime().isAfter(now)) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "INVALID_MAINTENANCE_END_TIME",
+                    "Thời gian kết thúc mới phải sau thời điểm hiện tại.");
+        }
+
+        validateTimeRange(effectiveStartTime, request.getEndTime());
 
         Long spaceId = block.getSpace().getId();
 
         // 1. Kiểm tra Hard-block với booking trong khoảng thời gian mới
-        checkOccupyingBookingConflict(spaceId, request.getStartTime(), request.getEndTime());
+        checkOccupyingBookingConflict(spaceId, effectiveStartTime, request.getEndTime());
 
         // 2. Kiểm tra trùng lặp với các khoảng bảo trì khác (loại trừ chính nó)
-        checkMaintenanceOverlap(spaceId, maintenanceId, request.getStartTime(), request.getEndTime());
+        checkMaintenanceOverlap(spaceId, maintenanceId, effectiveStartTime, request.getEndTime());
 
         User currentUser = requireCurrentUser();
         Long actorId = currentUser.getId();
         String actorEmail = currentUser.getEmail();
 
-        block.setStartTime(request.getStartTime());
+        block.setStartTime(effectiveStartTime);
         block.setEndTime(request.getEndTime());
-        block.setReason(request.getReason().trim());
+        block.setReason(effectiveReason);
 
         MaintenanceBlock updated = maintenanceBlockRepository.save(block);
 
         // Ghi Staff Audit Log
         staffAuditService.logAction(actorId, actorEmail, StaffAuditAction.MAINTENANCE_UPDATED,
-                "MAINTENANCE", updated.getId(), spaceId, "Cập nhật bảo trì: " + request.getReason().trim());
+                "MAINTENANCE", updated.getId(), spaceId,
+                inProgress
+                        ? "Cập nhật bảo trì đang diễn ra: kết thúc " + request.getEndTime()
+                            + ", lý do: " + effectiveReason
+                        : "Cập nhật bảo trì: " + effectiveReason);
 
         log.info("Staff {} đã cập nhật bảo trì #{} cho Space #{}", actorEmail, updated.getId(), spaceId);
         return toResponse(updated, actorEmail);
@@ -169,6 +193,13 @@ public class MaintenanceService {
         if (!start.isBefore(end)) {
             throw new AppException(HttpStatus.BAD_REQUEST, "INVALID_MAINTENANCE_TIME",
                     "Thời gian bắt đầu bảo trì phải trước thời gian kết thúc");
+        }
+    }
+
+    private void validateStartTimeNotInPast(LocalDateTime start, LocalDateTime now) {
+        if (start.isBefore(now)) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "MAINTENANCE_START_TIME_IN_PAST",
+                    "Thời gian bắt đầu bảo trì không được nằm trong quá khứ");
         }
     }
 

@@ -12,7 +12,9 @@ import {
   Wrench,
 } from 'lucide-react';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
+import { FilterSelect } from '../../../components/common/FilterSelect';
 import { Pagination } from '../../../components/common/Pagination';
+import { Tooltip } from '../../../components/common/Tooltip';
 import { spaceApi } from '../../space/api/spaceApi';
 import type { Space } from '../../space/types/space';
 import { maintenanceApi } from '../api/maintenanceApi';
@@ -40,14 +42,43 @@ const getTimeStatus = (item: MaintenanceBlock, now: number): MaintenanceTimeStat
   return 'IN_PROGRESS';
 };
 
+const sortMaintenanceByPriority = (
+  a: MaintenanceBlock,
+  b: MaintenanceBlock,
+  now: number,
+) => {
+  const statusA = getTimeStatus(a, now);
+  const statusB = getTimeStatus(b, now);
+  const statusPriority: Record<MaintenanceTimeStatus, number> = {
+    IN_PROGRESS: 0,
+    UPCOMING: 1,
+    COMPLETED: 2,
+  };
+
+  const groupOrder = statusPriority[statusA] - statusPriority[statusB];
+  if (groupOrder !== 0) return groupOrder;
+
+  const startA = new Date(a.startTime).getTime();
+  const startB = new Date(b.startTime).getTime();
+  const endA = new Date(a.endTime).getTime();
+  const endB = new Date(b.endTime).getTime();
+
+  if (statusA === 'IN_PROGRESS') {
+    return (endA - endB) || (startB - startA) || (b.id - a.id);
+  }
+  if (statusA === 'UPCOMING') {
+    return (startA - startB) || (endA - endB) || (b.id - a.id);
+  }
+  return (endB - endA) || (startB - startA) || (b.id - a.id);
+};
+
 const statusInfo = (status: MaintenanceTimeStatus) => {
   if (status === 'UPCOMING') return { label: 'Sắp diễn ra', className: 'upcoming' };
   if (status === 'IN_PROGRESS') return { label: 'Đang bảo trì', className: 'in-progress' };
   return { label: 'Đã kết thúc', className: 'completed' };
 };
 
-const formatDate = (value: string) => new Intl.DateTimeFormat('vi-VN', {
-  weekday: 'short',
+const formatShortDate = (value: string) => new Intl.DateTimeFormat('vi-VN', {
   day: '2-digit',
   month: '2-digit',
   year: 'numeric',
@@ -150,12 +181,15 @@ export const MaintenanceManagementPageKT = () => {
         const matchesDate = !dateFilter || item.startTime.slice(0, 10) === dateFilter;
         return matchesSearch && matchesSpace && matchesStatus && matchesDate;
       })
-      .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
+      .sort((a, b) => sortMaintenanceByPriority(a, b, now));
   }, [maintenanceList, searchQuery, spaceFilter, statusFilter, dateFilter, spaceById, now]);
 
   const totalPages = Math.max(1, Math.ceil(filteredMaintenance.length / pageSize));
   const safePage = Math.min(currentPage, totalPages);
   const visibleMaintenance = filteredMaintenance.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const deletingTimeStatus = deletingMaintenance ? getTimeStatus(deletingMaintenance, now) : null;
+  const deletingIsCompleted = deletingTimeStatus === 'COMPLETED';
+  const deletingIsInProgress = deletingTimeStatus === 'IN_PROGRESS';
 
   const clearFilters = () => {
     setSearchQuery('');
@@ -172,17 +206,36 @@ export const MaintenanceManagementPageKT = () => {
   };
 
   const openEdit = (item: MaintenanceBlock) => {
+    if (getTimeStatus(item, Date.now()) === 'COMPLETED') return;
     setFormMode('edit');
     setEditingMaintenance(item);
     setFormOpen(true);
   };
 
   const handleFormSubmit = async (spaceId: number, data: MaintenanceCreateRequest) => {
+    if (
+      formMode === 'edit'
+      && editingMaintenance
+      && getTimeStatus(editingMaintenance, Date.now()) === 'COMPLETED'
+    ) {
+      setFormOpen(false);
+      setEditingMaintenance(null);
+      showToast('Lịch bảo trì đã kết thúc, không thể chỉnh sửa.', 'error');
+      return;
+    }
     setFormSubmitting(true);
     try {
+      const updateData = formMode === 'edit'
+        && editingMaintenance
+        && getTimeStatus(editingMaintenance, Date.now()) === 'IN_PROGRESS'
+        ? {
+            ...data,
+            startTime: editingMaintenance.startTime,
+          }
+        : data;
       const response = formMode === 'create'
         ? await maintenanceApi.createMaintenance(spaceId, data)
-        : await maintenanceApi.updateMaintenance(editingMaintenance!.id, data as MaintenanceUpdateRequest);
+        : await maintenanceApi.updateMaintenance(editingMaintenance!.id, updateData as MaintenanceUpdateRequest);
       setFormOpen(false);
       setEditingMaintenance(null);
       showToast(response.message);
@@ -194,6 +247,7 @@ export const MaintenanceManagementPageKT = () => {
 
   const handleDelete = async () => {
     if (!deletingMaintenance) return;
+    if (getTimeStatus(deletingMaintenance, Date.now()) === 'IN_PROGRESS') return;
     setDeleteLoading(true);
     setDeleteError(null);
     try {
@@ -257,15 +311,23 @@ export const MaintenanceManagementPageKT = () => {
               />
             </label>
             <label>
-              <select value={spaceFilter} aria-label="Lọc theo không gian" onChange={(event) => { setSpaceFilter(event.target.value); setCurrentPage(1); }}>
-                <option value="ALL">Tất cả không gian</option>
-                {spaces.map((space) => <option key={space.id} value={space.id}>{space.spaceCode} — {space.name}</option>)}
-              </select>
+              <FilterSelect
+                value={spaceFilter}
+                ariaLabel="Lọc theo không gian"
+                options={[
+                  { value: 'ALL', label: 'Tất cả không gian' },
+                  ...spaces.map((space) => ({ value: String(space.id), label: `${space.spaceCode} — ${space.name}` })),
+                ]}
+                onChange={(value) => { setSpaceFilter(value); setCurrentPage(1); }}
+              />
             </label>
             <label>
-              <select value={statusFilter} aria-label="Lọc theo trạng thái" onChange={(event) => { setStatusFilter(event.target.value as MaintenanceTimeStatus | 'ALL'); setCurrentPage(1); }}>
-                {STATUS_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-              </select>
+              <FilterSelect
+                value={statusFilter}
+                ariaLabel="Lọc theo trạng thái"
+                options={STATUS_OPTIONS}
+                onChange={(value) => { setStatusFilter(value as MaintenanceTimeStatus | 'ALL'); setCurrentPage(1); }}
+              />
             </label>
             <label><input type="date" value={dateFilter} aria-label="Lọc theo ngày bắt đầu" onChange={(event) => { setDateFilter(event.target.value); setCurrentPage(1); }} /></label>
             <button
@@ -317,7 +379,9 @@ export const MaintenanceManagementPageKT = () => {
                 <tbody>
                   {visibleMaintenance.map((item, index) => {
                     const space = spaceById.get(item.spaceId);
-                    const status = statusInfo(getTimeStatus(item, now));
+                    const timeStatus = getTimeStatus(item, now);
+                    const status = statusInfo(timeStatus);
+                    const deleteLabel = timeStatus === 'COMPLETED' ? 'Xóa khỏi danh sách' : 'Hủy lịch bảo trì';
                     return (
                       <tr key={item.id}>
                         <td><span className="maintenance-row-number">{(safePage - 1) * pageSize + index + 1}</span></td>
@@ -326,14 +390,38 @@ export const MaintenanceManagementPageKT = () => {
                             <div><strong>{space?.spaceCode || item.spaceName}</strong><small>{item.spaceName}<br />{space ? `${space.building} · Tầng ${space.floor}` : ''}<br />Tạo {formatCreatedAt(item.createdAt)}</small></div>
                           </div>
                         </td>
-                        <td><strong>{formatDate(item.startTime)}</strong><small>{formatTime(item.startTime)} – {formatTime(item.endTime)}</small></td>
-                        <td><span className="maintenance-reason" title={item.reason}>{item.reason}</span></td>
-                        <td><strong className="maintenance-creator">{item.creatorEmail || 'Không xác định'}</strong></td>
+                        <td>
+                          <div className="maintenance-time-range">
+                            <strong>{formatShortDate(item.startTime)} – {formatShortDate(item.endTime)}</strong>
+                            <span>{formatTime(item.startTime)} – {formatTime(item.endTime)}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <Tooltip content={item.reason} maxWidth={420} onlyWhenOverflow>
+                            <span className="maintenance-reason">{item.reason}</span>
+                          </Tooltip>
+                        </td>
+                        <td>
+                          <Tooltip content={item.creatorEmail || 'Không xác định'} maxWidth={360} onlyWhenOverflow>
+                            <strong className="maintenance-creator">{item.creatorEmail || 'Không xác định'}</strong>
+                          </Tooltip>
+                        </td>
                         <td><span className={`maintenance-status ${status.className}`}>{status.label}</span></td>
                         <td>
                           <div className="maintenance-row-actions">
-                            <button type="button" className="edit" onClick={() => openEdit(item)} aria-label={`Sửa lịch bảo trì của ${item.spaceName}`} title="Chỉnh sửa"><Pencil size={16} /></button>
-                            <button type="button" className="delete" onClick={() => { setDeleteError(null); setDeletingMaintenance(item); }} aria-label={`Hủy lịch bảo trì của ${item.spaceName}`} title="Hủy lịch bảo trì"><Trash2 size={16} /></button>
+                            <button
+                              type="button"
+                              className="edit"
+                              onClick={() => openEdit(item)}
+                              disabled={timeStatus === 'COMPLETED'}
+                              aria-label={timeStatus === 'COMPLETED'
+                                ? `Không thể sửa lịch bảo trì đã kết thúc của ${item.spaceName}`
+                                : `Sửa lịch bảo trì của ${item.spaceName}`}
+                              title={timeStatus === 'COMPLETED' ? 'Lịch đã kết thúc, không thể chỉnh sửa' : 'Chỉnh sửa'}
+                            >
+                              <Pencil size={16} />
+                            </button>
+                            <button type="button" className="delete" onClick={() => { setDeleteError(null); setDeletingMaintenance(item); }} aria-label={`${deleteLabel} của ${item.spaceName}`} title={deleteLabel}><Trash2 size={16} /></button>
                           </div>
                         </td>
                       </tr>
@@ -366,14 +454,29 @@ export const MaintenanceManagementPageKT = () => {
 
       <ConfirmDialog
         isOpen={Boolean(deletingMaintenance)}
-        title="Hủy lịch bảo trì"
-        message={deletingMaintenance ? `Bạn có chắc muốn hủy lịch bảo trì của “${deletingMaintenance.spaceName}”?` : ''}
-        warningNote="Lịch sẽ được hủy khỏi hệ thống và thao tác này được ghi vào nhật ký vận hành."
+        title={deletingIsInProgress
+          ? 'Không thể xóa lịch đang diễn ra'
+          : deletingIsCompleted ? 'Xóa lịch đã kết thúc' : 'Hủy lịch bảo trì'}
+        message={deletingMaintenance
+          ? deletingIsInProgress
+            ? `Lịch bảo trì của “${deletingMaintenance.spaceName}” đang diễn ra và không thể xóa.`
+            : deletingIsCompleted
+            ? `Bạn có chắc muốn xóa lịch bảo trì đã kết thúc của “${deletingMaintenance.spaceName}” khỏi danh sách?`
+            : `Bạn có chắc muốn hủy lịch bảo trì của “${deletingMaintenance.spaceName}”?`
+          : ''}
+        warningNote={deletingIsInProgress
+          ? 'Vui lòng chờ lịch bảo trì kết thúc trước khi xóa khỏi danh sách.'
+          : deletingIsCompleted
+            ? 'Lịch đã kết thúc sẽ được xóa khỏi danh sách và thao tác này được ghi vào nhật ký vận hành.'
+            : 'Lịch sẽ được hủy khỏi hệ thống và thao tác này được ghi vào nhật ký vận hành.'}
         errorMessage={deleteError}
-        confirmText="Hủy lịch bảo trì"
+        confirmText={deletingIsInProgress
+          ? 'Không thể xóa'
+          : deletingIsCompleted ? 'Xóa khỏi danh sách' : 'Hủy lịch bảo trì'}
         cancelText="Quay lại"
         isDanger
         isLoading={deleteLoading}
+        isConfirmDisabled={deletingIsInProgress}
         onConfirm={() => void handleDelete()}
         onCancel={() => { if (!deleteLoading) { setDeletingMaintenance(null); setDeleteError(null); } }}
       />

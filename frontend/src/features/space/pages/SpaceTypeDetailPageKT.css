@@ -537,10 +537,10 @@
 }
 
 .spaces-items-list .space-card-item:hover {
-  border-color: #cbd5e1 !important;
-  background-color: #f8fafc !important;
+  border-color: #bfdbfe !important;
+  background-color: #f7faff !important;
   transform: translateY(-1px) !important;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05) !important;
+  box-shadow: inset 4px 0 0 #3b82f6, 0 4px 12px rgba(15, 23, 42, 0.05) !important;
 }
 
 .spaces-items-list .space-card-item-left {

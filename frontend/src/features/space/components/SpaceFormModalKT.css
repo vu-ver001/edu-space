@@ -117,11 +117,11 @@
 .astp-form-input.input-error,
 .astp-form-select.input-error {
   border-color: #ef4444 !important;
-  background-color: #fffaf0;
+  background: #fffaf0 !important;
 }
 
 .astp-form-input.input-error:focus,
-.astp-form-select.input-error:focus {
+.astp-form-select.input-error:focus-within {
   box-shadow: 0 0 0 3.5px rgba(239, 68, 68, 0.15) !important;
 }
 
@@ -172,13 +172,13 @@
   border-color: #94a3b8;
 }
 
-.astp-form-select:focus {
+.astp-form-select:focus-within {
   border-color: #2563eb;
   box-shadow: 0 0 0 3.5px rgba(37, 99, 235, 0.12);
 }
 
-.astp-form-select:disabled {
-  background-color: #f1f5f9;
+.astp-form-select.disabled {
+  background: #f1f5f9 !important;
   color: #94a3b8;
   cursor: not-allowed;
 }

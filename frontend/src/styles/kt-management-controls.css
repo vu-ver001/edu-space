@@ -1,0 +1,139 @@
+/* Shared search, select and refresh controls for KT management pages. */
+
+:root {
+  --kt-control-height: 40px;
+  --kt-control-border: #cbd5e1;
+  --kt-control-background: #ffffff;
+  --kt-control-color: #334155;
+  --kt-control-radius: 9px;
+  --kt-control-focus: #2563eb;
+  --kt-control-hover-background: #eff6ff;
+  --kt-control-hover-border: #93c5fd;
+}
+
+.maintenance-filter-bar .maintenance-search input,
+.maintenance-filter-bar input[type='date'],
+.booking-search-field,
+.booking-filter-field input[type='date'],
+.table-card-header-bar .filter-search-input,
+.facility-filter-bar .facility-search-input,
+.maintenance-filter-bar .filter-select-control,
+.booking-filter-field .filter-select-control,
+.table-card-actions-group .filter-select-control,
+.space-filters-cluster-group .filter-select-control,
+.facility-filter-bar .filter-select-control {
+  box-sizing: border-box !important;
+  height: var(--kt-control-height) !important;
+  color: var(--kt-control-color) !important;
+  background: var(--kt-control-background) !important;
+  border: 1px solid var(--kt-control-border) !important;
+  border-radius: var(--kt-control-radius) !important;
+  font-family: inherit !important;
+  font-size: 13.5px !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease !important;
+}
+
+.space-filter-search-fluid,
+.space-filter-search-fluid .filter-search-box {
+  height: 40px !important;
+}
+
+.maintenance-filter-bar .maintenance-search input:focus,
+.maintenance-filter-bar input[type='date']:focus,
+.booking-search-field:focus-within,
+.booking-filter-field input[type='date']:focus,
+.table-card-header-bar .filter-search-input:focus,
+.facility-filter-bar .facility-search-input:focus,
+.maintenance-filter-bar .filter-select-control:focus-within,
+.booking-filter-field .filter-select-control:focus-within,
+.table-card-actions-group .filter-select-control:focus-within,
+.space-filters-cluster-group .filter-select-control:focus-within,
+.facility-filter-bar .filter-select-control:focus-within {
+  border-color: var(--kt-control-focus) !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
+  outline: none !important;
+}
+
+.maintenance-filter-bar .filter-select-trigger,
+.booking-filter-field .filter-select-trigger,
+.table-card-actions-group .filter-select-trigger,
+.space-filters-cluster-group .filter-select-trigger,
+.facility-filter-bar .filter-select-trigger {
+  color: #334155 !important;
+  font-size: 13.5px !important;
+}
+
+.maintenance-filter-bar .filter-select-trigger:focus-visible,
+.maintenance-filter-bar .filter-select-trigger.open,
+.booking-filter-field .filter-select-trigger:focus-visible,
+.booking-filter-field .filter-select-trigger.open,
+.table-card-actions-group .filter-select-trigger:focus-visible,
+.table-card-actions-group .filter-select-trigger.open,
+.space-filters-cluster-group .filter-select-trigger:focus-visible,
+.space-filters-cluster-group .filter-select-trigger.open,
+.facility-filter-bar .filter-select-trigger:focus-visible,
+.facility-filter-bar .filter-select-trigger.open {
+  box-shadow: none !important;
+}
+
+.maintenance-refresh-btn,
+.booking-refresh-btn,
+.btn-filter-refresh-icon-only {
+  box-sizing: border-box !important;
+  width: 40px !important;
+  min-width: 40px !important;
+  height: 40px !important;
+  flex-basis: 40px !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #52637f !important;
+  background: var(--kt-control-background) !important;
+  border: 1px solid var(--kt-control-border) !important;
+  border-radius: var(--kt-control-radius) !important;
+  box-shadow: none !important;
+  cursor: pointer !important;
+  transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+.maintenance-refresh-btn:hover:not(:disabled),
+.booking-refresh-btn:hover:not(:disabled),
+.btn-filter-refresh-icon-only:hover:not(:disabled) {
+  color: var(--kt-control-focus) !important;
+  background: var(--kt-control-hover-background) !important;
+  border-color: var(--kt-control-hover-border) !important;
+}
+
+.maintenance-refresh-btn:focus-visible,
+.booking-refresh-btn:focus-visible,
+.btn-filter-refresh-icon-only:focus-visible {
+  border-color: var(--kt-control-focus) !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
+  outline: none !important;
+}
+
+.maintenance-refresh-btn:disabled,
+.booking-refresh-btn:disabled,
+.btn-filter-refresh-icon-only:disabled {
+  cursor: wait !important;
+  opacity: 0.55 !important;
+}
+
+.kt-control-spin,
+.maintenance-refresh-btn .spin,
+.booking-refresh-btn .spin {
+  animation: kt-control-spin 0.8s linear infinite;
+}
+
+@keyframes kt-control-spin {
+  to { transform: rotate(360deg); }
+}
+
+.maintenance-filter-bar input::placeholder,
+.booking-search-field input::placeholder,
+.table-card-header-bar .filter-search-input::placeholder,
+.facility-filter-bar .facility-search-input::placeholder {
+  color: #64748b !important;
+  opacity: 0.85;
+}

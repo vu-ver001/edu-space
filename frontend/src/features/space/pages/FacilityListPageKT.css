@@ -411,12 +411,13 @@
 }
 
 .facility-table tbody tr:hover {
-  background: #f9fbff;
+  background: #f7faff;
+  box-shadow: inset 4px 0 0 #3b82f6;
 }
 
 .facility-table tbody tr.selected {
   background: #f1f7ff;
-  box-shadow: inset 3px 0 #2a7cf3;
+  box-shadow: inset 4px 0 0 #3b82f6;
 }
 
 .facility-name-cell {
