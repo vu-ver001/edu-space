@@ -41,10 +41,40 @@ export const SpaceDetailPage: React.FC = () => {
   };
 
   // Form booking state initialized from URL params
-  const today = new Date().toISOString().split('T')[0];
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  
+  // Tính toán giờ khởi tạo thông minh để tránh rơi vào quá khứ khi mở trang
+  const getSmartInitialTimes = () => {
+    const paramStart = searchParams.get('startTime');
+    const paramEnd = searchParams.get('endTime');
+    const paramDate = searchParams.get('date');
+    const targetDate = paramDate || today;
+
+    if (paramStart && paramEnd) {
+      return { initStart: normalizeTime(paramStart, '08:00'), initEnd: normalizeTime(paramEnd, '10:00') };
+    }
+
+    if (targetDate === today) {
+      const currentH = now.getHours();
+      const currentM = now.getMinutes();
+      let nextStartH = currentM > 0 ? currentH + 1 : currentH;
+      if (nextStartH < 7) nextStartH = 7;
+      if (nextStartH >= 22) nextStartH = 20;
+      let nextEndH = Math.min(nextStartH + 2, 22);
+      if (nextEndH <= nextStartH) nextEndH = Math.min(nextStartH + 1, 23);
+      return {
+        initStart: `${String(nextStartH).padStart(2, '0')}:00`,
+        initEnd: `${String(nextEndH).padStart(2, '0')}:00`
+      };
+    }
+    return { initStart: '08:00', initEnd: '10:00' };
+  };
+
+  const { initStart, initEnd } = getSmartInitialTimes();
   const [date, setDate] = useState<string>(searchParams.get('date') || today);
-  const [startTime, setStartTime] = useState<string>(normalizeTime(searchParams.get('startTime'), '08:00'));
-  const [endTime, setEndTime] = useState<string>(normalizeTime(searchParams.get('endTime'), '10:00'));
+  const [startTime, setStartTime] = useState<string>(initStart);
+  const [endTime, setEndTime] = useState<string>(initEnd);
   const [participantCount, setParticipantCount] = useState<number | string>(
     Number(searchParams.get('participantCount')) || 4
   );
@@ -55,6 +85,35 @@ export const SpaceDetailPage: React.FC = () => {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
+  const formatTimeHHmm = (timeStr?: string, defaultVal: string = '07:00'): string => {
+    if (!timeStr) return defaultVal;
+    const trimmed = String(timeStr).trim();
+    if (/^\d{1,2}$/.test(trimmed)) {
+      const h = parseInt(trimmed, 10);
+      return `${String(h).padStart(2, '0')}:00`;
+    }
+    if (/^\d{1,2}:\d{2}/.test(trimmed)) {
+      const [h, m] = trimmed.split(':');
+      return `${h.padStart(2, '0')}:${m}`;
+    }
+    return defaultVal;
+  };
+
+  const toMinutes = (timeStr: string): number => {
+    if (!timeStr) return 0;
+    const [h, m] = timeStr.split(':').map(Number);
+    return (h || 0) * 60 + (m || 0);
+  };
+
+  const [operatingHours, setOperatingHours] = useState<{
+    openingHour: string;
+    closingHour: string;
+    maxDurationMinutes: number;
+  }>({
+    openingHour: '07:00',
+    closingHour: '22:00',
+    maxDurationMinutes: 180
+  });
 
   const bookingMode = space?.bookingMode || space?.spaceType?.bookingMode || (
     space?.spaceTypeName?.toLowerCase().includes('bàn') ? 'PER_TABLE' :
@@ -79,6 +138,16 @@ export const SpaceDetailPage: React.FC = () => {
         setError(err?.response?.data?.message || 'Không thể tải thông tin phòng học.');
       })
       .finally(() => setLoading(false));
+
+    spaceService.getOperatingHours().then((res) => {
+      if (res) {
+        setOperatingHours({
+          openingHour: formatTimeHHmm(res.openingHour, '07:00'),
+          closingHour: formatTimeHHmm(res.closingHour, '22:00'),
+          maxDurationMinutes: res.maxDurationMinutes || 180
+        });
+      }
+    }).catch(() => {});
   }, [id]);
 
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -95,14 +164,48 @@ export const SpaceDetailPage: React.FC = () => {
       return;
     }
 
-    if (startTime >= endTime) {
+    const startMinutes = toMinutes(startTime);
+    const endMinutes = toMinutes(endTime);
+    const openMinutes = toMinutes(operatingHours.openingHour);
+    const closeMinutes = toMinutes(operatingHours.closingHour);
+
+    const nowCheck = new Date();
+    const todayCheck = `${nowCheck.getFullYear()}-${String(nowCheck.getMonth() + 1).padStart(2, '0')}-${String(nowCheck.getDate()).padStart(2, '0')}`;
+
+    if (date < todayCheck) {
+      setBookingError('Không thể đặt phòng vào ngày trong quá khứ. Vui lòng chọn ngày hôm nay hoặc trong tương lai.');
+      return;
+    }
+
+    if (date === todayCheck) {
+      const currentMinutes = nowCheck.getHours() * 60 + nowCheck.getMinutes();
+      if (startMinutes <= currentMinutes) {
+        setBookingError('Thời gian bắt đầu phải lớn hơn thời điểm hiện tại. Vui lòng chọn khung giờ trong tương lai.');
+        return;
+      }
+    }
+
+    if (startMinutes >= endMinutes) {
       setBookingError('Thời gian bắt đầu phải trước thời gian kết thúc.');
+      return;
+    }
+
+    if (startMinutes < openMinutes || endMinutes > closeMinutes) {
+      setBookingError(`Tòa nhà chỉ mở cửa phục vụ trong khung giờ từ ${operatingHours.openingHour} đến ${operatingHours.closingHour}. Vui lòng chọn lại.`);
+      return;
+    }
+
+    const durationMinutes = endMinutes - startMinutes;
+    if (durationMinutes > operatingHours.maxDurationMinutes) {
+      const maxHours = Math.floor(operatingHours.maxDurationMinutes / 60);
+      setBookingError(`Thời lượng đặt phòng tối đa là ${maxHours} giờ (${operatingHours.maxDurationMinutes} phút). Khung giờ bạn chọn (${durationMinutes} phút) vượt quá quy định.`);
       return;
     }
 
     // Bắt buộc nhập lý do sử dụng nếu phòng cần duyệt trước theo CSDL
     if (requiresApproval && (!purpose || !purpose.trim())) {
       setBookingError('Vui lòng nhập mục đích sử dụng (bắt buộc đối với không gian cần nhân viên duyệt).');
+
       return;
     }
 
@@ -398,6 +501,14 @@ export const SpaceDetailPage: React.FC = () => {
                   <input
                     type="time"
                     step="60"
+                    min={
+                      date === today
+                        ? (toMinutes(`${now.getHours()}:${now.getMinutes()}`) > toMinutes(operatingHours.openingHour)
+                            ? `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+                            : operatingHours.openingHour)
+                        : operatingHours.openingHour
+                    }
+                    max={operatingHours.closingHour}
                     className="form-control-input internal-time-input"
                     value={startTime}
                     onChange={(e) => setStartTime(e.target.value)}
@@ -410,6 +521,8 @@ export const SpaceDetailPage: React.FC = () => {
                   <input
                     type="time"
                     step="60"
+                    min={operatingHours.openingHour}
+                    max={operatingHours.closingHour}
                     className="form-control-input internal-time-input"
                     value={endTime}
                     onChange={(e) => setEndTime(e.target.value)}
@@ -417,6 +530,13 @@ export const SpaceDetailPage: React.FC = () => {
                   />
                 </div>
               </div>
+
+              {/* Gợi ý giờ hoạt động cả tòa */}
+              <div style={{ marginTop: '-4px', marginBottom: '14px', fontSize: '12px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ color: '#2563EB' }}>⏰</span>
+                <span><strong>Giờ mở cửa toàn tòa:</strong> {operatingHours.openingHour} – {operatingHours.closingHour} (Tối đa {Math.floor(operatingHours.maxDurationMinutes / 60)} giờ/lượt đặt)</span>
+              </div>
+
 
               {/* Số người tham gia */}
               <div className="form-field-group">

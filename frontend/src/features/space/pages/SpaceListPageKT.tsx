@@ -1,17 +1,23 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Layers, Building2, ClipboardList, Plus, Sparkles } from 'lucide-react';
-import type { Space, Facility, SpaceCreateRequest, SpaceUpdateRequest } from '../types/space';
+import type {
+  Space,
+  Facility,
+  SpaceCreateRequest,
+  SpaceUpdateRequest,
+  SpaceFormImage,
+} from '../types/space';
 import type { SpaceType } from '../types/spaceType';
 import { spaceApi } from '../api/spaceApi';
 import { spaceTypeApi } from '../api/spaceTypeApi';
-import { spaceImageApi } from '../api/spaceImageApi';
 import { readSpaceApiError } from '../api/spaceApiError';
 import { SpaceStatsCardsKT } from '../components/SpaceStatsCardsKT';
 import { SpaceFilterBarKT } from '../components/SpaceFilterBarKT';
 import { SpaceTableKT } from '../components/SpaceTableKT';
 import { SpaceCardGridKT } from '../components/SpaceCardGridKT';
-import { SpaceFormModalKT, type FormImageItem } from '../components/SpaceFormModalKT';
+import { SpaceFormModalKT } from '../components/SpaceFormModalKT';
+import { syncSpaceImages } from '../utils/syncSpaceImages';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
 import { Pagination } from '../../../components/common/Pagination';
 import './SpaceListPageKT.css';
@@ -180,7 +186,7 @@ export const SpaceListPageKT: React.FC = () => {
 
   const handleFormSubmit = async (
     data: SpaceCreateRequest | SpaceUpdateRequest,
-    images?: FormImageItem[]
+    images: SpaceFormImage[] = []
   ) => {
     setFormSubmitting(true);
     try {
@@ -191,73 +197,12 @@ export const SpaceListPageKT: React.FC = () => {
         setSpaces((prev) => [created, ...prev.filter((s) => s.id !== created.id)]);
         setCurrentPage(1);
 
-        // Lưu toàn bộ danh sách ảnh vào bảng space_images
-        if (images && images.length > 0) {
-          for (let i = 0; i < images.length; i++) {
-            const img = images[i];
-            try {
-              if (img.type === 'file' && img.file) {
-                const formData = new FormData();
-                formData.append('file', img.file);
-                if (img.isPrimary !== undefined) {
-                  formData.append('isPrimary', String(Boolean(img.isPrimary)));
-                }
-                formData.append('sortOrder', String(i));
-                await spaceImageApi.uploadImage(created.id, formData);
-              } else if (img.type === 'url' && img.url) {
-                await spaceImageApi.addImageUrl(created.id, {
-                  imageUrl: img.url.trim(),
-                  isPrimary: Boolean(img.isPrimary),
-                  sortOrder: i,
-                });
-              }
-            } catch (imgErr) {
-              console.error('Lỗi khi tải ảnh lên cho không gian mới:', imgErr);
-            }
-          }
-        } else if (data.imageUrl && data.imageUrl.trim()) {
-          await spaceImageApi.addImageUrl(created.id, {
-            imageUrl: data.imageUrl.trim(),
-            isPrimary: true,
-            sortOrder: 0,
-          }).catch(() => {});
-        }
+        await syncSpaceImages(created.id, images);
         showToast(response.message);
       } else if (editingSpace) {
         const response = await spaceApi.updateSpace(editingSpace.id, data as SpaceUpdateRequest);
 
-        // Xử lý ảnh thêm mới trong chế độ chỉnh sửa
-        if (images && images.length > 0) {
-          const newImages = images.filter((img) => img.type !== 'existing');
-          for (let i = 0; i < newImages.length; i++) {
-            const img = newImages[i];
-            try {
-              if (img.type === 'file' && img.file) {
-                const formData = new FormData();
-                formData.append('file', img.file);
-                if (img.isPrimary !== undefined) {
-                  formData.append('isPrimary', String(Boolean(img.isPrimary)));
-                }
-                formData.append('sortOrder', String(img.sortOrder ?? i));
-                await spaceImageApi.uploadImage(editingSpace.id, formData);
-              } else if (img.type === 'url' && img.url) {
-                await spaceImageApi.addImageUrl(editingSpace.id, {
-                  imageUrl: img.url.trim(),
-                  isPrimary: Boolean(img.isPrimary),
-                  sortOrder: img.sortOrder ?? i,
-                });
-              }
-            } catch (imgErr) {
-              console.error('Lỗi khi thêm ảnh mới khi chỉnh sửa:', imgErr);
-            }
-          }
-        } else if (data.imageUrl && data.imageUrl.trim() && data.imageUrl !== editingSpace.primaryImageUrl) {
-          await spaceImageApi.addImageUrl(editingSpace.id, {
-            imageUrl: data.imageUrl.trim(),
-            isPrimary: true,
-            sortOrder: 0,
-          }).catch(() => {});
-        }
+        await syncSpaceImages(editingSpace.id, images, editingSpace.images || []);
         showToast(response.message);
       }
       setFormModalOpen(false);

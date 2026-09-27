@@ -1,5 +1,6 @@
 import React from 'react';
-import { RotateCcw, LayoutGrid, List } from 'lucide-react';
+import { RefreshCw, LayoutGrid, List } from 'lucide-react';
+import { FilterSelect } from '../../../components/common/FilterSelect';
 import { SearchInput } from '../../../components/common/SearchInput';
 
 interface Props {
@@ -54,45 +55,47 @@ export const SpaceFilterBarKT: React.FC<Props> = ({
         </div>
 
         {/* Filter: Hình thức đặt */}
-        <select
+        <FilterSelect
           className="filter-select space-select-fluid"
           value={bookingModeFilter}
-          onChange={(e) => onBookingModeFilterChange(e.target.value)}
+          onChange={onBookingModeFilterChange}
+          ariaLabel="Hình thức đặt"
           title="Hình thức đặt"
-        >
-          <option value="ALL">Tất cả hình thức đặt</option>
-          <option value="WHOLE_SPACE">Đặt nguyên phòng</option>
-          <option value="PER_SEAT">Đặt theo chỗ ngồi</option>
-          <option value="PER_TABLE">Đặt theo bàn</option>
-        </select>
+          options={[
+            { value: 'ALL', label: 'Tất cả hình thức đặt' },
+            { value: 'WHOLE_SPACE', label: 'Đặt nguyên phòng' },
+            { value: 'PER_SEAT', label: 'Đặt theo chỗ ngồi' },
+            { value: 'PER_TABLE', label: 'Đặt theo bàn' },
+          ]}
+        />
 
         {/* Filter: Trạng thái */}
-        <select
+        <FilterSelect
           className="filter-select space-select-fluid"
           value={statusFilter}
-          onChange={(e) => onStatusFilterChange(e.target.value)}
+          onChange={onStatusFilterChange}
+          ariaLabel="Trạng thái"
           title="Trạng thái"
-        >
-          <option value="ALL">Tất cả trạng thái</option>
-          <option value="AVAILABLE">Hoạt động</option>
-          <option value="MAINTENANCE">Bảo trì</option>
-          <option value="INACTIVE">Ngưng hoạt động</option>
-        </select>
+          options={[
+            { value: 'ALL', label: 'Tất cả trạng thái' },
+            { value: 'AVAILABLE', label: 'Hoạt động' },
+            { value: 'MAINTENANCE', label: 'Bảo trì' },
+            { value: 'INACTIVE', label: 'Ngưng hoạt động' },
+          ]}
+        />
 
         {/* Filter: Tòa nhà */}
-        <select
+        <FilterSelect
           className="filter-select space-select-fluid"
           value={buildingFilter}
-          onChange={(e) => onBuildingFilterChange(e.target.value)}
+          onChange={onBuildingFilterChange}
+          ariaLabel="Tòa nhà"
           title="Tòa nhà"
-        >
-          <option value="ALL">Tất cả tòa nhà</option>
-          {buildings.map((b) => (
-            <option key={b} value={b}>
-              {b}
-            </option>
-          ))}
-        </select>
+          options={[
+            { value: 'ALL', label: 'Tất cả tòa nhà' },
+            ...buildings.map((building) => ({ value: building, label: building })),
+          ]}
+        />
 
         <button
           className="btn-filter-refresh btn-filter-refresh-icon-only"
@@ -101,7 +104,7 @@ export const SpaceFilterBarKT: React.FC<Props> = ({
           title="Làm mới bộ lọc"
           aria-label="Làm mới bộ lọc"
         >
-          <RotateCcw size={16} />
+          <RefreshCw size={18} />
         </button>
 
         {/* Cụm nút chuyển đổi Chế độ xem: Dạng bảng / Dạng thẻ (đi liền kề không bị tách xa) */}

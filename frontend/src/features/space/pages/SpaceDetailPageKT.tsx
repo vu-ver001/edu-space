@@ -33,7 +33,15 @@ import {
   Plus,
   AlertTriangle,
 } from 'lucide-react';
-import type { Space, SpaceSeat, SpaceTable, Facility, SpaceUpdateRequest, SpaceImage } from '../types/space';
+import type {
+  Space,
+  SpaceSeat,
+  SpaceTable,
+  Facility,
+  SpaceUpdateRequest,
+  SpaceImage,
+  SpaceFormImage,
+} from '../types/space';
 import type { SpaceType } from '../types/spaceType';
 import type { MaintenanceBlock } from '../../staff/types/staff';
 import { spaceApi } from '../api/spaceApi';
@@ -43,9 +51,12 @@ import { readSpaceApiError } from '../api/spaceApiError';
 import { maintenanceApi } from '../../staff/api/maintenanceApi';
 import { SpaceFormModalKT } from '../components/SpaceFormModalKT';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
+import { FilterSelect } from '../../../components/common/FilterSelect';
+import { Tooltip } from '../../../components/common/Tooltip';
 import { bookingService } from '../../../services/bookingService';
 import { formatImageUrl } from '../../../utils/imageUrl';
 import { staffApi } from '../../staff/api/staffApi';
+import { syncSpaceImages } from '../utils/syncSpaceImages';
 import './SpaceDetailPageKT.css';
 
 const PLACEHOLDER_SPACE_IMAGE = 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1000&auto=format&fit=crop&q=80';
@@ -772,12 +783,17 @@ export const SpaceDetailPageKT: React.FC = () => {
     return <Sparkles size={17} strokeWidth={2.2} />;
   };
 
-  const handleUpdate = async (data: SpaceUpdateRequest) => {
+  const handleUpdate = async (
+    data: SpaceUpdateRequest,
+    images: SpaceFormImage[] = [],
+  ) => {
     if (!space) return;
     setIsSubmitting(true);
     try {
       const response = await spaceApi.updateSpace(space.id, data);
-      setSpace(response.data);
+      const originalImages = space.images?.length ? space.images : spaceImages;
+      await syncSpaceImages(space.id, images, originalImages);
+
       setIsEditOpen(false);
       showToast(response.message);
       fetchDetail();
@@ -1408,9 +1424,9 @@ export const SpaceDetailPageKT: React.FC = () => {
                                       </span>
                                     </div>
                                     {tbl.description && (
-                                      <span className="table-desc-note" title={tbl.description}>
-                                        {tbl.description}
-                                      </span>
+                                      <Tooltip content={tbl.description} maxWidth={420} onlyWhenOverflow>
+                                        <span className="table-desc-note">{tbl.description}</span>
+                                      </Tooltip>
                                     )}
                                   </div>
                                 </div>
@@ -1780,15 +1796,17 @@ export const SpaceDetailPageKT: React.FC = () => {
                 </div>
                 <div className="item-form-group">
                   <label className="item-form-label">Trạng thái cấu hình</label>
-                  <select
+                  <FilterSelect
                     className="item-form-select"
                     value={tableStatusInput}
-                    onChange={(e) => setTableStatusInput(e.target.value as 'AVAILABLE' | 'INACTIVE')}
+                    ariaLabel="Trạng thái cấu hình bàn"
+                    options={[
+                      { value: 'AVAILABLE', label: 'Hoạt động (AVAILABLE)' },
+                      { value: 'INACTIVE', label: 'Tạm ngưng (INACTIVE)' },
+                    ]}
+                    onChange={(value) => setTableStatusInput(value as 'AVAILABLE' | 'INACTIVE')}
                     disabled={isTableSubmitting}
-                  >
-                    <option value="AVAILABLE">Hoạt động (AVAILABLE)</option>
-                    <option value="INACTIVE">Tạm ngưng (INACTIVE)</option>
-                  </select>
+                  />
                 </div>
                 <div className="item-form-group">
                   <label className="item-form-label">Ghi chú / Mô tả</label>
@@ -1922,15 +1940,17 @@ export const SpaceDetailPageKT: React.FC = () => {
                     </div>
                     <div className="item-form-group">
                       <label className="item-form-label">Trạng thái cấu hình</label>
-                      <select
+                      <FilterSelect
                         className="item-form-select"
                         value={seatStatusInput}
-                        onChange={(e) => setSeatStatusInput(e.target.value as 'AVAILABLE' | 'INACTIVE')}
+                        ariaLabel="Trạng thái cấu hình chỗ ngồi"
+                        options={[
+                          { value: 'AVAILABLE', label: 'Hoạt động / Sẵn sàng (AVAILABLE)' },
+                          { value: 'INACTIVE', label: 'Tạm ngưng (INACTIVE)' },
+                        ]}
+                        onChange={(value) => setSeatStatusInput(value as 'AVAILABLE' | 'INACTIVE')}
                         disabled={isSeatSubmitting}
-                      >
-                        <option value="AVAILABLE">Hoạt động / Sẵn sàng (AVAILABLE)</option>
-                        <option value="INACTIVE">Tạm ngưng (INACTIVE)</option>
-                      </select>
+                      />
                     </div>
                     <div className="item-form-group">
                       <label className="item-form-label">Ghi chú / Mô tả</label>

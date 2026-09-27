@@ -10,21 +10,17 @@ export type BookingStatus =
   | 'NO_SHOW'
   | 'COMPLETED';
 
-export type CheckInDemoState = 'AVAILABLE' | 'TOO_EARLY' | 'CLOSED';
-
 export type CheckInErrorCode =
   | 'CHECKIN_TOO_EARLY'
-  | 'CHECKIN_WINDOW_CLOSED'
   | 'CHECKIN_WINDOW_EXPIRED'
-  | 'BOOKING_ACCESS_DENIED'
   | 'CHECKIN_FORBIDDEN'
-  | 'BOOKING_STATUS_INVALID'
   | 'INVALID_STATUS_FOR_CHECKIN'
   | 'BOOKING_NOT_FOUND'
   | 'UNAUTHORIZED'
   | 'UNAUTHENTICATED'
   | 'FORBIDDEN'
   | 'INVALID_CHECKIN_POLICY'
+  | 'CHECKIN_TOKEN_INVALID'
   | 'INTERNAL_ERROR'
   | 'STAFF_BOOKING_LIST_UNAVAILABLE'
   | 'NETWORK_ERROR';
@@ -41,15 +37,19 @@ export type CheckInBooking = {
   studentId: string;
   studentName: string;
   studentCode: string;
+  spaceId?: number;
   spaceName: string;
+  spaceTypeName?: string;
   building: string;
+  participantCount?: number;
+  purpose?: string;
   startTime: string;
   endTime: string;
+  createdAt?: string;
   checkInOpenAt?: string;
   checkInDeadline?: string;
   status: BookingStatus;
   canCheckIn?: boolean;
-  demoState?: CheckInDemoState;
   checkedInAt?: string;
   checkedInBy?: string;
   checkedInById?: number;
@@ -63,6 +63,13 @@ export type CheckInResult = {
   checkedInById?: number;
 };
 
+export type CheckInToken = {
+  bookingId: number;
+  token: string;
+  issuedAt: string;
+  expiresAt: string;
+};
+
 export type CheckInServiceError = Error & {
   code: CheckInErrorCode | string;
   status?: number;
@@ -71,5 +78,4 @@ export type CheckInServiceError = Error & {
 export type CheckInService = {
   listBookings: (actor: CheckInActor) => Promise<CheckInBooking[]>;
   checkIn: (bookingId: number, actor: CheckInActor) => Promise<CheckInResult>;
-  reset?: () => void;
 };

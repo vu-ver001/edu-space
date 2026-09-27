@@ -198,48 +198,6 @@ INSERT IGNORE INTO space_facilities (space_id, facility_id) VALUES
     (@space_l202, @facility_wifi), (@space_l202, @facility_tv),
     (@space_l202, @facility_power), (@space_l202, @facility_air);
 
--- --------------------------------------------------------------------------
--- 7. Hình ảnh không gian
--- Chỉ thêm khi URL chưa tồn tại nên chạy lại không tạo ảnh trùng.
--- --------------------------------------------------------------------------
-SET @image_g101 := 'https://images.unsplash.com/photo-1517502884422-41eaead166d4?auto=format&fit=crop&w=1200&q=80';
-SET @image_g102 := 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=80';
-SET @image_p201 := 'https://images.unsplash.com/photo-1577495508048-b635879837f1?auto=format&fit=crop&w=1200&q=80';
-SET @image_s201 := 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=1200&q=80';
-SET @image_b301 := 'https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=1200&q=80';
-SET @image_g103 := 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1200&q=80';
-SET @image_d201 := 'https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&w=1200&q=80';
-SET @image_clb401 := 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=1200&q=80';
-SET @image_l202 := 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1200&q=80';
-
-INSERT INTO space_images (space_id, image_url, is_primary, sort_order, created_at, updated_at)
-SELECT @space_g101, @image_g101, TRUE, 0, NOW(), NOW()
-WHERE NOT EXISTS (SELECT 1 FROM space_images WHERE space_id = @space_g101 AND image_url = @image_g101);
-INSERT INTO space_images (space_id, image_url, is_primary, sort_order, created_at, updated_at)
-SELECT @space_g102, @image_g102, TRUE, 0, NOW(), NOW()
-WHERE NOT EXISTS (SELECT 1 FROM space_images WHERE space_id = @space_g102 AND image_url = @image_g102);
-INSERT INTO space_images (space_id, image_url, is_primary, sort_order, created_at, updated_at)
-SELECT @space_p201, @image_p201, TRUE, 0, NOW(), NOW()
-WHERE NOT EXISTS (SELECT 1 FROM space_images WHERE space_id = @space_p201 AND image_url = @image_p201);
-INSERT INTO space_images (space_id, image_url, is_primary, sort_order, created_at, updated_at)
-SELECT @space_s201, @image_s201, TRUE, 0, NOW(), NOW()
-WHERE NOT EXISTS (SELECT 1 FROM space_images WHERE space_id = @space_s201 AND image_url = @image_s201);
-INSERT INTO space_images (space_id, image_url, is_primary, sort_order, created_at, updated_at)
-SELECT @space_b301, @image_b301, TRUE, 0, NOW(), NOW()
-WHERE NOT EXISTS (SELECT 1 FROM space_images WHERE space_id = @space_b301 AND image_url = @image_b301);
-INSERT INTO space_images (space_id, image_url, is_primary, sort_order, created_at, updated_at)
-SELECT @space_g103, @image_g103, TRUE, 0, NOW(), NOW()
-WHERE NOT EXISTS (SELECT 1 FROM space_images WHERE space_id = @space_g103 AND image_url = @image_g103);
-INSERT INTO space_images (space_id, image_url, is_primary, sort_order, created_at, updated_at)
-SELECT @space_d201, @image_d201, TRUE, 0, NOW(), NOW()
-WHERE NOT EXISTS (SELECT 1 FROM space_images WHERE space_id = @space_d201 AND image_url = @image_d201);
-INSERT INTO space_images (space_id, image_url, is_primary, sort_order, created_at, updated_at)
-SELECT @space_clb401, @image_clb401, TRUE, 0, NOW(), NOW()
-WHERE NOT EXISTS (SELECT 1 FROM space_images WHERE space_id = @space_clb401 AND image_url = @image_clb401);
-INSERT INTO space_images (space_id, image_url, is_primary, sort_order, created_at, updated_at)
-SELECT @space_l202, @image_l202, TRUE, 0, NOW(), NOW()
-WHERE NOT EXISTS (SELECT 1 FROM space_images WHERE space_id = @space_l202 AND image_url = @image_l202);
-
 COMMIT;
 
 -- Tóm tắt số dòng mẫu sau khi chạy.
@@ -261,9 +219,5 @@ UNION ALL
 SELECT 'space_tables', COUNT(*) FROM space_tables WHERE space_id IN (@space_d201, @space_l202)
 UNION ALL
 SELECT 'space_facilities', COUNT(*) FROM space_facilities
-WHERE space_id IN (@space_g101, @space_g102, @space_p201, @space_s201,
-                   @space_b301, @space_g103, @space_d201, @space_clb401, @space_l202)
-UNION ALL
-SELECT 'space_images', COUNT(*) FROM space_images
 WHERE space_id IN (@space_g101, @space_g102, @space_p201, @space_s201,
                    @space_b301, @space_g103, @space_d201, @space_clb401, @space_l202);

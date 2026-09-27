@@ -14,9 +14,11 @@ import java.util.List;
 @AllArgsConstructor
 public class BulkBookingOperationResponse {
 
+    private String message;
     private int totalRequested;
     private int successCount;
     private int failureCount;
+
 
     @Builder.Default
     private List<BookingResponse> successfulBookings = new ArrayList<>();

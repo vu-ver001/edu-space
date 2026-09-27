@@ -12,7 +12,7 @@ interface RejectBookingConfirmModalKTProps {
   onConfirm: (reason: string) => Promise<void>;
 }
 
-const MAX_REASON_LENGTH = 500;
+const MAX_REASON_LENGTH = 2000;
 
 const bookingCode = (booking: StaffBooking) => {
   return booking.bookingCode || 'Chưa có mã';
