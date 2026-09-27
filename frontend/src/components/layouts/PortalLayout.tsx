@@ -113,7 +113,7 @@ export const PortalLayout = () => {
                       <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
                     </div>
                     <div style={{display: 'flex', flexDirection: 'column', minWidth: 0}}>
-                      <strong style={{color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>{user.fullName}</strong>
+                      <strong style={{color: '#2799d1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>{user.fullName}</strong>
                       <span style={{fontSize: '0.8rem', color: '#64748b'}}>{user.email}</span>
                     </div>
                   </div>
