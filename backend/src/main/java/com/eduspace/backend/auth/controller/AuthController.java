@@ -24,13 +24,16 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider tokenProvider;
     private final UserRepository userRepository;
+    private final UserService userService;
 
     public AuthController(AuthenticationManager authenticationManager,
                           JwtTokenProvider tokenProvider,
-                          UserRepository userRepository) {
+                          UserRepository userRepository,
+                          UserService userService) {
         this.authenticationManager = authenticationManager;
         this.tokenProvider = tokenProvider;
         this.userRepository = userRepository;
+        this.userService = userService;
     }
 
     @PostMapping("/login")
@@ -76,8 +79,7 @@ public class AuthController {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String currentUser = authentication.getName();
 
-            // Gọi UserService qua instance (lưu ý: bạn cần inject UserService vào AuthController)
-            // Nếu AuthController chưa có UserService, hãy thêm vào constructor nhé!
+            // Gọi UserService xử lý đổi mật khẩu
             userService.changePassword(currentUser, request);
 
             return ResponseEntity.ok(Map.of("message", "Đổi mật khẩu thành công!"));

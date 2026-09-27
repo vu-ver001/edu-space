@@ -136,6 +136,10 @@ public class UserService {
             throw new BadCredentialsException("Mật khẩu hiện tại không chính xác.");
         }
 
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
+            throw new BadCredentialsException("Mật khẩu mới không được trùng với mật khẩu hiện tại.");
+        }
+
         // Mã hóa và lưu mật khẩu mới
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
