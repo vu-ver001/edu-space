@@ -835,7 +835,8 @@
   position: relative;
   display: block;
   max-width: 100%;
-  cursor: text; /* Con trỏ thanh dọc (I-beam) | thay cho dấu ? */
+  cursor: text;
+  /* Con trỏ thanh dọc (I-beam) | thay cho dấu ? */
 }
 
 .maint-reason-text {
@@ -843,7 +844,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  cursor: text; /* Con trỏ thanh dọc | */
+  cursor: text;
+  /* Con trỏ thanh dọc | */
   color: #334155;
   transition: color 0.15s ease;
 }
@@ -1299,12 +1301,12 @@
 }
 
 .btn-action-icon {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
+  border-radius: 8px;
   border: 1px solid #e2e8f0;
   background: #ffffff;
   cursor: pointer;
