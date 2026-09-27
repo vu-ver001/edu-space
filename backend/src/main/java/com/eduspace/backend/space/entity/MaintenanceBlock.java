@@ -1,7 +1,5 @@
 package com.eduspace.backend.space.entity;
 
-import com.eduspace.backend.space.entity.Space;
-
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -35,10 +33,7 @@ public class MaintenanceBlock {
     @Column(nullable = false, length = 255)
     private String reason;
 
-    /**
-     * ID của người dùng (Staff / Admin) tạo lịch bảo trì.
-     * TODO integration: Trường này sẽ tham chiếu tới User (ManyToOne) sau khi module User/Auth của Minh Tân được merge.
-     */
+    /** ID của Staff/Admin đã tạo lịch bảo trì. */
     @Column(name = "created_by", nullable = false)
     private Long createdBy;
 

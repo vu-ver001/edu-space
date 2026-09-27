@@ -130,12 +130,12 @@ export const MaintenanceManagementPageKT = () => {
     setLoading(true);
     setError(null);
     try {
-      const spaceData = await spaceApi.getAllAdminSpaces();
-      const responses = await Promise.all(
-        spaceData.map((space) => maintenanceApi.getMaintenanceBySpace(space.id)),
-      );
+      const [spaceData, maintenanceData] = await Promise.all([
+        spaceApi.getAllAdminSpaces(),
+        maintenanceApi.getAllMaintenance(),
+      ]);
       setSpaces(spaceData);
-      setMaintenanceList(responses.flat());
+      setMaintenanceList(maintenanceData);
     } catch (loadError: unknown) {
       const apiError = readStaffApiError(loadError, 'Không thể tải danh sách bảo trì.');
       setError(apiError.message);
@@ -256,7 +256,7 @@ export const MaintenanceManagementPageKT = () => {
       showToast(response.message);
       await loadData();
     } catch (deleteRequestError: unknown) {
-      setDeleteError(readStaffApiError(deleteRequestError, 'Không thể hủy lịch bảo trì.').message);
+      setDeleteError(readStaffApiError(deleteRequestError, 'Không thể xóa lịch bảo trì.').message);
     } finally {
       setDeleteLoading(false);
     }

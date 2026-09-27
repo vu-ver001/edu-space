@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -147,23 +148,58 @@ public class MaintenanceService {
      * Xóa mềm khoảng bảo trì (Soft delete).
      */
     @Transactional
-    public void deleteMaintenance(Long maintenanceId) {
+    public String deleteMaintenance(Long maintenanceId) {
         MaintenanceBlock block = maintenanceBlockRepository.findByIdAndDeletedAtIsNull(maintenanceId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "MAINTENANCE_NOT_FOUND",
                         "Không tìm thấy khoảng bảo trì yêu cầu."));
+
+        LocalDateTime now = LocalDateTime.now();
+        boolean inProgress = !now.isBefore(block.getStartTime()) && now.isBefore(block.getEndTime());
+        if (inProgress) {
+            throw new AppException(HttpStatus.CONFLICT, "MAINTENANCE_IN_PROGRESS_CANNOT_DELETE",
+                    "Lịch bảo trì đang diễn ra nên không thể xóa.");
+        }
+        boolean completed = !now.isBefore(block.getEndTime());
 
         User currentUser = requireCurrentUser();
         Long actorId = currentUser.getId();
         String actorEmail = currentUser.getEmail();
 
-        block.setDeletedAt(LocalDateTime.now());
+        block.setDeletedAt(now);
         maintenanceBlockRepository.save(block);
 
         // Ghi Staff Audit Log
         staffAuditService.logAction(actorId, actorEmail, StaffAuditAction.MAINTENANCE_CANCELLED,
-                "MAINTENANCE", block.getId(), block.getSpace().getId(), "Hủy bảo trì #" + maintenanceId);
+                "MAINTENANCE", block.getId(), block.getSpace().getId(),
+                completed
+                        ? "Xóa lịch bảo trì đã kết thúc #" + maintenanceId
+                        : "Hủy lịch bảo trì #" + maintenanceId);
 
         log.info("Staff {} đã xóa mềm bảo trì #{}", actorEmail, maintenanceId);
+        return completed
+                ? "Đã xóa lịch bảo trì đã kết thúc khỏi danh sách."
+                : "Đã hủy lịch bảo trì thành công.";
+    }
+
+    @Transactional(readOnly = true)
+    public List<MaintenanceResponseKT> getAllMaintenance() {
+        List<MaintenanceBlock> blocks = maintenanceBlockRepository
+                .findAllByDeletedAtIsNullOrderByStartTimeAsc();
+        Map<Long, String> creatorEmails = userRepository.findAllById(
+                        blocks.stream()
+                                .map(MaintenanceBlock::getCreatedBy)
+                                .filter(id -> id != null && id > 0)
+                                .distinct()
+                                .toList())
+                .stream()
+                .filter(user -> user.getEmail() != null)
+                .collect(Collectors.toMap(User::getId, User::getEmail));
+
+        return blocks.stream()
+                .map(block -> toResponse(
+                        block,
+                        creatorEmails.getOrDefault(block.getCreatedBy(), "Không xác định")))
+                .toList();
     }
 
     @Transactional(readOnly = true)
