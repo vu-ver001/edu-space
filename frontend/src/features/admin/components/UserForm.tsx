@@ -14,7 +14,6 @@ interface UserFormProps {
     onSubmit: (formData: any) => void;
     onCancel?: () => void;
     loading?: boolean;
-    // Bổ sung 2 props để nhận thông báo từ ngoài truyền vào
     errorMessage?: string | null;
     successMessage?: string | null;
 }
@@ -37,8 +36,11 @@ export const UserForm: React.FC<UserFormProps> = ({
         department: ''
     });
 
-    // Thêm state lỗi nội bộ (dành cho việc check rỗng các trường)
+    // State lưu lỗi chung (như lỗi API trả về)
     const [localError, setLocalError] = useState<string | null>(null);
+
+    // State lưu lỗi riêng cho từng ô input
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
     useEffect(() => {
         if (initialData) {
@@ -54,8 +56,14 @@ export const UserForm: React.FC<UserFormProps> = ({
     }, [initialData]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        setForm({ ...form, [e.target.name]: e.target.value });
-        setLocalError(null); // Xóa lỗi nội bộ khi người dùng bắt đầu nhập lại
+        const { name, value } = e.target;
+        setForm({ ...form, [name]: value });
+
+        // Xóa lỗi của ô đó khi người dùng bắt đầu nhập lại
+        if (fieldErrors[name]) {
+            setFieldErrors(prev => ({ ...prev, [name]: '' }));
+        }
+        setLocalError(null);
     };
 
     const formatPasswordFromDob = (dobStr: string) => {
@@ -70,9 +78,24 @@ export const UserForm: React.FC<UserFormProps> = ({
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Cập nhật check lỗi rỗng vào form thay vì gọi alert
-        if (!form.email || !form.fullName || !form.dob) {
-            setLocalError('Vui lòng điền đầy đủ các thông tin bắt buộc (Họ Tên, Email, Ngày sinh).');
+        // Khởi tạo object chứa các lỗi
+        const errors: Record<string, string> = {};
+
+        // Bắt lỗi từng trường bắt buộc
+        if (!form.fullName.trim()) errors.fullName = 'Vui lòng nhập Họ và Tên';
+        if (!form.email.trim()) errors.email = 'Vui lòng nhập Địa chỉ Email';
+        if (!form.dob) errors.dob = 'Vui lòng chọn Ngày sinh';
+        if (form.role === 'STUDENT' && !form.studentId.trim()) {
+            errors.studentId = 'Vui lòng nhập Mã Sinh Viên';
+        }
+        if (form.role !== 'STUDENT' && !form.department.trim()) {
+            errors.department = 'Vui lòng nhập Phòng ban / Đơn vị';
+        }
+
+        // Nếu có lỗi, cập nhật state và dừng submit
+        if (Object.keys(errors).length > 0) {
+            setFieldErrors(errors);
+            setLocalError('Vui lòng kiểm tra lại các trường bị lỗi bên dưới.');
             return;
         }
 
@@ -86,12 +109,20 @@ export const UserForm: React.FC<UserFormProps> = ({
         onSubmit(payload);
     };
 
-    // Hiển thị lỗi nội bộ trước (nếu có), nếu không thì hiển thị lỗi do API báo về
     const displayError = localError || errorMessage;
+
+    // Style dùng chung cho ô input để tái sử dụng
+    const getInputStyle = (fieldName: string) => ({
+        padding: '10px 14px',
+        border: fieldErrors[fieldName] ? '1px solid #ef4444' : '1px solid #cbd5e1',
+        borderRadius: '6px',
+        outline: 'none',
+        backgroundColor: fieldErrors[fieldName] ? '#fef2f2' : 'white',
+        transition: '0.2s'
+    });
 
     return (
         <form onSubmit={handleSubmit}>
-
             {/* THÔNG BÁO THÀNH CÔNG */}
             {successMessage && (
                 <div style={{ padding: '12px', marginBottom: '20px', borderRadius: '6px', background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -100,7 +131,7 @@ export const UserForm: React.FC<UserFormProps> = ({
                 </div>
             )}
 
-            {/* THÔNG BÁO LỖI */}
+            {/* THÔNG BÁO LỖI CHUNG */}
             {displayError && (
                 <div style={{ padding: '12px', marginBottom: '20px', borderRadius: '6px', background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
@@ -113,10 +144,9 @@ export const UserForm: React.FC<UserFormProps> = ({
                     <label style={{ fontWeight: 500, color: '#334155' }}>Phân quyền (Role) *</label>
                     <select
                         name="role"
-                        className="form-control"
                         value={form.role}
                         onChange={handleChange}
-                        style={{ padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                        style={getInputStyle('role')}
                     >
                         <option value="STUDENT">Sinh viên (STUDENT)</option>
                         <option value="STAFF">Nhân viên Vận hành (STAFF)</option>
@@ -126,29 +156,29 @@ export const UserForm: React.FC<UserFormProps> = ({
 
                 {form.role === 'STUDENT' ? (
                     <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <label style={{ fontWeight: 500, color: '#334155' }}>Mã Sinh Viên</label>
+                        <label style={{ fontWeight: 500, color: '#334155' }}>Mã Sinh Viên *</label>
                         <input
                             type="text"
                             name="studentId"
-                            className="form-control"
                             value={form.studentId}
                             onChange={handleChange}
                             placeholder="VD: 2311063325"
-                            style={{ padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                            style={getInputStyle('studentId')}
                         />
+                        {fieldErrors.studentId && <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>{fieldErrors.studentId}</span>}
                     </div>
                 ) : (
                     <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <label style={{ fontWeight: 500, color: '#334155' }}>Phòng ban / Đơn vị</label>
+                        <label style={{ fontWeight: 500, color: '#334155' }}>Phòng ban / Đơn vị *</label>
                         <input
                             type="text"
                             name="department"
-                            className="form-control"
                             value={form.department}
                             onChange={handleChange}
                             placeholder="VD: Phòng Hành chính"
-                            style={{ padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                            style={getInputStyle('department')}
                         />
+                        {fieldErrors.department && <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>{fieldErrors.department}</span>}
                     </div>
                 )}
 
@@ -157,12 +187,12 @@ export const UserForm: React.FC<UserFormProps> = ({
                     <input
                         type="text"
                         name="fullName"
-                        className="form-control"
                         value={form.fullName}
                         onChange={handleChange}
                         placeholder="Nguyễn Văn A"
-                        style={{ padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                        style={getInputStyle('fullName')}
                     />
+                    {fieldErrors.fullName && <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>{fieldErrors.fullName}</span>}
                 </div>
 
                 <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -170,12 +200,12 @@ export const UserForm: React.FC<UserFormProps> = ({
                     <input
                         type="email"
                         name="email"
-                        className="form-control"
                         value={form.email}
                         onChange={handleChange}
                         placeholder="nva@eduspace.vn"
-                        style={{ padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                        style={getInputStyle('email')}
                     />
+                    {fieldErrors.email && <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>{fieldErrors.email}</span>}
                 </div>
 
                 <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -185,18 +215,17 @@ export const UserForm: React.FC<UserFormProps> = ({
                     <input
                         type="date"
                         name="dob"
-                        className="form-control"
                         value={form.dob}
                         onChange={handleChange}
-                        style={{ padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                        style={getInputStyle('dob')}
                     />
+                    {fieldErrors.dob && <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>{fieldErrors.dob}</span>}
                 </div>
             </div>
 
             <div style={{ display: 'flex', gap: '12px' }}>
                 <button
                     type="submit"
-                    className="btn-primary"
                     disabled={loading || !!successMessage}
                     style={{ background: '#2563eb', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '6px', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
                 >
