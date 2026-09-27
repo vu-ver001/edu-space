@@ -1,4 +1,5 @@
 import { Navigate, Outlet } from 'react-router-dom';
+import { jwtDecode } from 'jwt-decode'; // <-- THÊM DÒNG NÀY
 
 interface ProtectedRouteProps {
     allowedRoles?: string[];
@@ -16,6 +17,42 @@ export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
     if (!token || !user) {
         return <Navigate to="/login" replace />;
     }
+
+    // =========================================================================
+    // TRẠM KIỂM TRA AN NINH (THÊM MỚI): Chống hack đổi quyền bằng F12
+    // =========================================================================
+    try {
+        const decoded: any = jwtDecode(token);
+
+        // Kiểm tra xem token hết hạn chưa
+        const currentTime = Date.now() / 1000;
+        if (decoded.exp && decoded.exp < currentTime) {
+            localStorage.removeItem('eduspace_token');
+            localStorage.removeItem('eduspace_user');
+            return <Navigate to="/login" replace />;
+        }
+
+        // Tìm role thực sự được cất trong Token (cover nhiều tên gọi khác nhau từ Backend)
+        const realRole = decoded.role || decoded.roles || decoded.scope || decoded.authorities;
+
+        // Nếu trong token có thông tin role, ta đối chiếu xem nó có khớp với LocalStorage không.
+        // Nếu LocalStorage là ADMIN mà trong Token lại là STUDENT -> Bắt quả tang sửa bậy -> Đuổi 403
+        if (realRole) {
+            const isTampered = typeof realRole === 'string'
+                ? realRole !== user.role
+                : !realRole.includes(user.role); // Trường hợp role lưu dạng mảng ["STUDENT"]
+
+            if (isTampered) return <Navigate to="/403" replace />;
+        }
+    } catch (error) {
+        // Có người cố tình sửa nội dung chuỗi Token -> Token hỏng -> Đuổi về login
+        localStorage.removeItem('eduspace_token');
+        localStorage.removeItem('eduspace_user');
+        return <Navigate to="/login" replace />;
+    }
+    // =========================================================================
+    // KẾT THÚC ĐOẠN THÊM MỚI
+    // =========================================================================
 
     // 2. Đã đăng nhập nhưng sai Role -> Đuổi về trang báo lỗi 403 (hoặc trang chủ)
     if (allowedRoles && !allowedRoles.includes(user.role)) {

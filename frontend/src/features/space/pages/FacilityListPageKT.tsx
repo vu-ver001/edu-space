@@ -15,12 +15,14 @@ import {
   Package,
   Calendar,
   Clock,
+  RefreshCw,
 } from 'lucide-react';
 import type { Facility, FacilityCreateRequest, FacilityUpdateRequest } from '../types/space';
 import { facilityApi } from '../api/facilityApi';
 import { readSpaceApiError } from '../api/spaceApiError';
 import { FacilityFormModalKT } from '../components/FacilityFormModalKT';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
+import { FilterSelect } from '../../../components/common/FilterSelect';
 import { Tooltip } from '../../../components/common/Tooltip';
 import './FacilityListPageKT.css';
 
@@ -301,15 +303,32 @@ export const FacilityListPageKT: React.FC = () => {
                 />
               </div>
 
-              <select
+              <FilterSelect
                 className="facility-filter-select"
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as any)}
+                ariaLabel="Lọc theo trạng thái"
+                options={[
+                  { value: 'ALL', label: 'Tất cả trạng thái' },
+                  { value: 'IN_USE', label: 'Đang sử dụng' },
+                  { value: 'UNUSED', label: 'Chưa sử dụng' },
+                ]}
+                onChange={(value) => setStatusFilter(value as 'ALL' | 'IN_USE' | 'UNUSED')}
+              />
+
+              <button
+                type="button"
+                className="btn-filter-refresh-icon-only"
+                onClick={() => {
+                  setSearchText('');
+                  setStatusFilter('ALL');
+                  void fetchFacilities();
+                }}
+                disabled={loading}
+                title="Xóa bộ lọc và tải lại danh sách"
+                aria-label="Xóa bộ lọc và tải lại danh sách tiện ích"
               >
-                <option value="ALL">Tất cả trạng thái</option>
-                <option value="IN_USE">Đang sử dụng</option>
-                <option value="UNUSED">Chưa sử dụng</option>
-              </select>
+                <RefreshCw size={18} className={loading ? 'kt-control-spin' : ''} />
+              </button>
             </div>
           </div>
 

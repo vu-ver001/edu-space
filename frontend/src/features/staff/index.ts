@@ -8,3 +8,4 @@ export * from './api/maintenanceApi';
 export * from './api/auditLogApi';
 
 export * from './pages/BookingManagementPageKT';
+export * from './pages/MaintenanceManagementPageKT';

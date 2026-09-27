@@ -18,7 +18,9 @@ import {
 } from 'lucide-react';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
 import { Pagination } from '../../../components/common/Pagination';
+import { FilterSelect } from '../../../components/common/FilterSelect';
 import { StatusBadge } from '../../../components/common/StatusBadge';
+import { Tooltip } from '../../../components/common/Tooltip';
 import type { Space } from '../../space/types/space';
 import { spaceApi } from '../../space/api/spaceApi';
 import { formatImageUrl } from '../../../utils/imageUrl';
@@ -467,23 +469,36 @@ export const BookingManagementPageKT = () => {
               />
             </label>
             <label className="booking-filter-field">
-              <select aria-label="Không gian" value={spaceFilter} onChange={(event) => { setSpaceFilter(event.target.value); setCurrentPage(1); }}>
-                <option value="ALL">Tất cả không gian</option>
-                {spaces.map((space) => <option key={space.id} value={space.id}>{space.spaceCode} — {space.name}</option>)}
-              </select>
+              <FilterSelect
+                value={spaceFilter}
+                ariaLabel="Không gian"
+                options={[
+                  { value: 'ALL', label: 'Tất cả không gian' },
+                  ...spaces.map((space) => ({ value: String(space.id), label: `${space.spaceCode} — ${space.name}` })),
+                ]}
+                onChange={(value) => { setSpaceFilter(value); setCurrentPage(1); }}
+              />
             </label>
             <label className="booking-filter-field">
-              <select aria-label="Hình thức đặt" value={modeFilter} onChange={(event) => { setModeFilter(event.target.value); setCurrentPage(1); }}>
-                <option value="ALL">Tất cả hình thức</option>
-                <option value="WHOLE_SPACE">Nguyên phòng</option>
-                <option value="PER_TABLE">Theo bàn</option>
-                <option value="PER_SEAT">Theo ghế</option>
-              </select>
+              <FilterSelect
+                value={modeFilter}
+                ariaLabel="Hình thức đặt"
+                options={[
+                  { value: 'ALL', label: 'Tất cả hình thức' },
+                  { value: 'WHOLE_SPACE', label: 'Nguyên phòng' },
+                  { value: 'PER_TABLE', label: 'Theo bàn' },
+                  { value: 'PER_SEAT', label: 'Theo ghế' },
+                ]}
+                onChange={(value) => { setModeFilter(value); setCurrentPage(1); }}
+              />
             </label>
             <label className="booking-filter-field">
-              <select aria-label="Trạng thái" value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value as BookingStatus | 'ALL'); setCurrentPage(1); }}>
-                {STATUS_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-              </select>
+              <FilterSelect
+                value={statusFilter}
+                ariaLabel="Trạng thái"
+                options={STATUS_OPTIONS}
+                onChange={(value) => { setStatusFilter(value as BookingStatus | 'ALL'); setCurrentPage(1); }}
+              />
             </label>
             <button
               className="booking-refresh-btn"
@@ -605,13 +620,24 @@ export const BookingManagementPageKT = () => {
                           <td>
                             <div className="booking-student-cell">
                               <span className="booking-avatar small">{initials(booking.studentName)}</span>
-                              <span><strong>{booking.studentName || 'Sinh viên'}</strong><small>{booking.studentEmail}</small></span>
+                              <span>
+                                <Tooltip content={booking.studentName || 'Sinh viên'} maxWidth={320} onlyWhenOverflow>
+                                  <strong>{booking.studentName || 'Sinh viên'}</strong>
+                                </Tooltip>
+                                <Tooltip content={booking.studentEmail} maxWidth={360} onlyWhenOverflow>
+                                  <small>{booking.studentEmail}</small>
+                                </Tooltip>
+                              </span>
                             </div>
                           </td>
                           <td><strong>{space?.spaceCode || booking.spaceName}</strong><small>{booking.spaceName}<br />{booking.building} {booking.floor ? `• ${formatFloor(booking.floor)}` : ''}</small></td>
                           <td><strong>{formatDate(booking.startTime)}</strong><small>{formatTime(booking.startTime)} – {formatTime(booking.endTime)}</small></td>
                           <td><span className={`booking-mode-badge mode-${mode.toLowerCase()}`}>{modeLabel(mode)}</span></td>
-                          <td><span className="booking-purpose" title={booking.purpose}>{booking.purpose || '—'}</span></td>
+                          <td>
+                            <Tooltip content={booking.purpose || '—'} maxWidth={440} onlyWhenOverflow>
+                              <span className="booking-purpose">{booking.purpose || '—'}</span>
+                            </Tooltip>
+                          </td>
                           <td><StatusBadge status={booking.status} size="sm" /></td>
                           <td>
                             <div className="booking-row-actions">
