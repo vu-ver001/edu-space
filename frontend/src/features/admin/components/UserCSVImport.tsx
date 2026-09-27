@@ -15,11 +15,19 @@ export interface UserData {
 
 interface UserCSVImportProps {
     onSubmit: (csvData: UserData[], importType: string) => void;
-    onCancel: () => void; // Thêm prop đóng form
+    onCancel: () => void;
     loading?: boolean;
+    errorMessage?: string | null;
+    successMessage?: string | null;
 }
 
-export const UserCSVImport: React.FC<UserCSVImportProps> = ({ onSubmit, onCancel, loading = false }) => {
+export const UserCSVImport: React.FC<UserCSVImportProps> = ({
+                                                                onSubmit,
+                                                                onCancel,
+                                                                loading = false,
+                                                                errorMessage,
+                                                                successMessage
+                                                            }) => {
     const [importType, setImportType] = useState<'STUDENT' | 'STAFF'>('STUDENT');
     const [csvData, setCsvData] = useState<UserData[]>([]);
     const [fileName, setFileName] = useState<string>('');
@@ -77,7 +85,23 @@ export const UserCSVImport: React.FC<UserCSVImportProps> = ({ onSubmit, onCancel
     };
 
     return (
-        <div> {/* Bỏ class card-box đi để form nằm đẹp trong Modal */}
+        <div>
+            {/* THÔNG BÁO THÀNH CÔNG */}
+            {successMessage && (
+                <div style={{ padding: '12px', marginBottom: '20px', borderRadius: '6px', background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                    {successMessage}
+                </div>
+            )}
+
+            {/* THÔNG BÁO LỖI */}
+            {errorMessage && (
+                <div style={{ padding: '12px', marginBottom: '20px', borderRadius: '6px', background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    {errorMessage}
+                </div>
+            )}
+
             <div className="import-type-selector" style={{ display: 'flex', gap: '24px', marginBottom: '20px', padding: '16px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 500, cursor: 'pointer', color: '#1e293b' }}>
                     <input type="radio" name="importType" checked={importType === 'STUDENT'} onChange={() => { setImportType('STUDENT'); setCsvData([]); setFileName(''); }} />
@@ -132,7 +156,7 @@ export const UserCSVImport: React.FC<UserCSVImportProps> = ({ onSubmit, onCancel
                 <button
                     type="button"
                     onClick={onCancel}
-                    disabled={loading}
+                    disabled={loading || !!successMessage}
                     style={{ background: '#e2e8f0', color: '#334155', border: 'none', padding: '10px 20px', borderRadius: '6px', fontWeight: 600, cursor: 'pointer' }}
                 >
                     Hủy bỏ
@@ -140,7 +164,7 @@ export const UserCSVImport: React.FC<UserCSVImportProps> = ({ onSubmit, onCancel
                 <button
                     className="btn-primary"
                     onClick={() => onSubmit(csvData, importType)}
-                    disabled={loading || csvData.length === 0}
+                    disabled={loading || csvData.length === 0 || !!successMessage}
                     style={{ background: '#2563eb', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '6px', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
                 >
                     {loading ? 'Đang Import...' : 'Xác nhận Import'}
