@@ -20,6 +20,10 @@ public class StaffAuditLogResponseKT {
 
     private String actorEmail;
 
+    private String actorName;
+
+    private String actorRole;
+
     private StaffAuditAction action;
 
     private String actionDescription;
@@ -28,7 +32,11 @@ public class StaffAuditLogResponseKT {
 
     private Long targetId;
 
+    private String targetLabel;
+
     private Long spaceId;
+
+    private String spaceName;
 
     private String details;
 

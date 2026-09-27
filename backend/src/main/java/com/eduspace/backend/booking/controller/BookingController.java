@@ -63,9 +63,9 @@ public class BookingController {
 
     /**
      * Xem lịch sử thao tác của booking:
-     * GET /api/bookings/{id}/history
+     * GET /api/bookings/{id}/history (cũ) hoặc /api/bookings/{id}/audit-logs (frontend AuditLogModal)
      */
-    @GetMapping({"/{id}/history"})
+    @GetMapping({"/{id}/history", "/{id}/audit-logs"})
     @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('STUDENT', 'STAFF', 'ADMIN')")
     public ResponseEntity<List<BookingAuditLogResponse>> getBookingAuditLogs(@PathVariable Long id) {
         return ResponseEntity.ok(bookingService.getBookingAuditLogs(id));
