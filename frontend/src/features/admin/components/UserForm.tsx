@@ -36,10 +36,7 @@ export const UserForm: React.FC<UserFormProps> = ({
         department: ''
     });
 
-    // State lưu lỗi chung (như lỗi API trả về)
     const [localError, setLocalError] = useState<string | null>(null);
-
-    // State lưu lỗi riêng cho từng ô input
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
     useEffect(() => {
@@ -59,7 +56,6 @@ export const UserForm: React.FC<UserFormProps> = ({
         const { name, value } = e.target;
         setForm({ ...form, [name]: value });
 
-        // Xóa lỗi của ô đó khi người dùng bắt đầu nhập lại
         if (fieldErrors[name]) {
             setFieldErrors(prev => ({ ...prev, [name]: '' }));
         }
@@ -78,21 +74,19 @@ export const UserForm: React.FC<UserFormProps> = ({
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Khởi tạo object chứa các lỗi
         const errors: Record<string, string> = {};
 
-        // Bắt lỗi từng trường bắt buộc
         if (!form.fullName.trim()) errors.fullName = 'Vui lòng nhập Họ và Tên';
         if (!form.email.trim()) errors.email = 'Vui lòng nhập Địa chỉ Email';
         if (!form.dob) errors.dob = 'Vui lòng chọn Ngày sinh';
-        if (form.role === 'STUDENT' && !form.studentId.trim()) {
+
+        if (form.role === 'STUDENT' && !form.studentId?.trim()) {
             errors.studentId = 'Vui lòng nhập Mã Sinh Viên';
         }
-        if (form.role !== 'STUDENT' && !form.department.trim()) {
+        if (form.role !== 'STUDENT' && !form.department?.trim()) {
             errors.department = 'Vui lòng nhập Phòng ban / Đơn vị';
         }
 
-        // Nếu có lỗi, cập nhật state và dừng submit
         if (Object.keys(errors).length > 0) {
             setFieldErrors(errors);
             setLocalError('Vui lòng kiểm tra lại các trường bị lỗi bên dưới.');
@@ -111,19 +105,20 @@ export const UserForm: React.FC<UserFormProps> = ({
 
     const displayError = localError || errorMessage;
 
-    // Style dùng chung cho ô input để tái sử dụng
-    const getInputStyle = (fieldName: string) => ({
+    // Bổ sung tham số isDisabled để đổi style (nền xám, con trỏ cấm)
+    const getInputStyle = (fieldName: string, isDisabled: boolean = false) => ({
         padding: '10px 14px',
         border: fieldErrors[fieldName] ? '1px solid #ef4444' : '1px solid #cbd5e1',
         borderRadius: '6px',
         outline: 'none',
-        backgroundColor: fieldErrors[fieldName] ? '#fef2f2' : 'white',
+        backgroundColor: isDisabled ? '#f1f5f9' : (fieldErrors[fieldName] ? '#fef2f2' : 'white'),
+        color: isDisabled ? '#64748b' : '#0f172a',
+        cursor: isDisabled ? 'not-allowed' : 'text',
         transition: '0.2s'
     });
 
     return (
         <form onSubmit={handleSubmit}>
-            {/* THÔNG BÁO THÀNH CÔNG */}
             {successMessage && (
                 <div style={{ padding: '12px', marginBottom: '20px', borderRadius: '6px', background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
@@ -131,7 +126,6 @@ export const UserForm: React.FC<UserFormProps> = ({
                 </div>
             )}
 
-            {/* THÔNG BÁO LỖI CHUNG */}
             {displayError && (
                 <div style={{ padding: '12px', marginBottom: '20px', borderRadius: '6px', background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
@@ -146,7 +140,8 @@ export const UserForm: React.FC<UserFormProps> = ({
                         name="role"
                         value={form.role}
                         onChange={handleChange}
-                        style={getInputStyle('role')}
+                        style={getInputStyle('role', isEditMode)}
+                        disabled={isEditMode}
                     >
                         <option value="STUDENT">Sinh viên (STUDENT)</option>
                         <option value="STAFF">Nhân viên Vận hành (STAFF)</option>
@@ -163,7 +158,8 @@ export const UserForm: React.FC<UserFormProps> = ({
                             value={form.studentId}
                             onChange={handleChange}
                             placeholder="VD: 2311063325"
-                            style={getInputStyle('studentId')}
+                            style={getInputStyle('studentId', isEditMode)}
+                            disabled={isEditMode}
                         />
                         {fieldErrors.studentId && <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>{fieldErrors.studentId}</span>}
                     </div>
@@ -176,7 +172,8 @@ export const UserForm: React.FC<UserFormProps> = ({
                             value={form.department}
                             onChange={handleChange}
                             placeholder="VD: Phòng Hành chính"
-                            style={getInputStyle('department')}
+                            style={getInputStyle('department', isEditMode)}
+                            disabled={isEditMode}
                         />
                         {fieldErrors.department && <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>{fieldErrors.department}</span>}
                     </div>
@@ -203,7 +200,8 @@ export const UserForm: React.FC<UserFormProps> = ({
                         value={form.email}
                         onChange={handleChange}
                         placeholder="nva@eduspace.vn"
-                        style={getInputStyle('email')}
+                        style={getInputStyle('email', isEditMode)}
+                        disabled={isEditMode}
                     />
                     {fieldErrors.email && <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>{fieldErrors.email}</span>}
                 </div>
