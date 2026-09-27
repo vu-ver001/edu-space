@@ -319,10 +319,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .btn-action-icon {
+  box-sizing: border-box;
   width: 32px;
   height: 32px;
   border-radius: 8px;
@@ -332,40 +333,41 @@
   cursor: pointer;
   transition: all 0.15s ease;
   padding: 0;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
 }
 
 .btn-action-view {
   background: #ffffff;
-  border: 1px solid #e2e8f0;
-  color: #475569;
 }
 
 .btn-action-view:hover {
-  background: #f8fafc;
-  color: #0f172a;
-  border-color: #cbd5e1;
-}
-
-.btn-action-edit {
+  border-color: #93c5fd;
   background: #eff6ff;
-  border: 1px solid #dbeafe;
   color: #2563eb;
 }
 
+.btn-action-edit {
+  background: #ffffff;
+}
+
 .btn-action-edit:hover {
-  background: #dbeafe;
-  color: #1d4ed8;
+  border-color: #c7d2fe;
+  background: #eef2ff;
+  color: #4f46e5;
 }
 
 .btn-action-delete {
-  background: #fef2f2;
-  border: 1px solid #fee2e2;
+  background: #ffffff;
+  border-color: #fecdd3;
   color: #ef4444;
 }
 
 .btn-action-delete:hover {
-  background: #fee2e2;
-  color: #b91c1c;
+  border-color: #fda4af;
+  background: #fff1f2;
+  color: #e11d48;
 }
 
 /* ========================================================
