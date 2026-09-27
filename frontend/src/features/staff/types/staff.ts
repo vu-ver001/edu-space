@@ -141,11 +141,31 @@ export interface StaffAuditLog {
   id: number;
   actorUserId: number;
   actorEmail: string;
+  actorName?: string;
+  actorRole?: string;
   action: StaffAuditAction;
   actionDescription?: string;
   targetType: string;
   targetId: number;
+  targetLabel?: string;
   spaceId?: number;
+  spaceName?: string;
   details?: string;
   createdAt: string;
+}
+
+export interface StaffAuditLogPage {
+  content: StaffAuditLog[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
+export interface StaffAuditStats {
+  totalActions: number;
+  approvedCount: number;
+  rejectedCount: number;
+  checkInCount: number;
+  maintenanceCount: number;
 }
