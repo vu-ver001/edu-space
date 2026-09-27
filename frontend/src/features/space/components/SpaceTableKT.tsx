@@ -124,7 +124,7 @@ export const SpaceTableKT: React.FC<Props> = ({
 
                   {/* 2. Mã không gian (Lấy trực tiếp từ CSDL: cột space_code) */}
                   <td className="col-compact">
-                    <span className="space-code-badge">
+                    <span className="space-code-text">
                       {item.spaceCode || '—'}
                     </span>
                   </td>
