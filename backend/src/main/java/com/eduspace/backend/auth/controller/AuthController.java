@@ -12,6 +12,10 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import com.eduspace.backend.auth.dto.request.ChangePasswordRequest;
+import org.springframework.security.authentication.BadCredentialsException;
+import java.util.Map;
+import com.eduspace.backend.auth.service.UserService;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -63,5 +67,24 @@ public class AuthController {
                 .build();
 
         return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/change-password")
+    public ResponseEntity<?> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+        try {
+            // Lấy id/email của người dùng đang gọi API từ JWT Token
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String currentUser = authentication.getName();
+
+            // Gọi UserService qua instance (lưu ý: bạn cần inject UserService vào AuthController)
+            // Nếu AuthController chưa có UserService, hãy thêm vào constructor nhé!
+            userService.changePassword(currentUser, request);
+
+            return ResponseEntity.ok(Map.of("message", "Đổi mật khẩu thành công!"));
+        } catch (BadCredentialsException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("message", "Có lỗi xảy ra, vui lòng thử lại sau."));
+        }
     }
 }
