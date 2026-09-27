@@ -1,51 +1,64 @@
 import { Navigate, Outlet } from 'react-router-dom';
-import { jwtDecode } from 'jwt-decode';
+import { jwtDecode } from 'jwt-decode'; // <-- THÊM DÒNG NÀY
 
 interface ProtectedRouteProps {
     allowedRoles?: string[];
 }
 
-// Khai báo cấu trúc dữ liệu mà Backend giấu bên trong Token
-interface JwtPayload {
-    role: string;
-    exp?: number; // Thời gian hết hạn của token
-    // Có thể thêm id, username... tùy backend cấu hình
-}
-
 export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
+    // Đọc token theo đúng key mà file api.ts đã định nghĩa
     const token = localStorage.getItem('eduspace_token');
 
-    // 1. Không có token -> Đuổi về trang login
-    if (!token) {
+    // Giả sử thông tin user (id, email, role) được lưu dưới key 'user' khi login thành công
+    const userStr = localStorage.getItem('eduspace_user');
+    const user = userStr ? JSON.parse(userStr) : null;
+
+    // 1. Chưa đăng nhập -> Đuổi về trang login
+    if (!token || !user) {
         return <Navigate to="/login" replace />;
     }
 
+    // =========================================================================
+    // TRẠM KIỂM TRA AN NINH (THÊM MỚI): Chống hack đổi quyền bằng F12
+    // =========================================================================
     try {
-        // Bóc tách token. Bất cứ hành động tự sửa token nào cũng sẽ làm token bị hỏng và nhảy xuống block catch.
-        const decoded = jwtDecode<JwtPayload>(token);
+        const decoded: any = jwtDecode(token);
 
-        // (Tùy chọn) Kiểm tra Token đã hết hạn chưa
-        if (decoded.exp) {
-            const currentTime = Date.now() / 1000;
-            if (decoded.exp < currentTime) {
-                // Hết hạn -> Xóa rác và đuổi về login
-                localStorage.removeItem('eduspace_token');
-                localStorage.removeItem('eduspace_user');
-                return <Navigate to="/login" replace />;
-            }
+        // Kiểm tra xem token hết hạn chưa
+        const currentTime = Date.now() / 1000;
+        if (decoded.exp && decoded.exp < currentTime) {
+            localStorage.removeItem('eduspace_token');
+            localStorage.removeItem('eduspace_user');
+            return <Navigate to="/login" replace />;
         }
 
-        // 2. Kiểm tra Role thực sự lấy từ bên trong Token
-        if (allowedRoles && !allowedRoles.includes(decoded.role)) {
-            return <Navigate to="/403" replace />;
-        }
+        // Tìm role thực sự được cất trong Token (cover nhiều tên gọi khác nhau từ Backend)
+        const realRole = decoded.role || decoded.roles || decoded.scope || decoded.authorities;
 
-        // 3. Hợp lệ -> Cho phép render component
-        return <Outlet />;
+        // Nếu trong token có thông tin role, ta đối chiếu xem nó có khớp với LocalStorage không.
+        // Nếu LocalStorage là ADMIN mà trong Token lại là STUDENT -> Bắt quả tang sửa bậy -> Đuổi 403
+        if (realRole) {
+            const isTampered = typeof realRole === 'string'
+                ? realRole !== user.role
+                : !realRole.includes(user.role); // Trường hợp role lưu dạng mảng ["STUDENT"]
+
+            if (isTampered) return <Navigate to="/403" replace />;
+        }
     } catch (error) {
-        // Token bị can thiệp sai định dạng -> Xóa và đuổi về login ngay
+        // Có người cố tình sửa nội dung chuỗi Token -> Token hỏng -> Đuổi về login
         localStorage.removeItem('eduspace_token');
         localStorage.removeItem('eduspace_user');
         return <Navigate to="/login" replace />;
     }
+    // =========================================================================
+    // KẾT THÚC ĐOẠN THÊM MỚI
+    // =========================================================================
+
+    // 2. Đã đăng nhập nhưng sai Role -> Đuổi về trang báo lỗi 403 (hoặc trang chủ)
+    if (allowedRoles && !allowedRoles.includes(user.role)) {
+        return <Navigate to="/403" replace />;
+    }
+
+    // 3. Hợp lệ -> Cho phép render component con bên trong
+    return <Outlet />;
 };
