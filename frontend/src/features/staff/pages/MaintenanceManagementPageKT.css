@@ -64,7 +64,7 @@
   border: 1.5px solid;
   border-radius: 18px;
   box-shadow: 0 2px 10px rgba(15, 23, 42, 0.035);
-  transition: transform 0.25s, box-shadow 0.25s;
+  transition: transform 0.25s, box-shadow 0.25s, border-color 0.25s;
 }
 
 .maintenance-stat-card:hover { transform: translateY(-4px); }
@@ -74,12 +74,16 @@
 .maintenance-stat-card strong { font-size: 38px; line-height: 1; letter-spacing: -0.035em; }
 
 .maintenance-stat-card.total { color: #1d4ed8; background: #f0f7ff; border-color: #dbeafe; }
+.maintenance-stat-card.total:hover { border-color: #bfdbfe; box-shadow: 0 10px 24px -4px rgba(37, 99, 235, 0.12); }
 .maintenance-stat-card.total strong { color: #1e3a8a; }
 .maintenance-stat-card.upcoming { color: #b45309; background: #fffbeb; border-color: #fef3c7; }
+.maintenance-stat-card.upcoming:hover { border-color: #fde68a; box-shadow: 0 10px 24px -4px rgba(217, 119, 6, 0.12); }
 .maintenance-stat-card.upcoming strong { color: #78350f; }
-.maintenance-stat-card.progress { color: #c2410c; background: #fff7ed; border-color: #fed7aa; }
+.maintenance-stat-card.progress { color: #c2410c; background: #fff7ed; border-color: #ffedd5; }
+.maintenance-stat-card.progress:hover { border-color: #fed7aa; box-shadow: 0 10px 24px -4px rgba(234, 88, 12, 0.12); }
 .maintenance-stat-card.progress strong { color: #7c2d12; }
 .maintenance-stat-card.completed { color: #15803d; background: #f0fdf4; border-color: #dcfce7; }
+.maintenance-stat-card.completed:hover { border-color: #bbf7d0; box-shadow: 0 10px 24px -4px rgba(22, 163, 74, 0.12); }
 .maintenance-stat-card.completed strong { color: #14532d; }
 
 .maintenance-list-panel {
@@ -248,7 +252,10 @@
 }
 .maintenance-table th:nth-child(4) { width: 235px; }
 .maintenance-table th:nth-child(5) { width: 165px; }
-.maintenance-table th:nth-child(6) { width: 120px; }
+.maintenance-table th:nth-child(6) {
+  width: 120px;
+  text-align: center;
+}
 .maintenance-table th:nth-child(7) { width: 100px; text-align: center; white-space: nowrap; }
 
 .maintenance-table tbody tr { position: relative; transition: background 0.15s, box-shadow 0.15s; }
@@ -261,6 +268,7 @@
 
 .maintenance-table td:first-child { text-align: center; }
 .maintenance-table td:nth-child(3) { text-align: center; }
+.maintenance-table td:nth-child(6) { text-align: center; }
 .maintenance-row-number { color: #64748b; font-size: 13.5px; font-weight: 500; }
 .maintenance-space-cell { min-width: 0; }
 .maintenance-space-cell strong { display: block; color: #0f172a; font-size: 13.5px; font-weight: 600; }
