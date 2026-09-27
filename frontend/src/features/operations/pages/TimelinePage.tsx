@@ -18,16 +18,44 @@ import {
   UsersRound,
   X,
 } from 'lucide-react';
-import { getMockTimeline, hasTimelineConflict, timelineSpaces } from '../mockOperations';
+import { hasTimelineConflict, timelineSpaces } from '../mockOperations';
+import { staffApi } from '../../staff/api/staffApi';
+import { spaceApi } from '../../space/api/spaceApi';
+import type { StaffTimelineEvent } from '../../staff/types/staff';
 import type { OperationsSpace, OperationsTimelineEvent, TimelineEventType, TimelineQuery } from '../types';
 import '../operations.css';
+
+const toTimelineISO = (dateOnly: string, endOfDay = false) =>
+  `${dateOnly}T${endOfDay ? '23:59:59' : '00:00:00'}`;
+
+const mapStaffEventToOperations = (event: StaffTimelineEvent): OperationsTimelineEvent => {
+  const isBooking = event.eventType === 'BOOKING';
+  const displayCode = isBooking ? `BK-${event.eventId}` : `MT-${event.eventId}`;
+  const tableLabel = event.tableCode
+    ?? (event.selectedSeats && event.selectedSeats.length > 0 ? event.selectedSeats.join(', ') : undefined);
+  return {
+    eventType: event.eventType,
+    eventId: event.eventId,
+    displayCode,
+    spaceId: event.spaceId,
+    spaceName: event.spaceName,
+    startTime: event.startTime,
+    endTime: event.endTime,
+    status: event.status as OperationsTimelineEvent['status'],
+    title: event.title,
+    purpose: event.purpose ?? event.reason ?? event.title,
+    participantName: event.studentName,
+    participantCount: event.participantCount,
+    tableLabel,
+    reason: event.reason,
+    createdBy: event.creatorEmail ?? event.studentEmail ?? '',
+    createdAt: event.createdAt,
+  };
+};
 
 type ViewMode = 'day' | 'week' | 'list';
 type LoadMode = 'loading' | 'refreshing';
 
-const sampleDate = '2026-09-19';
-const sampleFrom = '2026-09-19';
-const sampleTo = '2026-09-25';
 const timelineStartHour = 6;
 const timelineEndHour = 24;
 const timelineDurationMinutes = (timelineEndHour - timelineStartHour) * 60;
@@ -428,7 +456,8 @@ const BookingDetailItem = ({ icon, label, value, secondary }: BookingDetailItemP
 
 const TimelineEventModal = ({ event, conflicts, onClose }: EventModalProps) => {
   const isBooking = event.eventType === 'BOOKING';
-  const selectedSpace = timelineSpaces.find((space) => space.id === event.spaceId);
+  const selectedSpace = timelineSpaces.find((space) => space.id === event.spaceId)
+    ?? { id: event.spaceId, name: event.spaceName };
   const detailStatus = detailStatusLabels[event.status] ?? event.status;
   const statusIcon = event.status === 'CONFIRMED'
     ? <CheckCircle2 size={17} />
@@ -501,17 +530,21 @@ const TimelineEventModal = ({ event, conflicts, onClose }: EventModalProps) => {
 
 export const TimelinePage = () => {
   const defaultSpaceId = timelineSpaces[1]?.id ?? timelineSpaces[0]?.id ?? 1;
+  const initialToday = useMemo(() => toDateInput(new Date()), []);
+  const initialNextWeek = useMemo(() => addDays(initialToday, 6), [initialToday]);
+
   const [selectedSpaceId, setSelectedSpaceId] = useState(defaultSpaceId);
-  const [selectedDate, setSelectedDate] = useState(sampleDate);
-  const [calendarMonth, setCalendarMonth] = useState(startOfMonth(sampleDate));
-  const [fromDate, setFromDate] = useState(sampleFrom);
-  const [toDate, setToDate] = useState(sampleTo);
+  const [selectedDate, setSelectedDate] = useState(initialToday);
+  const [calendarMonth, setCalendarMonth] = useState(() => startOfMonth(initialToday));
+  const [fromDate, setFromDate] = useState(initialToday);
+  const [toDate, setToDate] = useState(initialNextWeek);
   const [eventType, setEventType] = useState<TimelineEventType | ''>('');
   const [status, setStatus] = useState('');
   const [spaceSearch, setSpaceSearch] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('day');
-  const [appliedQuery, setAppliedQuery] = useState<TimelineQuery>({ spaceId: defaultSpaceId, from: sampleFrom, to: sampleTo });
+  const [appliedQuery, setAppliedQuery] = useState<TimelineQuery>({ spaceId: defaultSpaceId, from: initialToday, to: initialNextWeek });
   const [events, setEvents] = useState<OperationsTimelineEvent[]>([]);
+  const [spaces, setSpaces] = useState<OperationsSpace[]>(timelineSpaces);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
@@ -519,11 +552,32 @@ export const TimelinePage = () => {
   const [selectedEvent, setSelectedEvent] = useState<OperationsTimelineEvent | null>(null);
 
   const loadTimeline = useCallback(async (query: TimelineQuery, mode: LoadMode = 'loading') => {
+    if (!query.spaceId) {
+      setEvents([]);
+      return;
+    }
     if (mode === 'refreshing') setRefreshing(true);
     else setLoading(true);
     setError('');
     try {
-      setEvents(await getMockTimeline(query));
+      const timeline = await staffApi.getSpaceTimeline(
+        query.spaceId,
+        toTimelineISO(query.from),
+        toTimelineISO(query.to, true),
+      );
+      const mapped = (timeline.events ?? []).map(mapStaffEventToOperations);
+      const filtered = mapped
+        .filter((event) => !query.eventType || event.eventType === query.eventType)
+        .filter((event) => event.startTime.slice(0, 10) >= query.from && event.startTime.slice(0, 10) <= query.to)
+        .filter((event) => !query.status
+          || (query.status === 'CONFLICT'
+            ? mapped.some((other) => other !== event
+              && other.spaceId === event.spaceId
+              && new Date(event.startTime).getTime() < new Date(other.endTime).getTime()
+              && new Date(other.startTime).getTime() < new Date(event.endTime).getTime())
+            : event.status === query.status))
+        .sort((a, b) => a.startTime.localeCompare(b.startTime));
+      setEvents(filtered);
     } catch {
       setError('Không thể tải timeline. Vui lòng thử lại.');
     } finally {
@@ -536,13 +590,37 @@ export const TimelinePage = () => {
     void loadTimeline(appliedQuery);
   }, [appliedQuery, loadTimeline]);
 
-  const selectedSpace = timelineSpaces.find((space) => space.id === selectedSpaceId) ?? timelineSpaces[0];
+  useEffect(() => {
+    let cancelled = false;
+    spaceApi.getAllSpaces()
+      .then((realSpaces) => {
+        if (cancelled || !Array.isArray(realSpaces) || realSpaces.length === 0) return;
+        const mapped: OperationsSpace[] = realSpaces.map((space) => ({
+          id: space.id,
+          name: space.name,
+          location: [space.building, space.floor].filter(Boolean).join(' · '),
+        }));
+        setSpaces(mapped);
+        // Nếu spaceId mặc định từ mock không tồn tại trong DB thật, chuyển sang space thật đầu tiên.
+        if (!mapped.some((space) => space.id === defaultSpaceId)) {
+          const firstId = mapped[0]?.id ?? defaultSpaceId;
+          setSelectedSpaceId(firstId);
+          setAppliedQuery((prev) => (prev.spaceId === defaultSpaceId ? { ...prev, spaceId: firstId } : prev));
+        }
+      })
+      .catch(() => {})
+    return () => { cancelled = true; };
+    // Chỉ chạy 1 lần khi mount để đồng bộ space thật; defaultSpaceId ổn định từ mock.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const selectedSpace = spaces.find((space) => space.id === selectedSpaceId) ?? spaces[0] ?? timelineSpaces[0];
   const visibleSpaces = useMemo(() => {
     const keyword = spaceSearch.trim().toLocaleLowerCase('vi-VN');
     return keyword
-      ? timelineSpaces.filter((space) => `${space.name} ${space.location ?? ''}`.toLocaleLowerCase('vi-VN').includes(keyword))
-      : timelineSpaces;
-  }, [spaceSearch]);
+      ? spaces.filter((space) => `${space.name} ${space.location ?? ''}`.toLocaleLowerCase('vi-VN').includes(keyword))
+      : spaces;
+  }, [spaceSearch, spaces]);
 
   const monthCells = useMemo(() => {
     const leadingDays = (calendarMonth.getDay() + 6) % 7;
@@ -570,13 +648,51 @@ export const TimelinePage = () => {
     setAppliedQuery(nextQuery);
   };
 
-  const selectDate = (date: string) => {
+  const selectDate = (date: string, targetMode?: ViewMode) => {
     setSelectedDate(date);
     setCalendarMonth(startOfMonth(date));
+
+    const effectiveMode = targetMode ?? viewMode;
+    if (effectiveMode === 'week') {
+      const monday = startOfWeek(date);
+      const sunday = addDays(monday, 6);
+      if (appliedQuery.from !== monday || appliedQuery.to !== sunday) {
+        setFromDate(monday);
+        setToDate(sunday);
+        setAppliedQuery((prev) => ({ ...prev, from: monday, to: sunday }));
+      }
+    } else if (effectiveMode === 'day') {
+      if (date < appliedQuery.from || date > appliedQuery.to) {
+        setFromDate(date);
+        const nextWeek = addDays(date, 6);
+        setToDate(nextWeek);
+        setAppliedQuery((prev) => ({ ...prev, from: date, to: nextWeek }));
+      }
+    }
+  };
+
+  const handleViewModeChange = (nextMode: ViewMode) => {
+    setViewMode(nextMode);
+    if (nextMode === 'week') {
+      const monday = startOfWeek(selectedDate);
+      const sunday = addDays(monday, 6);
+      if (appliedQuery.from !== monday || appliedQuery.to !== sunday) {
+        setFromDate(monday);
+        setToDate(sunday);
+        setAppliedQuery((prev) => ({ ...prev, from: monday, to: sunday }));
+      }
+    } else if (nextMode === 'day') {
+      if (selectedDate < appliedQuery.from || selectedDate > appliedQuery.to) {
+        setFromDate(selectedDate);
+        const nextWeek = addDays(selectedDate, 6);
+        setToDate(nextWeek);
+        setAppliedQuery((prev) => ({ ...prev, from: selectedDate, to: nextWeek }));
+      }
+    }
   };
 
   const openDay = (date: string) => {
-    selectDate(date);
+    selectDate(date, 'day');
     setViewMode('day');
   };
 
@@ -592,13 +708,16 @@ export const TimelinePage = () => {
     setValidationError('');
     const query: TimelineQuery = { spaceId: selectedSpaceId, from: fromDate, to: toDate, eventType, status };
     setAppliedQuery(query);
-    if (selectedDate < fromDate || selectedDate > toDate) selectDate(fromDate);
+    if (selectedDate < fromDate || selectedDate > toDate) {
+      setSelectedDate(fromDate);
+      setCalendarMonth(startOfMonth(fromDate));
+    }
   };
 
   const resetFilters = () => {
     const today = toDateInput(new Date());
     const nextWeek = addDays(today, 6);
-    const firstSpaceId = timelineSpaces[0]?.id ?? 1;
+    const firstSpaceId = spaces[0]?.id ?? timelineSpaces[0]?.id ?? 1;
     const query: TimelineQuery = { spaceId: firstSpaceId, from: today, to: nextWeek };
     setSelectedSpaceId(firstSpaceId);
     setFromDate(today);
@@ -633,7 +752,7 @@ export const TimelinePage = () => {
         <label className="calendar-filter-field calendar-space-filter">
           <span>Không gian</span>
           <select value={selectedSpaceId} onChange={(event) => selectSpace(Number(event.target.value))} disabled={loading || refreshing}>
-            {timelineSpaces.map((space) => <option key={space.id} value={space.id}>{space.name}</option>)}
+            {spaces.map((space) => <option key={space.id} value={space.id}>{space.name}</option>)}
           </select>
         </label>
         <label className="calendar-filter-field">
@@ -693,7 +812,16 @@ export const TimelinePage = () => {
           <header className="schedule-card-header">
             <div><h2>{viewMode === 'week' ? `Tuần ${formatDateOnly(`${weekDates[0]}T00:00:00`)} – ${formatDateOnly(`${weekDates[6]}T00:00:00`)}` : formatDateHeading(selectedDate)}</h2><span>{selectedSpace?.name}</span></div>
             <div className="schedule-view-switcher" role="group" aria-label="Chế độ xem">
-              {([['day', 'Ngày'], ['week', 'Tuần'], ['list', 'Danh sách']] as const).map(([value, label]) => <button type="button" key={value} className={viewMode === value ? 'is-active' : ''} onClick={() => setViewMode(value)}>{label}</button>)}
+              {([['day', 'Ngày'], ['week', 'Tuần'], ['list', 'Danh sách']] as const).map(([value, label]) => (
+                <button
+                  type="button"
+                  key={value}
+                  className={viewMode === value ? 'is-active' : ''}
+                  onClick={() => handleViewModeChange(value)}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
           </header>
 
