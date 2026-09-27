@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../../services/api';
+import { UserForm } from '../components/UserForm';
 
 const userStyles = `
   .user-mgt-container { max-width: 1100px; margin: 0 auto; padding-bottom: 40px; font-family: 'Inter', sans-serif; }
@@ -13,7 +14,8 @@ const userStyles = `
   
   .card-box { background: white; border-radius: 10px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; }
   
-  .toolbar { display: flex; justify-content: space-between; margin-bottom: 16px; align-items: center; }
+  .toolbar { display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .toolbar-left { display: flex; gap: 16px; align-items: center; flex: 1; }
   .search-input { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; width: 300px; outline: none; transition: 0.2s; }
   .search-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15); }
   
@@ -34,12 +36,6 @@ const userStyles = `
   .action-btn { background: none; border: none; cursor: pointer; color: #64748b; padding: 6px; border-radius: 4px; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; }
   .action-btn:hover { background: #e2e8f0; color: #0f172a; }
   .action-btn.danger:hover { background: #fee2e2; color: #991b1b; }
-  
-  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
-  .form-group { display: flex; flex-direction: column; gap: 8px; }
-  .form-group label { font-weight: 500; color: #334155; font-size: 0.95rem; }
-  .form-control { padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95rem; outline: none; }
-  .form-control:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15); }
   
   .btn-primary { background: #2563eb; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 8px; }
   .btn-primary:hover { background: #1d4ed8; }
@@ -68,22 +64,24 @@ interface UserData {
 }
 
 export const UserManagementPage = () => {
-    const [activeTab, setActiveTab] = useState<'list' | 'manual' | 'csv'>('list');
+    // Chỉ còn 2 tab: Danh sách và Import CSV
+    const [activeTab, setActiveTab] = useState<'list' | 'csv'>('list');
     const [loading, setLoading] = useState(false);
     const [listFilter, setListFilter] = useState<'ALL' | 'STUDENT' | 'STAFF' | 'ADMIN'>('ALL');
 
-    // State lưu dữ liệu thật từ Backend
     const [usersList, setUsersList] = useState<UserData[]>([]);
 
-    const [manualForm, setManualForm] = useState<UserData>({
-        fullName: '', dob: '', email: '', role: 'STUDENT', studentId: '', department: ''
-    });
+    // STATE QUẢN LÝ MODAL (Dùng chung cho cả Create và Edit)
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingUser, setEditingUser] = useState<UserData | null>(null);
+
+    const [modalError, setModalError] = useState<string | null>(null);
+    const [modalSuccess, setModalSuccess] = useState<string | null>(null);
 
     const [importType, setImportType] = useState<'STUDENT' | 'STAFF'>('STUDENT');
     const [csvData, setCsvData] = useState<UserData[]>([]);
     const [fileName, setFileName] = useState<string>('');
 
-    // 1. GỌI API LẤY DANH SÁCH USER KHI MỞ TAB 'list'
     useEffect(() => {
         if (activeTab === 'list') {
             fetchUsers();
@@ -101,62 +99,72 @@ export const UserManagementPage = () => {
 
     const filteredUsers = usersList.filter(user => listFilter === 'ALL' || user.role === listFilter);
 
-    const handleManualChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        setManualForm({ ...manualForm, [e.target.name]: e.target.value });
+    // Mở Popup để THÊM MỚI
+    const handleOpenCreateModal = () => {
+        setEditingUser(null);
+        setIsModalOpen(true);
+        setModalSuccess(null);
+        setIsModalOpen(true);
     };
 
-    // 2. GỌI API THÊM USER THỦ CÔNG
-    const handleSaveManual = async () => {
-        if (!manualForm.email || !manualForm.fullName || !manualForm.dob) {
-            return alert('Vui lòng điền đủ thông tin bắt buộc (Họ Tên, Email, Ngày sinh)');
-        }
+    // Mở Popup để CHỈNH SỬA
+    const handleOpenEditModal = (user: UserData) => {
+        setEditingUser(user);
+        setIsModalOpen(true);
+        setModalSuccess(null);
+        setIsModalOpen(true);
+    };
 
+    // Đóng Popup
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+        setEditingUser(null);
+        setModalError(null);
+        setModalSuccess(null);
+    };
+
+    // XỬ LÝ LƯU (Gộp chung luồng POST và PUT)
+    const handleSubmitForm = async (payload: any) => {
+        setModalError(null);
+        setModalSuccess(null);
         setLoading(true);
         try {
-            const formatPasswordFromDob = (dobStr: string) => {
-                if (!dobStr) return '123456';
-                const parts = dobStr.split('-'); // Tách [2005, 05, 18]
-                if (parts.length === 3) {
-                    return parts[2] + parts[1] + parts[0]; // Đảo thành 18052005
-                }
-                return dobStr.replace(/[-/]/g, '');
-            };
+            if (editingUser?.id) {
+                await api.put(`/api/users/${editingUser.id}`, payload);
+                setModalSuccess('Cập nhật thông tin tài khoản thành công!');
+            } else {
+                await api.post('/api/users', payload);
+                setModalSuccess('Tạo tài khoản thành công!');
+                setListFilter(payload.role);
+            }
 
-            const payload = {
-                email: manualForm.email,
-                fullName: manualForm.fullName,
-                role: manualForm.role,
-                dob: manualForm.dob,
-                password: formatPasswordFromDob(manualForm.dob),
-                studentId: manualForm.role === 'STUDENT' ? manualForm.studentId : null,
-                department: manualForm.role !== 'STUDENT' ? manualForm.department : null
-            };
+            fetchUsers();
 
-            await api.post('/api/users', payload);
-            alert('Tạo tài khoản thành công!');
+            // Đợi 1.5 giây để người dùng kịp nhìn thấy thông báo thành công màu xanh rồi mới đóng Popup
+            setTimeout(() => {
+                handleCloseModal();
+            }, 1500);
 
-            setManualForm({ fullName: '', dob: '', email: '', role: 'STUDENT', studentId: '', department: '' });
-            setListFilter(manualForm.role as any);
-            setActiveTab('list'); // Đẩy về tab danh sách, useEffect sẽ tự động gọi lại fetchUsers
         } catch (error: any) {
-            alert('Lỗi tạo tài khoản: ' + (error.response?.data?.message || 'Có lỗi xảy ra'));
+            // Lấy chính xác thông báo lỗi từ phía Backend đẩy lên UI
+            setModalError(error.response?.data?.message || 'Có lỗi xảy ra, vui lòng thử lại.');
         } finally {
             setLoading(false);
         }
     };
 
-    // 3. GỌI API KHÓA/MỞ KHÓA TÀI KHOẢN
+    // Khóa / Mở khóa tài khoản
     const handleToggleStatus = async (userId: number | undefined) => {
         if (!userId) return;
         try {
             await api.patch(`/api/users/${userId}/toggle-status`);
-            fetchUsers(); // Cập nhật lại bảng ngay sau khi đổi trạng thái thành công
+            fetchUsers();
         } catch (error: any) {
             alert('Lỗi: ' + (error.response?.data?.message || 'Không thể thay đổi trạng thái'));
         }
     };
 
-    // XỬ LÝ IMPORT CSV (Tạm thời Frontend - Để Backend hỗ trợ Bulk API sau)
+    // ================= CSV IMPORT LOGIC =================
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -199,7 +207,6 @@ export const UserManagementPage = () => {
         if (csvData.length === 0) return alert('Chưa có dữ liệu');
         setLoading(true);
 
-        // Gọi API POST cho từng dòng (Nên tối ưu bằng Bulk API ở Backend sau này)
         let successCount = 0;
         for (const user of csvData) {
             try {
@@ -217,6 +224,7 @@ export const UserManagementPage = () => {
         setListFilter(importType);
         setActiveTab('list');
     };
+    // ====================================================
 
     return (
         <div className="user-mgt-container">
@@ -231,10 +239,6 @@ export const UserManagementPage = () => {
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                     Danh sách tài khoản
                 </button>
-                <button className={`tab-btn ${activeTab === 'manual' ? 'active' : ''}`} onClick={() => setActiveTab('manual')}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                    Thêm thủ công
-                </button>
                 <button className={`tab-btn ${activeTab === 'csv' ? 'active' : ''}`} onClick={() => setActiveTab('csv')}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                     Import từ CSV
@@ -245,14 +249,21 @@ export const UserManagementPage = () => {
             {activeTab === 'list' && (
                 <div className="card-box">
                     <div className="toolbar">
-                        <input type="text" className="search-input" placeholder="Tìm kiếm theo Tên, Email, Username..." />
-
-                        <div className="filter-group">
-                            <button className={`filter-btn ${listFilter === 'ALL' ? 'active' : ''}`} onClick={() => setListFilter('ALL')}>Tất cả</button>
-                            <button className={`filter-btn ${listFilter === 'STUDENT' ? 'active' : ''}`} onClick={() => setListFilter('STUDENT')}>Sinh viên</button>
-                            <button className={`filter-btn ${listFilter === 'STAFF' ? 'active' : ''}`} onClick={() => setListFilter('STAFF')}>Nhân viên</button>
-                            <button className={`filter-btn ${listFilter === 'ADMIN' ? 'active' : ''}`} onClick={() => setListFilter('ADMIN')}>Quản trị viên</button>
+                        <div className="toolbar-left">
+                            <input type="text" className="search-input" placeholder="Tìm kiếm theo Tên, Email, Username..." />
+                            <div className="filter-group">
+                                <button className={`filter-btn ${listFilter === 'ALL' ? 'active' : ''}`} onClick={() => setListFilter('ALL')}>Tất cả</button>
+                                <button className={`filter-btn ${listFilter === 'STUDENT' ? 'active' : ''}`} onClick={() => setListFilter('STUDENT')}>Sinh viên</button>
+                                <button className={`filter-btn ${listFilter === 'STAFF' ? 'active' : ''}`} onClick={() => setListFilter('STAFF')}>Nhân viên</button>
+                                <button className={`filter-btn ${listFilter === 'ADMIN' ? 'active' : ''}`} onClick={() => setListFilter('ADMIN')}>Quản trị viên</button>
+                            </div>
                         </div>
+
+                        {/* NÚT THÊM TÀI KHOẢN ĐƯA VÀO TOOLBAR */}
+                        <button className="btn-primary" onClick={handleOpenCreateModal}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            Thêm tài khoản
+                        </button>
                     </div>
 
                     <div style={{overflowX: 'auto'}}>
@@ -282,12 +293,14 @@ export const UserManagementPage = () => {
                                     <td>
                                         {user.isActive ? <span className="status-badge status-active">Đang hoạt động</span> : <span className="status-badge status-locked">Bị khóa</span>}
                                     </td>
-
                                     <td style={{textAlign: 'center'}}>
-                                        <button className="action-btn" title="Chỉnh sửa">
+                                        <button
+                                            className="action-btn"
+                                            title="Chỉnh sửa"
+                                            onClick={() => handleOpenEditModal(user)}
+                                        >
                                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                         </button>
-                                        {/* Nút Khóa / Mở khóa tích hợp API */}
                                         <button
                                             className="action-btn danger"
                                             title={user.isActive ? 'Khóa tài khoản' : 'Mở khóa'}
@@ -313,52 +326,7 @@ export const UserManagementPage = () => {
                 </div>
             )}
 
-            {/* TAB 2: THÊM THỦ CÔNG */}
-            {activeTab === 'manual' && (
-                <div className="card-box">
-                    <div className="form-grid">
-                        <div className="form-group">
-                            <label>Phân quyền (Role)</label>
-                            <select name="role" className="form-control" value={manualForm.role} onChange={handleManualChange}>
-                                <option value="STUDENT">Sinh viên (STUDENT)</option>
-                                <option value="STAFF">Nhân viên Vận hành (STAFF)</option>
-                                <option value="ADMIN">Quản trị viên (ADMIN)</option>
-                            </select>
-                        </div>
-
-                        {manualForm.role === 'STUDENT' ? (
-                            <div className="form-group">
-                                <label>Mã Sinh Viên</label>
-                                <input type="text" name="studentId" className="form-control" value={manualForm.studentId} onChange={handleManualChange} placeholder="VD: SV2021001" />
-                            </div>
-                        ) : (
-                            <div className="form-group">
-                                <label>Phòng ban / Đơn vị</label>
-                                <input type="text" name="department" className="form-control" value={manualForm.department} onChange={handleManualChange} placeholder="VD: Phòng Hành chính" />
-                            </div>
-                        )}
-
-                        <div className="form-group">
-                            <label>Họ và Tên</label>
-                            <input type="text" name="fullName" className="form-control" value={manualForm.fullName} onChange={handleManualChange} placeholder="Nguyễn Văn A" />
-                        </div>
-                        <div className="form-group">
-                            <label>Địa chỉ Email</label>
-                            <input type="email" name="email" className="form-control" value={manualForm.email} onChange={handleManualChange} placeholder="nva@eduspace.vn" />
-                        </div>
-                        <div className="form-group">
-                            <label>Ngày sinh (Làm mật khẩu mặc định)</label>
-                            <input type="date" name="dob" className="form-control" value={manualForm.dob} onChange={handleManualChange} />
-                        </div>
-                    </div>
-                    <button className="btn-primary" onClick={handleSaveManual} disabled={loading}>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-                        {loading ? 'Đang xử lý...' : 'Tạo tài khoản'}
-                    </button>
-                </div>
-            )}
-
-            {/* TAB 3: IMPORT TỪ CSV */}
+            {/* TAB 2: IMPORT TỪ CSV */}
             {activeTab === 'csv' && (
                 <div className="card-box">
                     <div className="import-type-selector">
@@ -387,40 +355,63 @@ export const UserManagementPage = () => {
                             <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px'}}>
                                 <strong style={{color: '#1e3a8a'}}>Đã phân tích: {fileName} ({csvData.length} dòng)</strong>
                                 <button className="btn-primary" onClick={handleSaveCSV} disabled={loading}>
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                                     {loading ? 'Đang Import...' : 'Xác nhận Import'}
                                 </button>
                             </div>
-
-                            <table className="data-table" style={{marginTop: '16px'}}>
-                                <thead>
-                                <tr>
-                                    {importType === 'STUDENT' && <th>Mã SV</th>}
-                                    <th>Họ và Tên</th>
-                                    {importType === 'STAFF' && <th>Phòng ban</th>}
-                                    <th>Username (Tự tạo)</th>
-                                    <th>Mật khẩu (Tự tạo)</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                {csvData.slice(0, 3).map((user, idx) => (
-                                    <tr key={idx}>
-                                        {importType === 'STUDENT' && <td>{user.studentId}</td>}
-                                        <td>{user.fullName}<br/><span style={{fontSize:'0.8rem', color:'#64748b'}}>{user.email}</span></td>
-                                        {importType === 'STAFF' && <td>{user.department}</td>}
-                                        <td><strong>{user.username}</strong></td>
-                                        <td><code>{user.password}</code></td>
-                                    </tr>
-                                ))}
-                                </tbody>
-                            </table>
-                            {csvData.length > 3 && (
-                                <div style={{textAlign: 'center', padding: '12px', background: '#f8fafc', color: '#64748b', fontSize: '0.9rem', border: '1px solid #e2e8f0', borderTop: 'none'}}>
-                                    ... và {csvData.length - 3} tài khoản khác được ẩn đi.
-                                </div>
-                            )}
                         </div>
                     )}
+                </div>
+            )}
+
+            {/* MODAL POPUP CHUNG CHO THÊM VÀ SỬA */}
+            {isModalOpen && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+                    background: 'rgba(0, 0, 0, 0.5)', display: 'flex', justifyContent: 'center',
+                    alignItems: 'center', zIndex: 1000
+                }}>
+                    <div style={{
+                        background: 'white', padding: '30px', borderRadius: '10px',
+                        width: '600px', maxWidth: '90%', boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div style={{ background: '#eff6ff', color: '#2563eb', padding: '10px', borderRadius: '8px' }}>
+                                    {editingUser ? (
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                    ) : (
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+                                    )}
+                                </div>
+                                <div>
+                                    <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1.25rem' }}>
+                                        {editingUser ? 'Chỉnh sửa tài khoản' : 'Thêm tài khoản mới'}
+                                    </h3>
+                                    <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                                        {editingUser ? 'Cập nhật thông tin chi tiết của người dùng' : 'Khai báo thông tin tài khoản và phân quyền hệ thống'}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={handleCloseModal}
+                                style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#94a3b8', padding: '4px' }}
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Truyền dữ liệu vào form: nếu có editingUser -> Edit Mode, ngược lại -> Create Mode */}
+                        <UserForm
+                            initialData={editingUser || undefined}
+                            isEditMode={!!editingUser}
+                            loading={loading}
+                            onSubmit={handleSubmitForm}
+                            onCancel={handleCloseModal}
+                            errorMessage={modalError}
+                            successMessage={modalSuccess}
+                        />
+                    </div>
                 </div>
             )}
         </div>
