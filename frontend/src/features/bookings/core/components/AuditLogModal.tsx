@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import type { Booking, BookingAuditLog } from '../services/bookingService';
 import { bookingService } from '../services/bookingService';
+import { formatDateTimeVI } from './DateInputVI';
 
 interface Props {
   booking: Booking;
@@ -57,7 +58,7 @@ export const AuditLogModal: React.FC<Props> = ({ booking, onClose }) => {
                     <div className="timeline-header">
                       <strong className="timeline-action">{log.actionDescription || log.action}</strong>
                       <span className="timeline-time">
-                        {new Date(log.performedAt).toLocaleString('vi-VN')}
+                        {formatDateTimeVI(log.performedAt)}
                       </span>
                     </div>
                     <div className="timeline-actor">

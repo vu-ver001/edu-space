@@ -122,13 +122,14 @@ export const MyBookingsPage: React.FC = () => {
     });
   }, [bookings, activeTab, searchQuery]);
 
-  // Helper định dạng ngày tháng chuẩn như Check-in
+  // Helper định dạng ngày tháng chuẩn dd/mm/yyyy
   const parseDateInfo = (isoString: string) => {
     const d = new Date(isoString);
-    const dayNum = d.getDate().toString().padStart(2, '0');
-    const monthNum = `THÁNG ${d.getMonth() + 1}`;
-    const fullDate = d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    const timeStr = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const dayNum = pad(d.getDate());
+    const monthNum = `THÁNG ${pad(d.getMonth() + 1)}`;
+    const fullDate = `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+    const timeStr = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
     return { dayNum, monthNum, fullDate, timeStr };
   };
 
@@ -390,7 +391,10 @@ export const MyBookingsPage: React.FC = () => {
                     {/* Chi tiết Không gian & Thời gian */}
                     <div className="mb-space-details">
                       <div className="mb-space-name-row">
-                        <Link to={`/student/spaces/${b.spaceId}`} className="mb-space-title">
+                        <Link
+                          to={`/student/spaces/${b.spaceId}?date=${(b.startTime || '').split('T')[0]}&startTime=${(b.startTime || '').includes('T') ? b.startTime.split('T')[1].substring(0, 5) : ''}&endTime=${(b.endTime || '').includes('T') ? b.endTime.split('T')[1].substring(0, 5) : ''}&participantCount=${b.participantCount || 1}`}
+                          className="mb-space-title"
+                        >
                           {b.spaceName}
                         </Link>
 
@@ -441,7 +445,7 @@ export const MyBookingsPage: React.FC = () => {
                             <circle cx="12" cy="12" r="10"/>
                             <polyline points="12 6 12 12 16 14"/>
                           </svg>
-                          {startInfo.timeStr} – {endInfo.timeStr}
+                          {startInfo.timeStr} – {endInfo.timeStr} • {startInfo.fullDate}
                         </span>
                         <span className="mb-participants-tag">
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4, verticalAlign: '-1px' }}>
@@ -599,12 +603,23 @@ export const MyBookingsPage: React.FC = () => {
                   <div className="mb-actions-right">
                     {/* Xem chi tiết phòng */}
                     <button
-                      type="button"
-                      className="btn-card-icon-action btn-action-view"
-                      onClick={() => navigate(`/student/spaces/${b.spaceId}`)}
-                      title="Xem phòng"
-                      aria-label="Xem phòng"
-                    >
+                        type="button"
+                        className="btn-card-icon-action btn-action-view"
+                        onClick={() => {
+                          const [bDate] = (b.startTime || '').split('T');
+                          const bStart = (b.startTime || '').includes('T') ? b.startTime.split('T')[1].substring(0, 5) : '';
+                          const bEnd = (b.endTime || '').includes('T') ? b.endTime.split('T')[1].substring(0, 5) : '';
+                          const params = new URLSearchParams();
+                          if (bDate) params.set('date', bDate);
+                          if (bStart) params.set('startTime', bStart);
+                          if (bEnd) params.set('endTime', bEnd);
+                          if (b.participantCount) params.set('participantCount', String(b.participantCount));
+                          const qs = params.toString();
+                          navigate(`/student/spaces/${b.spaceId}${qs ? `?${qs}` : ''}`);
+                        }}
+                        title="Xem phòng"
+                        aria-label="Xem phòng"
+                      >
                       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
                         <circle cx="12" cy="12" r="3"/>
