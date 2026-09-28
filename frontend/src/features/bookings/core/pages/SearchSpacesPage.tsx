@@ -7,6 +7,8 @@ import { spaceService } from '../services/spaceService';
 import './SearchSpacesPage.css';
 import '../components/MaintenanceModal.css';
 
+const SPACE_ROWS_PER_PAGE = 4;
+
 export const SearchSpacesPage: React.FC = () => {
   const initialSlot = getNextAvailableSlot();
   const [spaces, setSpaces] = useState<Space[]>([]);
@@ -20,8 +22,13 @@ export const SearchSpacesPage: React.FC = () => {
   });
   const [selectedSpaceForBooking, setSelectedSpaceForBooking] = useState<Space | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [cardsPerRow, setCardsPerRow] = useState<number>(() =>
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches ? 1 : 3
+  );
 
   const fetchSpaces = (filter: SearchFilter = activeFilter) => {
+    setCurrentPage(1);
     setLoading(true);
     setError(null);
 
@@ -186,6 +193,15 @@ export const SearchSpacesPage: React.FC = () => {
     return () => window.removeEventListener('user-switched', handleUserSwitch);
   }, []);
 
+  useEffect(() => {
+    const mobileLayout = window.matchMedia('(max-width: 768px)');
+    const syncCardsPerRow = () => setCardsPerRow(mobileLayout.matches ? 1 : 3);
+
+    syncCardsPerRow();
+    mobileLayout.addEventListener('change', syncCardsPerRow);
+    return () => mobileLayout.removeEventListener('change', syncCardsPerRow);
+  }, []);
+
   const handleSearch = (filter: SearchFilter) => {
     setActiveFilter(filter);
     fetchSpaces(filter);
@@ -212,6 +228,38 @@ export const SearchSpacesPage: React.FC = () => {
   const displayDate = formatDisplayDate(rawDate);
   const displayStart = activeFilter.startTime ? activeFilter.startTime.substring(0, 5) : initialSlot.startTime;
   const displayEnd = activeFilter.endTime ? activeFilter.endTime.substring(0, 5) : initialSlot.endTime;
+  const pageSize = SPACE_ROWS_PER_PAGE * cardsPerRow;
+  const totalPages = Math.max(1, Math.ceil(spaces.length / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const pageStartIndex = (safeCurrentPage - 1) * pageSize;
+  const paginatedSpaces = spaces.slice(pageStartIndex, pageStartIndex + pageSize);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [pageSize]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
+
+  const handlePageChange = (page: number) => {
+    const nextPage = Math.min(Math.max(page, 1), totalPages);
+    setCurrentPage(nextPage);
+    window.requestAnimationFrame(() => {
+      document.querySelector('.rooms-grid-v1')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
+
+  const getPaginationItems = (): Array<number | string> => {
+    if (totalPages <= 5) {
+      return Array.from({ length: totalPages }, (_, index) => index + 1);
+    }
+    if (safeCurrentPage <= 3) return [1, 2, 3, 4, 'end-dots', totalPages];
+    if (safeCurrentPage >= totalPages - 2) {
+      return [1, 'start-dots', totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+    }
+    return [1, 'start-dots', safeCurrentPage - 1, safeCurrentPage, safeCurrentPage + 1, 'end-dots', totalPages];
+  };
 
   return (
     <div className="search-spaces-page">
@@ -224,8 +272,15 @@ export const SearchSpacesPage: React.FC = () => {
 
       {/* Tiêu đề trang */}
       <div className="portal-page-intro">
-        <h2 className="portal-page-main-heading">Tìm không gian</h2>
-        <p className="portal-page-sub-heading">Tìm kiếm phòng học, phòng họp hoặc khu làm việc phù hợp với nhu cầu</p>
+        <h2 className="portal-page-main-heading">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="7" />
+            <line x1="20" y1="20" x2="16.2" y2="16.2" />
+            <path d="M8.5 11h5M11 8.5v5" opacity="0.75" />
+          </svg>
+          Tìm không gian
+        </h2>
+        <p className="portal-page-sub-heading">Tìm kiếm phòng học, phòng họp phù hợp với nhu cầu</p>
       </div>
 
       {/* Bộ lọc tìm kiếm theo form nội bộ chuẩn ảnh mẫu */}
@@ -275,21 +330,77 @@ export const SearchSpacesPage: React.FC = () => {
         </div>
       ) : (
         /* LƯỚI THẺ 3 CỘT NỘI BỘ THEO ẢNH 1 (Duy nhất định dạng thẻ, đã bỏ hoàn toàn dạng bảng) */
-        <div className="rooms-grid-v1">
-          {spaces.map((space) => (
-            <RoomCard
-              key={space.id}
-              space={space}
-              searchParams={{
-                date: activeFilter.date,
-                startTime: activeFilter.startTime,
-                endTime: activeFilter.endTime,
-                participantCount: activeFilter.participantCount,
-              }}
-              onBook={(s) => setSelectedSpaceForBooking(s)}
-            />
-          ))}
-        </div>
+        <>
+          <div className="rooms-grid-v1">
+            {paginatedSpaces.map((space) => (
+              <RoomCard
+                key={space.id}
+                space={space}
+                searchParams={{
+                  date: activeFilter.date,
+                  startTime: activeFilter.startTime,
+                  endTime: activeFilter.endTime,
+                  participantCount: activeFilter.participantCount,
+                }}
+                onBook={(s) => setSelectedSpaceForBooking(s)}
+              />
+            ))}
+          </div>
+
+          <nav className="spaces-pagination" aria-label="Phân trang danh sách không gian">
+            <div className="spaces-pagination-summary">
+              Hiển thị <strong>{pageStartIndex + 1}</strong>–<strong>{Math.min(pageStartIndex + pageSize, spaces.length)}</strong>
+              {' '}trong <strong>{spaces.length}</strong> không gian
+            </div>
+
+            <div className="spaces-pagination-controls">
+              <button
+                type="button"
+                className="spaces-pagination-arrow"
+                onClick={() => handlePageChange(safeCurrentPage - 1)}
+                disabled={safeCurrentPage === 1}
+                aria-label="Trang trước"
+                title="Trang trước"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="15 18 9 12 15 6" />
+                </svg>
+              </button>
+
+              <div className="spaces-pagination-pages">
+                {getPaginationItems().map((item) =>
+                  typeof item === 'string' ? (
+                    <span key={item} className="spaces-pagination-dots">…</span>
+                  ) : (
+                    <button
+                      key={item}
+                      type="button"
+                      className={`spaces-pagination-page ${item === safeCurrentPage ? 'active' : ''}`}
+                      onClick={() => handlePageChange(item)}
+                      aria-label={`Trang ${item}`}
+                      aria-current={item === safeCurrentPage ? 'page' : undefined}
+                    >
+                      {item}
+                    </button>
+                  )
+                )}
+              </div>
+
+              <button
+                type="button"
+                className="spaces-pagination-arrow"
+                onClick={() => handlePageChange(safeCurrentPage + 1)}
+                disabled={safeCurrentPage === totalPages}
+                aria-label="Trang sau"
+                title="Trang sau"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </button>
+            </div>
+          </nav>
+        </>
       )}
 
       {/* Modal đặt phòng */}

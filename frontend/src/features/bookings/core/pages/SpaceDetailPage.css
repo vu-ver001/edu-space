@@ -3,6 +3,10 @@
    EduSpace Booking Core Module - Nguyen Thi Khanh Van
    ======================================================== */
 
+.space-detail-page {
+  margin-top: -14px;
+}
+
 /* ========================================================
    DATE INPUT VI CUSTOM STYLES
    ======================================================== */
@@ -744,6 +748,11 @@
 .form-time-row .time-input-24h-container {
   width: 100%;
   position: relative;
+}
+
+/* Đồng bộ chiều cao giờ bắt đầu/kết thúc với ô ngày sử dụng bên cạnh. */
+.form-time-row .time-input-24h-input-box {
+  height: 42px;
 }
 
 .form-control-input,
