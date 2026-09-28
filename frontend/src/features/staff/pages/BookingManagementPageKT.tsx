@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   Clock3,
   DoorOpen,
+  IdCard,
   Mail,
   MapPin,
   RefreshCw,
@@ -16,7 +17,6 @@ import {
   UsersRound,
   X,
 } from 'lucide-react';
-import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
 import { Pagination } from '../../../components/common/Pagination';
 import { FilterSelect } from '../../../components/common/FilterSelect';
 import { StatusBadge } from '../../../components/common/StatusBadge';
@@ -27,6 +27,7 @@ import { formatImageUrl } from '../../../utils/imageUrl';
 import { staffApi } from '../api/staffApi';
 import { ApproveBookingModalKT } from '../components/ApproveBookingModalKT';
 import { BulkBookingActionModalKT } from '../components/BulkBookingActionModalKT';
+import { CheckInBookingModalKT } from '../components/CheckInBookingModalKT';
 import { RejectBookingConfirmModalKT } from '../components/RejectBookingConfirmModalKT';
 import type { BookingStatus, StaffBooking } from '../types/staff';
 import './BookingManagementPageKT.css';
@@ -232,7 +233,7 @@ export const BookingManagementPageKT = () => {
   const filteredBookings = useMemo(() => {
     const normalizedSearch = searchQuery.trim().toLowerCase();
 
-    return bookings.filter((booking) => {
+    const result = bookings.filter((booking) => {
       if (activeTab === 'pending' && booking.status !== 'PENDING_APPROVAL') return false;
       if (activeTab === 'checkin' && booking.status !== 'CONFIRMED') return false;
       if (statusFilter !== 'ALL' && booking.status !== statusFilter) return false;
@@ -256,7 +257,99 @@ export const BookingManagementPageKT = () => {
 
       return true;
     });
-  }, [bookings, activeTab, statusFilter, dateFilter, spaceFilter, modeFilter, searchQuery, spaceById]);
+
+    if (activeTab === 'pending') {
+      const nowTimestamp = now.getTime();
+
+      result.sort((first, second) => {
+        const firstStart = new Date(first.startTime).getTime();
+        const secondStart = new Date(second.startTime).getTime();
+        const firstValid = !Number.isNaN(firstStart);
+        const secondValid = !Number.isNaN(secondStart);
+
+        if (!firstValid || !secondValid) {
+          if (firstValid) return -1;
+          if (secondValid) return 1;
+          return first.id - second.id;
+        }
+
+        const firstUpcoming = firstStart >= nowTimestamp;
+        const secondUpcoming = secondStart >= nowTimestamp;
+
+        if (firstUpcoming !== secondUpcoming) return firstUpcoming ? -1 : 1;
+        if (firstUpcoming) return firstStart - secondStart;
+        return secondStart - firstStart;
+      });
+    } else if (activeTab === 'checkin') {
+      const nowTimestamp = now.getTime();
+
+      result.sort((first, second) => {
+        const firstStart = new Date(first.startTime).getTime();
+        const secondStart = new Date(second.startTime).getTime();
+        const firstValid = !Number.isNaN(firstStart);
+        const secondValid = !Number.isNaN(secondStart);
+
+        if (!firstValid || !secondValid) {
+          if (firstValid) return -1;
+          if (secondValid) return 1;
+          return first.id - second.id;
+        }
+
+        const firstCanCheckIn = first.canCheckIn === true;
+        const secondCanCheckIn = second.canCheckIn === true;
+        if (firstCanCheckIn !== secondCanCheckIn) return firstCanCheckIn ? -1 : 1;
+
+        if (firstCanCheckIn) {
+          // Giờ bắt đầu sớm hơn đồng nghĩa hạn check-in cũng đến sớm hơn.
+          return firstStart - secondStart;
+        }
+
+        const firstUpcoming = firstStart >= nowTimestamp;
+        const secondUpcoming = secondStart >= nowTimestamp;
+        if (firstUpcoming !== secondUpcoming) return firstUpcoming ? -1 : 1;
+        if (firstUpcoming) return firstStart - secondStart;
+
+        // Dữ liệu quá hạn chưa kịp chuyển NO_SHOW nằm cuối danh sách.
+        return secondStart - firstStart;
+      });
+    } else {
+      const nowTimestamp = now.getTime();
+
+      result.sort((first, second) => {
+        const firstStart = new Date(first.startTime).getTime();
+        const secondStart = new Date(second.startTime).getTime();
+        const firstEnd = new Date(first.endTime).getTime();
+        const secondEnd = new Date(second.endTime).getTime();
+        const firstValid = !Number.isNaN(firstStart) && !Number.isNaN(firstEnd);
+        const secondValid = !Number.isNaN(secondStart) && !Number.isNaN(secondEnd);
+
+        if (!firstValid || !secondValid) {
+          if (firstValid) return -1;
+          if (secondValid) return 1;
+          return first.id - second.id;
+        }
+
+        const firstOngoing = firstStart <= nowTimestamp && firstEnd >= nowTimestamp;
+        const secondOngoing = secondStart <= nowTimestamp && secondEnd >= nowTimestamp;
+        if (firstOngoing !== secondOngoing) return firstOngoing ? -1 : 1;
+
+        if (firstOngoing) {
+          // Booking bắt đầu gần hiện tại nhất nằm trước trong nhóm đang diễn ra.
+          return secondStart - firstStart;
+        }
+
+        const firstUpcoming = firstStart > nowTimestamp;
+        const secondUpcoming = secondStart > nowTimestamp;
+        if (firstUpcoming !== secondUpcoming) return firstUpcoming ? -1 : 1;
+        if (firstUpcoming) return firstStart - secondStart;
+
+        // Booking đã qua: thời điểm kết thúc mới nhất nằm trước.
+        return secondEnd - firstEnd;
+      });
+    }
+
+    return result;
+  }, [bookings, activeTab, statusFilter, dateFilter, spaceFilter, modeFilter, searchQuery, spaceById, now]);
 
   const totalPages = Math.max(1, Math.ceil(filteredBookings.length / pageSize));
   const safePage = Math.min(currentPage, totalPages);
@@ -573,14 +666,15 @@ export const BookingManagementPageKT = () => {
                     <tr>
                       <th>
                         <div className="booking-select-code">
-                          <input
-                            type="checkbox"
-                            checked={allVisiblePendingSelected}
-                            disabled={visiblePendingBookings.length === 0}
-                            aria-label="Chọn tất cả booking chờ duyệt trên trang này"
-                            title="Chọn tất cả booking chờ duyệt trên trang này"
-                            onChange={toggleVisiblePendingBookings}
-                          />
+                          {visiblePendingBookings.length > 0 ? (
+                            <input
+                              type="checkbox"
+                              checked={allVisiblePendingSelected}
+                              aria-label="Chọn tất cả booking chờ duyệt trên trang này"
+                              title="Chọn tất cả booking chờ duyệt trên trang này"
+                              onChange={toggleVisiblePendingBookings}
+                            />
+                          ) : null}
                           <span>Mã đặt chỗ</span>
                         </div>
                       </th>
@@ -613,7 +707,9 @@ export const BookingManagementPageKT = () => {
                                   onClick={(event) => event.stopPropagation()}
                                   onChange={() => togglePendingBooking(booking.id)}
                                 />
-                              ) : <span className="booking-checkbox-placeholder" />}
+                              ) : visiblePendingBookings.length > 0 ? (
+                                <span className="booking-checkbox-placeholder" />
+                              ) : null}
                               <strong className="booking-code">{bookingCode(booking)}</strong>
                             </div>
                           </td>
@@ -722,10 +818,14 @@ export const BookingManagementPageKT = () => {
               </div>
 
               <section className="booking-detail-section booking-student-section">
-                <h3>Thông tin sinh viên</h3>
                 <div className="booking-student-profile">
                   <span className="booking-avatar small">{initials(selectedBooking.studentName)}</span>
-                  <div><strong>{selectedBooking.studentName || 'Sinh viên'}</strong><span><Mail size={14} /> {selectedBooking.studentEmail || 'Chưa có email'}</span></div>
+                  <div>
+                    <strong>{selectedBooking.studentName || 'Sinh viên'}</strong>
+                    <span><IdCard size={14} /> {selectedBooking.studentUserCode || 'Chưa cập nhật mã sinh viên'}</span>
+                    <span><UserRound size={14} /> Lớp: {selectedBooking.studentClassName || 'Chưa cập nhật'}</span>
+                    <span><Mail size={14} /> {selectedBooking.studentEmail || 'Chưa cập nhật email'}</span>
+                  </div>
                 </div>
               </section>
 
@@ -800,16 +900,12 @@ export const BookingManagementPageKT = () => {
         onConfirm={handleConfirmAction}
       />
 
-      <ConfirmDialog
+      <CheckInBookingModalKT
         isOpen={confirmAction?.type === 'checkin'}
-        title="Xác nhận check-in?"
-        message={confirmAction?.type === 'checkin'
-          ? `${bookingCode(confirmAction.booking)} · ${confirmAction.booking.studentName} · ${confirmAction.booking.spaceName}`
-          : ''}
-        confirmText="Xác nhận check-in"
-        isDanger={false}
+        booking={confirmAction?.type === 'checkin' ? confirmAction.booking : null}
+        space={confirmAction?.type === 'checkin' ? spaceById.get(confirmAction.booking.spaceId) : undefined}
         isLoading={actionLoading}
-        onCancel={() => setConfirmAction(null)}
+        onClose={() => setConfirmAction(null)}
         onConfirm={handleConfirmAction}
       />
 

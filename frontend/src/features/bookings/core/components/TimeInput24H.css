@@ -1,0 +1,196 @@
+/* ========================================================
+   CUSTOM TIME PICKER - ĐỒNG BỘ 100% THEO PHÂN HỆ ADMIN CỦA NGỌC ANH
+   Giao diện tinh tế, chữ không in đậm, khung chuẩn d8e6f8
+   ======================================================== */
+
+.time-input-24h-container {
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* 1. KHUNG TRIGGER Ô NHẬP GIỜ THEO CHUẨN TRANG NGỌC ANH */
+.time-input-24h-input-box {
+  position: relative;
+  width: 100%;
+  height: 38px;
+  background: #ffffff;
+  border: 1px solid #d8e6f8;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.03);
+  transition: all 0.15s ease;
+}
+
+.time-input-24h-input-box:hover {
+  border-color: #bfdbfe;
+  background: #ffffff;
+}
+
+.time-input-24h-input-box.active,
+.time-input-24h-input-box:focus-within {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+/* Chữ trong ô giờ: font-weight 500 (mảnh, rõ ràng, KHÔNG in đậm thô) */
+.time-input-24h-text-field {
+  width: 100% !important;
+  height: 100% !important;
+  border: none !important;
+  outline: none !important;
+  background: transparent !important;
+  padding: 0 36px 0 12px !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  color: #0c2a5c !important;
+  font-family: inherit !important;
+  letter-spacing: 0.5px !important;
+  cursor: pointer !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+}
+
+/* Icon đồng hồ cố định 100% ở mép phải */
+.time-input-24h-clock-icon {
+  position: absolute !important;
+  right: 12px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #557297 !important;
+  pointer-events: none !important;
+  z-index: 2;
+  transition: color 0.15s ease;
+}
+
+.time-input-24h-input-box:hover .time-input-24h-clock-icon,
+.time-input-24h-input-box.active .time-input-24h-clock-icon {
+  color: #2563eb !important;
+}
+
+/* 2. KHUNG DROPDOWN BẢNG CHỌN GIỜ ĐỒNG BỘ 100% THEO TRANG NGỌC ANH */
+.time-picker-24h-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 200px;
+  background: #ffffff;
+  border: 1px solid #d8e6f8;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px -4px rgba(12, 42, 92, 0.14), 0 4px 10px -2px rgba(12, 42, 92, 0.04);
+  z-index: 9999;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  animation: dropdownFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.time-picker-24h-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.time-picker-24h-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.time-picker-24h-column:first-child {
+  border-right: 1px solid #eef4fb;
+  padding-right: 6px;
+}
+
+.time-picker-24h-column-header {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #557297;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+  text-align: center;
+  padding-bottom: 5px;
+  border-bottom: 1px solid #eef4fb;
+}
+
+.time-picker-24h-column-list {
+  height: 180px;
+  max-height: 180px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-right: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: #93c5fd transparent;
+}
+
+/* Thanh cuộn chuẩn xanh thanh lịch #93c5fd của trang Ngọc Anh */
+.time-picker-24h-column-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.time-picker-24h-column-list::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 4px;
+}
+
+.time-picker-24h-column-list::-webkit-scrollbar-thumb {
+  background: #93c5fd;
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.time-picker-24h-column-list::-webkit-scrollbar-thumb:hover {
+  background: #2563eb;
+}
+
+/* Từng số chọn giờ/phút: Chữ thanh lịch không in đậm */
+.time-picker-24h-item {
+  border: none;
+  background: transparent;
+  padding: 6px 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #0c2a5c;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  text-align: center;
+  font-family: inherit;
+}
+
+.time-picker-24h-item:hover:not(:disabled) {
+  background: #eff6ff;
+  color: #0284c7;
+}
+
+/* Vị trí đang được chọn: Khối bo góc màu xanh nhạt #e1ebf7 chuẩn theo ảnh của Ngọc Anh */
+.time-picker-24h-item.selected {
+  background: #e1ebf7;
+  color: #0c2a5c;
+  font-weight: 600;
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.08);
+}
+
+.time-picker-24h-item:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  color: #94a3b8;
+}

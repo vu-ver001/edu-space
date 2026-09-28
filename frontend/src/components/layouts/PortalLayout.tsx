@@ -5,6 +5,7 @@ import { DynamicIcon } from '../../helper/DynamicIcon.tsx';
 import { ROLE_NAV_ITEMS, isNavActive, ADMIN_BASE, STAFF_BASE, STUDENT_SPACES_PATH } from '../../config/roleNavigation.tsx';
 import type { AppRole, NavItem } from '../../config/roleNavigation.tsx';
 import './PortalLayout.css';
+import { ChangePasswordModal } from '../../features/admin/components/ChangePasswordModal.tsx';
 
 const VALID_ROLES: AppRole[] = ['ADMIN', 'STAFF', 'STUDENT'];
 
@@ -29,6 +30,7 @@ export const PortalLayout = () => {
   const [uiSettings, setUiSettings] = useState<any>({});
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
 
   useEffect(() => {
     const userStr = localStorage.getItem('eduspace_user') || localStorage.getItem('user');
@@ -50,6 +52,11 @@ export const PortalLayout = () => {
     if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
     return (parts[parts.length - 2][0] + parts[parts.length - 1][0]).toUpperCase();
   };
+
+  const handleChangePassword = () => {
+    setIsChangePasswordOpen(true);
+    setShowProfileMenu(false);
+  }
 
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
@@ -167,7 +174,7 @@ export const PortalLayout = () => {
                     </div>
                   </div>
                   <div className="dropdown-actions">
-                    <button className="dropdown-action-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>Thay đổi mật khẩu</button>
+                    <button className="dropdown-action-btn" onClick={handleChangePassword}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>Thay đổi mật khẩu</button>
                     <button className="dropdown-action-btn" onClick={handleLogout}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Đăng xuất</button>
                   </div>
                 </div>
@@ -181,6 +188,11 @@ export const PortalLayout = () => {
             <Outlet />
           </div>
         </div>
+
+        <ChangePasswordModal
+            isOpen={isChangePasswordOpen}
+            onClose={() => setIsChangePasswordOpen(false)}
+        />
       </div>
   );
 };

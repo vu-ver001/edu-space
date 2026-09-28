@@ -61,4 +61,12 @@ public class UserController {
         String currentAdminEmail = authentication.getName();
         return ResponseEntity.ok(userService.changeUserRole(id, role, currentAdminEmail));
     }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserResponse> updateUser(
+            @PathVariable Long id,
+            @Valid @RequestBody UserCreateRequest request) {
+        return ResponseEntity.ok(userService.updateUser(id, request));
+    }
 }

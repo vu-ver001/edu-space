@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { StatusBadge } from '../components/StatusBadge';
-import { AuditLogModal } from '../components/AuditLogModal';
+import { QrCheckInModal } from '../components/QrCheckInModal';
 import type { Booking } from '../services/bookingService';
 import { bookingService } from '../services/bookingService';
 import './MyBookingsPage.css';
@@ -15,9 +15,10 @@ export const MyBookingsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Modal states
-  const [selectedBookingForAudit, setSelectedBookingForAudit] = useState<Booking | null>(null);
   const [cancellingBooking, setCancellingBooking] = useState<Booking | null>(null);
   const [cancelReason, setCancelReason] = useState<string>('');
+  const [cancelReasonTouched, setCancelReasonTouched] = useState<boolean>(false);
+  const [qrCheckInBooking, setQrCheckInBooking] = useState<Booking | null>(null);
 
   const [actionLoading, setActionLoading] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -47,13 +48,18 @@ export const MyBookingsPage: React.FC = () => {
   // Xác nhận hủy đặt phòng
   const handleConfirmCancel = async () => {
     if (!cancellingBooking) return;
+    if (!cancelReason.trim()) {
+      setCancelReasonTouched(true);
+      return;
+    }
     setActionLoading(true);
     try {
-      await bookingService.cancelBooking(cancellingBooking.id, cancelReason.trim() || 'Người dùng chủ động hủy');
+      await bookingService.cancelBooking(cancellingBooking.id, cancelReason.trim());
       setToastMessage(`✓ Đã hủy thành công đơn #${cancellingBooking.id}. Phòng đã được giải phóng.`);
       setTimeout(() => setToastMessage(null), 4000);
       setCancellingBooking(null);
       setCancelReason('');
+      setCancelReasonTouched(false);
       fetchBookings();
     } catch (err: any) {
       alert(err?.response?.data?.message || 'Không thể hủy đơn đặt phòng này.');
@@ -62,46 +68,44 @@ export const MyBookingsPage: React.FC = () => {
     }
   };
 
-  // Check-in trực tiếp
-  const handleCheckIn = async (booking: Booking) => {
-    setActionLoading(true);
-    try {
-      await bookingService.checkIn(booking.id);
-      setToastMessage(`🎉 Check-in thành công tại ${booking.spaceName}! Bạn có thể bắt đầu sử dụng phòng.`);
-      setTimeout(() => setToastMessage(null), 4500);
-      fetchBookings();
-    } catch (err: any) {
-      alert(err?.response?.data?.message || 'Không thể check-in lúc này.');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
   // Tính toán số liệu thống kê (Metrics)
   const metrics = useMemo(() => {
     const total = bookings.length;
-    const occupying = bookings.filter((b) => b.isOccupying).length;
     const pending = bookings.filter((b) => b.status === 'PENDING_APPROVAL').length;
-    const readyCheckIn = bookings.filter((b) => b.status === 'CONFIRMED' && b.canCheckIn).length;
     const confirmed = bookings.filter((b) => b.status === 'CONFIRMED').length;
+    const checkedIn = bookings.filter((b) => b.status === 'CHECKED_IN').length;
     const completed = bookings.filter((b) => b.status === 'COMPLETED').length;
-    return { total, occupying, pending, readyCheckIn, confirmed, completed };
+    const history = bookings.filter((b) =>
+      ['COMPLETED', 'CANCELLED', 'REJECTED', 'EXPIRED', 'NO_SHOW'].includes(b.status)
+    ).length;
+    return { total, pending, confirmed, checkedIn, completed, history };
   }, [bookings]);
 
-  // Bộ lọc danh sách
+  // Helper tính độ ưu tiên trạng thái
+  const getStatusPriority = (status: string) => {
+    switch (status) {
+      case 'CHECKED_IN': return 1;
+      case 'CONFIRMED': return 2;
+      case 'PENDING_APPROVAL': return 3;
+      case 'COMPLETED': return 4;
+      default: return 5; // CANCELLED, REJECTED, EXPIRED, NO_SHOW
+    }
+  };
+
+  // Bộ lọc danh sách và sắp xếp logic
   const filteredBookings = useMemo(() => {
-    return bookings.filter((b) => {
+    const list = bookings.filter((b) => {
       // Tab filter
-      if (activeTab === 'ACTIVE') {
-        if (!b.isOccupying) return false;
-      } else if (activeTab === 'PENDING') {
+      if (activeTab === 'PENDING') {
         if (b.status !== 'PENDING_APPROVAL') return false;
       } else if (activeTab === 'CONFIRMED') {
         if (b.status !== 'CONFIRMED') return false;
       } else if (activeTab === 'CHECKED_IN') {
         if (b.status !== 'CHECKED_IN') return false;
+      } else if (activeTab === 'COMPLETED') {
+        if (b.status !== 'COMPLETED') return false;
       } else if (activeTab === 'HISTORY') {
-        if (b.isOccupying) return false;
+        if (!['COMPLETED', 'CANCELLED', 'REJECTED', 'EXPIRED', 'NO_SHOW'].includes(b.status)) return false;
       }
 
       // Search query filter
@@ -120,15 +124,38 @@ export const MyBookingsPage: React.FC = () => {
 
       return true;
     });
+
+    return [...list].sort((a, b) => {
+      const rankA = getStatusPriority(a.status);
+      const rankB = getStatusPriority(b.status);
+
+      if (rankA !== rankB) {
+        return rankA - rankB;
+      }
+
+      const timeA = new Date(a.startTime).getTime();
+      const timeB = new Date(b.startTime).getTime();
+
+      // Đơn sắp diễn ra / cần chú ý (Rank 1, 2, 3): ca sớm nhất, gần nhất lên trước (ASC)
+      if (rankA <= 3) {
+        if (timeA !== timeB) return timeA - timeB;
+        return a.id - b.id;
+      }
+
+      // Đơn lịch sử / đã đóng (Rank 4, 5): mới hoàn thành / mới đóng gần đây nhất lên trước (DESC)
+      if (timeA !== timeB) return timeB - timeA;
+      return b.id - a.id;
+    });
   }, [bookings, activeTab, searchQuery]);
 
-  // Helper định dạng ngày tháng chuẩn như Check-in
+  // Helper định dạng ngày tháng chuẩn dd/mm/yyyy
   const parseDateInfo = (isoString: string) => {
     const d = new Date(isoString);
-    const dayNum = d.getDate().toString().padStart(2, '0');
-    const monthNum = `THÁNG ${d.getMonth() + 1}`;
-    const fullDate = d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    const timeStr = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const dayNum = pad(d.getDate());
+    const monthNum = `THÁNG ${pad(d.getMonth() + 1)}`;
+    const fullDate = `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+    const timeStr = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
     return { dayNum, monthNum, fullDate, timeStr };
   };
 
@@ -203,15 +230,15 @@ export const MyBookingsPage: React.FC = () => {
         <div className="mb-metric-card">
           <div className="mb-metric-icon-box active">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="4" y="2" width="16" height="20" rx="2" ry="2"/>
-              <path d="M9 22v-4h6v4"/>
-              <path d="M8 6h.01M16 6h.01M8 10h.01M16 10h.01M8 14h.01M16 14h.01"/>
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
             </svg>
           </div>
           <div className="mb-metric-info">
-            <span className="mb-metric-val">{metrics.occupying}</span>
-            <span className="mb-metric-label">Đang giữ chỗ</span>
-
+            <span className="mb-metric-val">{metrics.total}</span>
+            <span className="mb-metric-label">Tất cả</span>
           </div>
         </div>
 
@@ -226,22 +253,19 @@ export const MyBookingsPage: React.FC = () => {
           <div className="mb-metric-info">
             <span className="mb-metric-val">{metrics.pending}</span>
             <span className="mb-metric-label">Chờ Staff duyệt</span>
-
           </div>
         </div>
 
         <div className="mb-metric-card">
           <div className="mb-metric-icon-box checkin">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-              <circle cx="18" cy="4" r="3" fill="#10B981" stroke="#FFFFFF" strokeWidth="1.5"/>
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+              <polyline points="22 4 12 14.01 9 11.01"/>
             </svg>
           </div>
           <div className="mb-metric-info">
-            <span className="mb-metric-val">{metrics.readyCheckIn > 0 ? `${metrics.readyCheckIn} sẵn sàng` : metrics.confirmed}</span>
-            <span className="mb-metric-label">Đã xác nhận & Check-in</span>
-
+            <span className="mb-metric-val">{metrics.confirmed}</span>
+            <span className="mb-metric-label">Đã xác nhận</span>
           </div>
         </div>
 
@@ -255,7 +279,6 @@ export const MyBookingsPage: React.FC = () => {
           <div className="mb-metric-info">
             <span className="mb-metric-val">{metrics.completed}</span>
             <span className="mb-metric-label">Đã hoàn thành</span>
-
           </div>
         </div>
       </div>
@@ -265,11 +288,11 @@ export const MyBookingsPage: React.FC = () => {
         <div className="mb-tabs-nav">
           {[
             { key: 'ALL', label: 'Tất cả', count: metrics.total },
-            { key: 'ACTIVE', label: 'Đang hoạt động', count: metrics.occupying },
             { key: 'PENDING', label: 'Chờ duyệt', count: metrics.pending },
             { key: 'CONFIRMED', label: 'Đã xác nhận', count: metrics.confirmed },
-            { key: 'CHECKED_IN', label: 'Đã check-in', count: bookings.filter(b => b.status === 'CHECKED_IN').length },
-            { key: 'HISTORY', label: 'Lịch sử', count: bookings.filter(b => !b.isOccupying).length }
+            { key: 'CHECKED_IN', label: 'Đã check-in', count: metrics.checkedIn },
+            { key: 'COMPLETED', label: 'Đã hoàn thành', count: metrics.completed },
+            { key: 'HISTORY', label: 'Lịch sử', count: metrics.history }
           ].map((tab) => (
             <button
               key={tab.key}
@@ -352,7 +375,7 @@ export const MyBookingsPage: React.FC = () => {
             return (
               <div
                 key={b.id}
-                className={`mb-booking-card ${b.isOccupying ? 'occupying' : ''} ${b.canCheckIn ? 'checkin-ready' : ''}`}
+                className={`mb-booking-card ${b.canCheckIn ? 'checkin-ready' : ''}`}
               >
                 <div>
                   {/* Thanh trên cùng của Thẻ */}
@@ -390,7 +413,10 @@ export const MyBookingsPage: React.FC = () => {
                     {/* Chi tiết Không gian & Thời gian */}
                     <div className="mb-space-details">
                       <div className="mb-space-name-row">
-                        <Link to={`/student/spaces/${b.spaceId}`} className="mb-space-title">
+                        <Link
+                          to={`/student/spaces/${b.spaceId}?date=${(b.startTime || '').split('T')[0]}&startTime=${(b.startTime || '').includes('T') ? b.startTime.split('T')[1].substring(0, 5) : ''}&endTime=${(b.endTime || '').includes('T') ? b.endTime.split('T')[1].substring(0, 5) : ''}&participantCount=${b.participantCount || 1}`}
+                          className="mb-space-title"
+                        >
                           {b.spaceName}
                         </Link>
 
@@ -441,7 +467,7 @@ export const MyBookingsPage: React.FC = () => {
                             <circle cx="12" cy="12" r="10"/>
                             <polyline points="12 6 12 12 16 14"/>
                           </svg>
-                          {startInfo.timeStr} – {endInfo.timeStr}
+                          {startInfo.timeStr} – {endInfo.timeStr} • {startInfo.fullDate}
                         </span>
                         <span className="mb-participants-tag">
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4, verticalAlign: '-1px' }}>
@@ -475,7 +501,7 @@ export const MyBookingsPage: React.FC = () => {
                         <polyline points="22 4 12 14.01 9 11.01"/>
                       </svg>
                       <div>
-                        <strong>Cửa sổ check-in đang mở!</strong> Hãy bấm nút check-in bên dưới để xác nhận có mặt sử dụng phòng.
+                        <strong>Cửa sổ check-in đang mở!</strong> Bấm nút check-in bên dưới để lấy mã QR xuất trình cho nhân viên Staff.
                       </div>
                     </div>
                   )}
@@ -559,19 +585,21 @@ export const MyBookingsPage: React.FC = () => {
                 {/* Các nút thao tác ở chân Thẻ */}
                 <div className="mb-card-actions">
                    <div className="mb-actions-left">
-                    {/* Nút Check-in nổi bật nếu đủ điều kiện */}
+                    {/* Nút Mã QR Check-in */}
                     {b.status === 'CONFIRMED' && (
                       <button
                         type="button"
                         className="btn-card-checkin"
-                        onClick={() => handleCheckIn(b)}
-                        disabled={!b.canCheckIn || actionLoading}
-                        title={b.canCheckIn ? 'Bấm để check-in có mặt' : 'Cần chờ đến 15 phút trước giờ bắt đầu mới có thể check-in'}
+                        onClick={() => setQrCheckInBooking(b)}
+                        title="Bấm để mở mã QR Check-in điểm danh"
                       >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="20 6 9 17 4 12"/>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="3" width="7" height="7"/>
+                          <rect x="14" y="3" width="7" height="7"/>
+                          <rect x="14" y="14" width="7" height="7"/>
+                          <rect x="3" y="14" width="7" height="7"/>
                         </svg>
-                        Check-in
+                        Mã QR Check-in
                       </button>
                     )}
 
@@ -599,31 +627,26 @@ export const MyBookingsPage: React.FC = () => {
                   <div className="mb-actions-right">
                     {/* Xem chi tiết phòng */}
                     <button
-                      type="button"
-                      className="btn-card-icon-action btn-action-view"
-                      onClick={() => navigate(`/student/spaces/${b.spaceId}`)}
-                      title="Xem phòng"
-                      aria-label="Xem phòng"
-                    >
+                        type="button"
+                        className="btn-card-icon-action btn-action-view"
+                        onClick={() => {
+                          const [bDate] = (b.startTime || '').split('T');
+                          const bStart = (b.startTime || '').includes('T') ? b.startTime.split('T')[1].substring(0, 5) : '';
+                          const bEnd = (b.endTime || '').includes('T') ? b.endTime.split('T')[1].substring(0, 5) : '';
+                          const params = new URLSearchParams();
+                          if (bDate) params.set('date', bDate);
+                          if (bStart) params.set('startTime', bStart);
+                          if (bEnd) params.set('endTime', bEnd);
+                          if (b.participantCount) params.set('participantCount', String(b.participantCount));
+                          const qs = params.toString();
+                          navigate(`/student/spaces/${b.spaceId}${qs ? `?${qs}` : ''}`);
+                        }}
+                        title="Xem phòng"
+                        aria-label="Xem phòng"
+                      >
                       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
                         <circle cx="12" cy="12" r="3"/>
-                      </svg>
-                    </button>
-
-                    {/* Xem Audit Log */}
-                    <button
-                      type="button"
-                      className="btn-card-icon-action btn-action-audit"
-                      onClick={() => setSelectedBookingForAudit(b)}
-                      title="Nhật ký đặt phòng"
-                      aria-label="Nhật ký đặt phòng"
-                    >
-                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                        <polyline points="14 2 14 8 20 8"/>
-                        <line x1="16" y1="13" x2="8" y2="13"/>
-                        <line x1="16" y1="17" x2="8" y2="17"/>
                       </svg>
                     </button>
                   </div>
@@ -636,7 +659,13 @@ export const MyBookingsPage: React.FC = () => {
 
       {/* 5. Modal Xác Nhận Hủy Đặt Phòng (Cancel Booking Modal) */}
       {cancellingBooking && (
-        <div className="mb-modal-overlay" onClick={() => setCancellingBooking(null)}>
+        <div
+          className="mb-modal-overlay"
+          onClick={() => {
+            setCancellingBooking(null);
+            setCancelReasonTouched(false);
+          }}
+        >
           <div className="mb-modal-box" onClick={(e) => e.stopPropagation()}>
             <div className="mb-modal-header">
               <h3 className="mb-modal-title">
@@ -649,8 +678,12 @@ export const MyBookingsPage: React.FC = () => {
               </h3>
               <button
                 type="button"
-                onClick={() => setCancellingBooking(null)}
+                onClick={() => {
+                  setCancellingBooking(null);
+                  setCancelReasonTouched(false);
+                }}
                 style={{ background: 'none', border: 'none', fontSize: '1.2rem', color: '#94A3B8', cursor: 'pointer' }}
+                aria-label="Đóng hộp thoại hủy đặt chỗ"
               >
                 ✕
               </button>
@@ -671,21 +704,38 @@ export const MyBookingsPage: React.FC = () => {
                 marginBottom: '16px',
                 lineHeight: 1.4
               }}>
-                📌 <strong>Lưu ý:</strong> Ngay sau khi hủy, phòng sẽ được giải phóng lập tức trong cơ sở dữ liệu để các bạn sinh viên khác có thể đặt.
+                📌 <strong>Lưu ý:</strong> Ngay sau khi hủy, phòng sẽ được giải phóng lập tức để các bạn sinh viên khác có thể đặt.
               </div>
 
               <div>
                 <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, color: '#475569', marginBottom: 6 }}>
-                  Lý do hủy (tùy chọn)
+                  Lý do hủy <span style={{ color: '#EF4444', fontWeight: 700 }}>*</span>
                 </label>
                 <input
                   type="text"
                   className="mb-search-input"
-                  style={{ width: '100%', height: '40px', padding: '0 12px' }}
+                  style={{
+                    width: '100%',
+                    height: '40px',
+                    padding: '0 12px',
+                    borderColor: cancelReasonTouched && !cancelReason.trim() ? '#EF4444' : undefined
+                  }}
                   placeholder="Ví dụ: Bận lịch thi đột xuất, đổi kế hoạch nhóm..."
                   value={cancelReason}
-                  onChange={(e) => setCancelReason(e.target.value)}
+                  onChange={(e) => {
+                    setCancelReason(e.target.value);
+                    if (e.target.value.trim()) setCancelReasonTouched(false);
+                  }}
+                  onBlur={() => setCancelReasonTouched(true)}
+                  aria-required="true"
+                  aria-invalid={cancelReasonTouched && !cancelReason.trim()}
+                  required
                 />
+                {cancelReasonTouched && !cancelReason.trim() && (
+                  <span style={{ fontSize: '11px', color: '#EF4444', marginTop: '4px', display: 'block' }}>
+                    Vui lòng nhập lý do hủy để tiếp tục.
+                  </span>
+                )}
               </div>
             </div>
 
@@ -693,7 +743,10 @@ export const MyBookingsPage: React.FC = () => {
               <button
                 type="button"
                 className="btn-modal-back"
-                onClick={() => setCancellingBooking(null)}
+                onClick={() => {
+                  setCancellingBooking(null);
+                  setCancelReasonTouched(false);
+                }}
                 disabled={actionLoading}
               >
                 Quay lại
@@ -711,11 +764,16 @@ export const MyBookingsPage: React.FC = () => {
         </div>
       )}
 
-      {/* 6. Modal Xem Nhật Ký Kiểm Toán (Audit Log Modal) */}
-      {selectedBookingForAudit && (
-        <AuditLogModal
-          booking={selectedBookingForAudit}
-          onClose={() => setSelectedBookingForAudit(null)}
+      {/* 6. Modal Mã QR Check-in Điểm Danh (Liên kết 100% CSDL của bạn Vũ) */}
+      {qrCheckInBooking && (
+        <QrCheckInModal
+          booking={qrCheckInBooking}
+          onClose={() => setQrCheckInBooking(null)}
+          onCheckInSuccess={() => {
+            setToastMessage(`🎉 Điểm danh thành công tại ${qrCheckInBooking.spaceName}!`);
+            setTimeout(() => setToastMessage(null), 4000);
+            fetchBookings();
+          }}
         />
       )}
     </div>

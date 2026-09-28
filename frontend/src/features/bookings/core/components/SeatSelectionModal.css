@@ -1,0 +1,608 @@
+/* ========================================================
+   M03 & M04 - SEAT & TABLE SELECTION MODAL STYLES
+   EduSpace Booking Core Module - Nguyen Thi Khanh Van
+   ======================================================== */
+
+/* ========================================================
+   9. GIAO DIỆN THEO ẢNH 3: SƠ ĐỒ CHỌN GHẾ RẠP CHIẾU PHIM MOMO
+   ======================================================== */
+/* ========================================================
+   MODAL SƠ ĐỒ CHỖ NGỒI PHÒNG HỌC (White & Royal Blue Theme)
+   ======================================================== */
+.cinema-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.2s ease;
+}
+
+.cinema-modal-container {
+  background: #FFFFFF;
+  color: #0F172A;
+  border: 1px solid #E2E8F0;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 660px;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.2);
+  animation: scaleUp 0.22s ease;
+}
+
+.cinema-modal-header {
+  padding: 20px 24px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  border-bottom: 1px solid #F1F5F9;
+  background: #FFFFFF;
+}
+
+.cinema-title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #0F172A;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cinema-subtitle {
+  font-size: 0.85rem;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.cinema-btn-close {
+  background: #F1F5F9;
+  border: none;
+  color: #64748B;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  transition: all 0.15s ease;
+}
+
+.cinema-btn-close:hover {
+  background: #EFF6FF;
+  color: #1D72FE;
+}
+
+.cinema-error-banner {
+  background: #FEF2F2;
+  border: 1px solid #FCA5A5;
+  color: #B91C1C;
+  padding: 10px 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin: 12px 24px 0;
+  border-radius: 8px;
+}
+
+/* Khu vực Bảng giảng / Màn hình / Bàn học nhóm */
+.cinema-screen-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 20px 24px 12px;
+}
+
+.cinema-screen-bar {
+  width: 82%;
+  padding: 8px 16px;
+  background: #EFF6FF;
+  border: 1.5px dashed #93C5FD;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(29, 114, 254, 0.08);
+}
+
+.cinema-screen-bar span {
+  font-size: 0.775rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #1D72FE;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cinema-screen-glow {
+  width: 70%;
+  height: 10px;
+  background: radial-gradient(ellipse at top, rgba(29, 114, 254, 0.12) 0%, transparent 80%);
+  margin-top: 2px;
+}
+
+/* Layout Bàn Học Nhóm Trung Tâm (Meeting Table Layout) */
+.meeting-table-layout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  margin: 10px 0 16px;
+}
+
+.meeting-table-block {
+  width: 88%;
+  background: linear-gradient(180deg, #F0F7FF 0%, #E0E7FF 100%);
+  border: 1.5px solid #BFDBFE;
+  border-radius: 16px;
+  padding: 18px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(29, 114, 254, 0.08);
+}
+
+.meeting-table-label {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #1D72FE;
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
+}
+
+.meeting-table-sub {
+  font-size: 0.725rem;
+  color: #64748B;
+  font-weight: 500;
+}
+
+.seats-meeting-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+/* Khu vực ghế ngồi */
+.cinema-seats-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 24px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.cinema-seat-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+  width: 100%;
+  align-items: center;
+}
+
+.cinema-seat-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.row-label {
+  font-size: 0.775rem;
+  font-weight: 800;
+  color: #64748B;
+  width: 20px;
+  text-align: center;
+  background: #F1F5F9;
+  padding: 2px 0;
+  border-radius: 4px;
+}
+
+.seats-in-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Kiểu dáng từng Ghế ngồi (Edu Seat) */
+.cinema-seat {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.18s ease;
+  border: 1.5px solid #CBD5E1;
+  background: #FFFFFF;
+  color: #1E293B;
+  position: relative;
+}
+
+/* 1. Ghế trống (Available) */
+.cinema-seat.seat-available {
+  background: #FFFFFF;
+  color: #1E293B;
+  border-color: #CBD5E1;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+.cinema-seat.seat-available:hover {
+  background: #EFF6FF;
+  border-color: #1D72FE;
+  color: #1D72FE;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(29, 114, 254, 0.2);
+}
+
+/* 2. Ghế đã đặt (Occupied / Disabled trong khung giờ) */
+.cinema-seat.seat-occupied {
+  background: #F1F5F9;
+  color: #94A3B8;
+  border-color: #E2E8F0;
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
+.cinema-seat.seat-occupied::after {
+  content: '✕';
+  position: absolute;
+  font-size: 10px;
+  color: #94A3B8;
+  top: 2px;
+  right: 4px;
+}
+
+/* 2b. Ghế tạm khóa bảo trì thiết bị từ ban quản lý (Inactive) */
+.cinema-seat.seat-inactive {
+  background: #FFFBEB;
+  color: #D97706;
+  border-color: #FDE68A;
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+
+.cinema-seat.seat-inactive::after {
+  content: '🔒';
+  position: absolute;
+  font-size: 9px;
+  top: 2px;
+  right: 3px;
+}
+
+/* 3. Ghế đang chọn (Selected - Xanh Dương Hoàng Gia #1D72FE) */
+.cinema-seat.seat-selected {
+  background: linear-gradient(135deg, #1D72FE 0%, #2563EB 100%);
+  color: #FFFFFF;
+  border-color: #1D72FE;
+  box-shadow: 0 4px 14px rgba(29, 114, 254, 0.4);
+  transform: scale(1.06);
+}
+
+/* Chú thích trạng thái ghế (Legend) */
+.cinema-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 10px 18px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.8rem;
+  color: #475569;
+  font-weight: 600;
+}
+
+.legend-box {
+  width: 15px;
+  height: 15px;
+  border-radius: 4px;
+}
+
+.legend-box.available {
+  background: #FFFFFF;
+  border: 1.5px solid #CBD5E1;
+}
+
+.legend-box.occupied {
+  background: #F1F5F9;
+  border: 1.5px solid #CBD5E1;
+}
+
+.legend-box.inactive {
+  background: #FFFBEB;
+  border: 1.5px solid #FDE68A;
+}
+
+.legend-box.selected {
+  background: #1D72FE;
+  border: 1.5px solid #1D72FE;
+}
+
+/* Footer Modal */
+.cinema-modal-footer {
+  background: #F8FAFC;
+  border-top: 1px solid #E2E8F0;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.footer-booking-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.footer-meta-time {
+  font-size: 0.825rem;
+  color: #475569;
+}
+
+.footer-seats-selected {
+  font-size: 0.825rem;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.selected-seats-badge {
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  color: #1D72FE;
+  font-weight: 800;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  font-size: 0.825rem;
+  letter-spacing: 0.02em;
+}
+
+.no-seats-text {
+  color: #94A3B8;
+  font-style: italic;
+}
+
+.footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-cinema-cancel {
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  color: #475569;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-cinema-cancel:hover {
+  background: #F1F5F9;
+  color: #0F172A;
+}
+
+.btn-cinema-confirm {
+  background: #1D72FE;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 22px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(29, 114, 254, 0.3);
+  transition: all 0.15s ease;
+}
+
+.btn-cinema-confirm:hover:not(:disabled) {
+  background: #1558C9;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(29, 114, 254, 0.38);
+}
+
+.btn-cinema-confirm:disabled {
+  background: #CBD5E1;
+  color: #94A3B8;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ====================================================================
+   MÔ HÌNH BÀN THẢO LUẬN (PER_TABLE - PHÒNG D-201)
+   Mô hình to hơn ghế một chút, hình khối bàn họp nhóm sang trọng
+   ==================================================================== */
+.cinema-tables-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 18px;
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 16px 0;
+}
+
+.cinema-table-card {
+  min-height: 96px;
+  border-radius: 14px;
+  padding: 12px 14px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 2px solid #CBD5E1;
+  background: #FFFFFF;
+  position: relative;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
+}
+
+.cinema-table-card.table-available {
+  background: #FFFFFF;
+  border-color: #CBD5E1;
+}
+
+.cinema-table-card.table-available:hover {
+  background: #F0F7FF;
+  border-color: #1D72FE;
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(29, 114, 254, 0.18);
+}
+
+.cinema-table-card.table-selected {
+  background: linear-gradient(135deg, #1D72FE 0%, #1E40AF 100%);
+  border-color: #1D72FE;
+  color: #FFFFFF;
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 8px 24px rgba(29, 114, 254, 0.35);
+}
+
+.cinema-table-card.table-occupied {
+  background: #F8FAFC;
+  border-color: #E2E8F0;
+  color: #94A3B8;
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.cinema-table-card.table-insufficient {
+  background: #FFF1F2;
+  border-color: #FECDD3;
+  color: #9F1239;
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+
+.cinema-table-card.table-insufficient:hover {
+  background: #FFE4E6;
+  border-color: #FDA4AF;
+  transform: none;
+  box-shadow: none;
+}
+
+.cinema-table-card.table-insufficient .table-card-capacity {
+  background: #FEE2E2;
+  color: #DC2626;
+  font-weight: 800;
+}
+
+.cinema-table-card.table-inactive {
+  background: #FEF2F2;
+  border-color: #FECACA;
+  color: #DC2626;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.table-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.table-card-code {
+  font-size: 1.05rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cinema-table-card.table-selected .table-card-code {
+  color: #FFFFFF;
+}
+
+.table-card-capacity {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: #EFF6FF;
+  color: #1D72FE;
+}
+
+.cinema-table-card.table-selected .table-card-capacity {
+  background: rgba(255, 255, 255, 0.25);
+  color: #FFFFFF;
+}
+
+.cinema-table-card.table-occupied .table-card-capacity {
+  background: #E2E8F0;
+  color: #64748B;
+}
+
+.table-card-desc {
+  font-size: 0.775rem;
+  margin-top: 6px;
+  color: #64748B;
+  line-height: 1.3;
+}
+
+.cinema-table-card.table-selected .table-card-desc {
+  color: #E0E7FF;
+}
+
+.table-card-status {
+  font-size: 0.725rem;
+  font-weight: 600;
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Global Floating Toast Notifications */
+.astp-toast-float {
+  position: fixed !important;
+  bottom: 24px !important;
+  right: 24px !important;
+  z-index: 99999 !important;
+  box-shadow: 0 12px 30px -4px rgba(0, 0, 0, 0.25) !important;
+  animation: astpToastSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes astpToastSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

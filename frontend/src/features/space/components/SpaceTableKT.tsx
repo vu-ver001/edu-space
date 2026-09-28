@@ -4,12 +4,9 @@ import {
   Pencil,
   Trash2,
   Inbox,
-  Users,
-  User,
   Armchair,
-  BookOpen,
-  Presentation,
   DoorOpen,
+  Users,
 } from 'lucide-react';
 import { Tooltip } from '../../../components/common/Tooltip';
 import type { Space } from '../types/space';
@@ -38,40 +35,25 @@ export const SpaceTableKT: React.FC<Props> = ({
     return `${building} - Tầng ${cleanFloor}`;
   };
 
-  // Badge loại không gian theo đúng bảng màu & icon pastel
+  // Hiển thị loại không gian với icon theo đúng hình thức đặt chỗ.
   const renderSpaceTypeBadge = (item: Space) => {
     const typeName = item.spaceType?.name || item.spaceTypeName || 'Chưa phân loại';
-    const lower = typeName.toLowerCase();
-    const mode = item.spaceType?.bookingMode || item.bookingMode;
+    const mode = item.spaceType?.bookingMode || item.bookingMode || 'WHOLE_SPACE';
+    const modeConfig = {
+      WHOLE_SPACE: { Icon: DoorOpen, label: 'Đặt theo phòng', className: 'space-type-mode-whole' },
+      PER_SEAT: { Icon: Armchair, label: 'Đặt theo ghế', className: 'space-type-mode-seat' },
+      PER_TABLE: { Icon: Users, label: 'Đặt theo bàn', className: 'space-type-mode-table' },
+    }[mode];
+    const { Icon, label, className } = modeConfig;
 
-    const badge = (className: string, Icon: React.ElementType) => (
-      <Tooltip content={typeName} maxWidth={320}>
-        <span className={`space-type-badge-pill ${className}`}>
-          <Icon size={13} className="space-type-icon" />
+    return (
+      <Tooltip content={`${typeName} · ${label}`} maxWidth={320}>
+        <span className={`space-type-badge-pill ${className}`} aria-label={`${typeName}, ${label}`}>
+          <Icon size={13} className="space-type-icon" aria-hidden="true" />
           <span>{typeName}</span>
         </span>
       </Tooltip>
     );
-
-    if (lower.includes('thảo luận') || lower.includes('thao luan')) {
-      return badge('badge-type-discussion', Users);
-    }
-    if (lower.includes('học nhóm') || lower.includes('hoc nhom')) {
-      return badge('badge-type-group', User);
-    }
-    if (lower.includes('tự học') || lower.includes('tu hoc')) {
-      return badge('badge-type-self-study', BookOpen);
-    }
-    if (lower.includes('bàn học') || lower.includes('ban hoc') || mode === 'PER_TABLE') {
-      return badge('badge-type-desk', Armchair);
-    }
-    if (lower.includes('seminar') || lower.includes('hội thảo') || lower.includes('thuyết trình')) {
-      return badge('badge-type-seminar', Presentation);
-    }
-    if (mode === 'PER_SEAT') {
-      return badge('badge-type-desk', Armchair);
-    }
-    return badge('badge-type-group', DoorOpen);
   };
 
   // Badge trạng thái theo chuẩn (Hoạt động, Bảo trì, Ngưng hoạt động)
@@ -136,7 +118,7 @@ export const SpaceTableKT: React.FC<Props> = ({
                     </Tooltip>
                   </td>
 
-                  {/* 4. Loại không gian (Pill badge pastel có icon) */}
+                  {/* 4. Loại không gian và icon theo hình thức đặt */}
                   <td>
                     {renderSpaceTypeBadge(item)}
                   </td>

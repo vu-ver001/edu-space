@@ -22,6 +22,8 @@ export interface PendingBooking {
   building?: string;
   studentId: number;
   studentName: string;
+  studentUserCode?: string;
+  studentClassName?: string;
   studentEmail: string;
   startTime: string;
   endTime: string;
@@ -114,7 +116,8 @@ export interface MaintenanceBlock {
   deletedAt?: string | null;
   active: boolean;
   createdBy?: number;
-  creatorEmail?: string;
+  creatorName?: string;
+  creatorUserCode?: string;
 }
 
 export interface MaintenanceCreateRequest {
@@ -132,11 +135,9 @@ export interface MaintenanceUpdateRequest {
 export type StaffAuditAction =
   | 'BOOKING_APPROVED'
   | 'BOOKING_REJECTED'
-  | 'STAFF_CHECK_IN'
   | 'STAFF_CHECKED_IN_BOOKING'
   | 'MAINTENANCE_CREATED'
   | 'MAINTENANCE_UPDATED'
-  | 'MAINTENANCE_DELETED'
   | 'MAINTENANCE_CANCELLED';
 
 export interface StaffAuditLog {

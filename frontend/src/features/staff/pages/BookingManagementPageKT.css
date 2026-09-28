@@ -869,6 +869,67 @@
   color: #64728a;
 }
 
+.booking-checkin-student-card {
+  margin-bottom: 11px;
+  padding: 13px 14px;
+  border: 1px solid #cfe1f8;
+  border-radius: 11px;
+  background: #f5f9ff;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.booking-checkin-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: #dbeafe;
+  color: #1d4ed8;
+  display: grid;
+  place-items: center;
+  flex: 0 0 46px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.booking-checkin-student-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.booking-checkin-student-main > strong {
+  overflow: hidden;
+  color: #17233e;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.booking-checkin-student-main > div {
+  min-width: 0;
+  color: #53627a;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  overflow-wrap: anywhere;
+}
+
+.booking-checkin-student-main svg,
+.booking-checkin-info-card dd svg {
+  flex: 0 0 auto;
+}
+
+.booking-checkin-info-card dd strong,
+.booking-checkin-info-card dd span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
 .booking-approve-note {
   margin-top: 11px;
   padding: 10px 12px;
@@ -886,6 +947,16 @@
 
 .booking-approve-note svg {
   color: #1677e8;
+}
+
+.booking-checkin-note {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.booking-checkin-note svg {
+  color: #16a34a;
 }
 
 .booking-approve-footer {

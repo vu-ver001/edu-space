@@ -27,7 +27,9 @@ public class MaintenanceResponseKT {
 
     private Long createdBy;
 
-    private String creatorEmail;
+    private String creatorName;
+
+    private String creatorUserCode;
 
     private LocalDateTime createdAt;
 

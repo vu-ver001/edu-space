@@ -11,7 +11,6 @@ import com.eduspace.backend.booking.dto.request.BulkApproveBookingRequest;
 import com.eduspace.backend.booking.dto.request.BulkRejectBookingRequest;
 import com.eduspace.backend.booking.dto.request.CreateBookingRequest;
 import com.eduspace.backend.booking.dto.request.RejectBookingRequest;
-import com.eduspace.backend.booking.dto.response.BookingAuditLogResponse;
 import com.eduspace.backend.booking.dto.response.BookingResponse;
 import com.eduspace.backend.booking.dto.response.BulkBookingOperationResponse;
 import com.eduspace.backend.booking.entity.BookingStatus;
@@ -59,16 +58,6 @@ public class BookingController {
     public ResponseEntity<BookingResponse> getBookingById(@PathVariable Long id) {
         String currentUserEmail = resolveCurrentUserEmail();
         return ResponseEntity.ok(bookingService.getBookingById(id, currentUserEmail));
-    }
-
-    /**
-     * Xem lịch sử thao tác của booking:
-     * GET /api/bookings/{id}/history (cũ) hoặc /api/bookings/{id}/audit-logs (frontend AuditLogModal)
-     */
-    @GetMapping({"/{id}/history", "/{id}/audit-logs"})
-    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('STUDENT', 'STAFF', 'ADMIN')")
-    public ResponseEntity<List<BookingAuditLogResponse>> getBookingAuditLogs(@PathVariable Long id) {
-        return ResponseEntity.ok(bookingService.getBookingAuditLogs(id));
     }
 
     /**

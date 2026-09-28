@@ -57,7 +57,8 @@ public class Booking {
         if (selectedSeats == null || selectedSeats.isBlank()) {
             return Collections.emptyList();
         }
-        return Arrays.stream(selectedSeats.split(","))
+        String cleaned = selectedSeats.replaceAll("[\\[\\]\"']", "");
+        return Arrays.stream(cleaned.split(","))
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
                 .collect(Collectors.toList());
