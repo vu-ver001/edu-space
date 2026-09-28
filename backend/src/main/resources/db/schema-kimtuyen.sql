@@ -37,6 +37,22 @@ CREATE TABLE IF NOT EXISTS spaces (
     CONSTRAINT fk_spaces_space_type FOREIGN KEY (space_type_id) REFERENCES space_types (id) ON DELETE RESTRICT
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
+-- 2A. Lịch khóa không gian để bảo trì (hỗ trợ soft delete)
+CREATE TABLE IF NOT EXISTS maintenance_blocks (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    space_id BIGINT NOT NULL,
+    start_time DATETIME(6) NOT NULL,
+    end_time DATETIME(6) NOT NULL,
+    reason VARCHAR(255) NOT NULL,
+    created_by BIGINT NOT NULL,
+    deleted_at DATETIME(6) NULL,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    CONSTRAINT chk_maintenance_time CHECK (start_time < end_time),
+    CONSTRAINT fk_maintenance_space FOREIGN KEY (space_id) REFERENCES spaces (id) ON DELETE RESTRICT,
+    INDEX idx_maintenance_space_time_del (space_id, start_time, end_time, deleted_at)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
 -- 3. Bảng chỗ ngồi cụ thể (chỉ dành cho spaces có booking_mode = PER_SEAT, hỗ trợ soft delete)
 CREATE TABLE IF NOT EXISTS seats (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,

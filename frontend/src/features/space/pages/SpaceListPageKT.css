@@ -181,22 +181,23 @@
   white-space: nowrap;
 }
 
-/* Space Type Badges (Pastel Pills with Icon) */
+/* Space type with booking-mode icon */
 .space-type-badge-pill {
   box-sizing: border-box;
   max-width: 100%;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 14px;
-  border-radius: 20px;
-  font-size: 12.5px;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 12px;
   font-weight: 600;
+  letter-spacing: 0.01em;
   white-space: nowrap;
   overflow: hidden;
 }
 
-.space-type-badge-pill > span {
+.space-type-badge-pill>span {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -207,39 +208,19 @@
   flex-shrink: 0;
 }
 
-/* Type 1: Phòng thảo luận - Purple */
-.badge-type-discussion {
-  background-color: #f3e8ff;
-  color: #9333ea;
-  border: 1px solid #e9d5ff;
-}
-
-/* Type 2: Phòng học nhóm - Fuchsia / Purple */
-.badge-type-group {
-  background-color: #f5d0fe;
-  color: #a21caf;
-  border: 1px solid #f0abfc;
-}
-
-/* Type 3: Phòng tự học - Violet */
-.badge-type-self-study {
-  background-color: #ede9fe;
-  color: #7c3aed;
-  border: 1px solid #ddd6fe;
-}
-
-/* Type 4: Khu bàn học - Sky / Cyan */
-.badge-type-desk {
+.space-type-mode-whole {
   background-color: #e0f2fe;
   color: #0284c7;
-  border: 1px solid #bae6fd;
 }
 
-/* Type 5: Phòng seminar - Pink */
-.badge-type-seminar {
-  background-color: #fce7f3;
-  color: #db2777;
-  border: 1px solid #fbcfe8;
+.space-type-mode-seat {
+  background-color: #dcfce7;
+  color: #16a34a;
+}
+
+.space-type-mode-table {
+  background-color: #f3e8ff;
+  color: #9333ea;
 }
 
 /* Building & Floor */
@@ -289,10 +270,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 4px 10px;
-  border-radius: 16px;
+  padding: 2px 10px;
+  border-radius: 9999px;
   font-size: 12px;
   font-weight: 600;
+  letter-spacing: 0.01em;
   white-space: nowrap;
 }
 
@@ -542,7 +524,8 @@
   align-items: center !important;
   justify-content: flex-start !important;
   flex-wrap: nowrap !important;
-  gap: 100px !important; /* Khoảng cách 100px với chữ danh sách không gian theo yêu cầu */
+  gap: 100px !important;
+  /* Khoảng cách 100px với chữ danh sách không gian theo yêu cầu */
   width: 100% !important;
 }
 
@@ -756,6 +739,7 @@
   color: #15803d;
   border: 1px solid #bbf7d0;
 }
+
 .dot-success {
   background-color: #16a34a;
 }
@@ -764,6 +748,7 @@
   color: #b45309;
   border: 1px solid #fde68a;
 }
+
 .dot-warning {
   background-color: #f59e0b;
 }
@@ -772,6 +757,7 @@
   color: #b91c1c;
   border: 1px solid #fecaca;
 }
+
 .dot-danger {
   background-color: #ef4444;
 }

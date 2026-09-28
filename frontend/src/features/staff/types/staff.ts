@@ -132,11 +132,9 @@ export interface MaintenanceUpdateRequest {
 export type StaffAuditAction =
   | 'BOOKING_APPROVED'
   | 'BOOKING_REJECTED'
-  | 'STAFF_CHECK_IN'
   | 'STAFF_CHECKED_IN_BOOKING'
   | 'MAINTENANCE_CREATED'
   | 'MAINTENANCE_UPDATED'
-  | 'MAINTENANCE_DELETED'
   | 'MAINTENANCE_CANCELLED';
 
 export interface StaffAuditLog {

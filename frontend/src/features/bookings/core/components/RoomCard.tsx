@@ -25,7 +25,6 @@ const ROOM_IMAGES: Record<number, string> = {
   5: 'https://images.unsplash.com/photo-1531482615713-2afd69097998?w=800&auto=format&fit=crop&q=80',
   6: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&auto=format&fit=crop&q=80',
 };
-
 const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&auto=format&fit=crop&q=80';
 
 export const formatMaintenanceTime = (startStr: string, endStr: string): string => {
@@ -328,4 +327,3 @@ export const RoomCard: React.FC<Props> = ({ space, searchParams }) => {
     </div>
   );
 };
-
