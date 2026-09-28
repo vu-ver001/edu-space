@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import type { Space } from '../services/spaceService';
 import { bookingService } from '../services/bookingService';
+import { DateInputVI } from './DateInputVI';
+import { TimeInput24H } from './TimeInput24H';
 
 interface Props {
   space: Space;
@@ -162,11 +164,10 @@ export const BookingModal: React.FC<Props> = ({
           <div className="modal-form-grid">
             <div className="form-group">
               <label className="form-label">📅 Ngày sử dụng *</label>
-              <input
-                type="date"
+              <DateInputVI
                 className="form-input internal-date-input"
                 value={date}
-                onChange={(e) => setDate(e.target.value)}
+                onChange={(val) => setDate(val)}
                 min={today}
                 required
               />
@@ -198,24 +199,18 @@ export const BookingModal: React.FC<Props> = ({
 
             <div className="form-group">
               <label className="form-label">⏰ Giờ bắt đầu *</label>
-              <input
-                type="time"
-                step="60"
-                className="form-input internal-time-input"
+              <TimeInput24H
                 value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
+                onChange={(val) => setStartTime(val)}
                 required
               />
             </div>
 
             <div className="form-group">
               <label className="form-label">⌛ Giờ kết thúc *</label>
-              <input
-                type="time"
-                step="60"
-                className="form-input internal-time-input"
+              <TimeInput24H
                 value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
+                onChange={(val) => setEndTime(val)}
                 required
               />
             </div>

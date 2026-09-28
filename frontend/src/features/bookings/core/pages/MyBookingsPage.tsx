@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { StatusBadge } from '../components/StatusBadge';
-import { AuditLogModal } from '../components/AuditLogModal';
 import type { Booking } from '../services/bookingService';
 import { bookingService } from '../services/bookingService';
 import './MyBookingsPage.css';
@@ -15,7 +14,6 @@ export const MyBookingsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Modal states
-  const [selectedBookingForAudit, setSelectedBookingForAudit] = useState<Booking | null>(null);
   const [cancellingBooking, setCancellingBooking] = useState<Booking | null>(null);
   const [cancelReason, setCancelReason] = useState<string>('');
 
@@ -77,10 +75,17 @@ export const MyBookingsPage: React.FC = () => {
     }
   };
 
+  // Helper kiểm tra đơn đặt đang hoạt động / giữ chỗ (phòng thủ Jackson serialize isOccupying/occupying hoặc fallback theo status)
+  const isBookingActive = (b: Booking): boolean => {
+    if (typeof b.isOccupying === 'boolean') return b.isOccupying;
+    if (typeof (b as any).occupying === 'boolean') return (b as any).occupying;
+    return b.status === 'PENDING_APPROVAL' || b.status === 'CONFIRMED' || b.status === 'CHECKED_IN';
+  };
+
   // Tính toán số liệu thống kê (Metrics)
   const metrics = useMemo(() => {
     const total = bookings.length;
-    const occupying = bookings.filter((b) => b.isOccupying).length;
+    const occupying = bookings.filter(isBookingActive).length;
     const pending = bookings.filter((b) => b.status === 'PENDING_APPROVAL').length;
     const readyCheckIn = bookings.filter((b) => b.status === 'CONFIRMED' && b.canCheckIn).length;
     const confirmed = bookings.filter((b) => b.status === 'CONFIRMED').length;
@@ -93,7 +98,7 @@ export const MyBookingsPage: React.FC = () => {
     return bookings.filter((b) => {
       // Tab filter
       if (activeTab === 'ACTIVE') {
-        if (!b.isOccupying) return false;
+        if (!isBookingActive(b)) return false;
       } else if (activeTab === 'PENDING') {
         if (b.status !== 'PENDING_APPROVAL') return false;
       } else if (activeTab === 'CONFIRMED') {
@@ -101,7 +106,7 @@ export const MyBookingsPage: React.FC = () => {
       } else if (activeTab === 'CHECKED_IN') {
         if (b.status !== 'CHECKED_IN') return false;
       } else if (activeTab === 'HISTORY') {
-        if (b.isOccupying) return false;
+        if (isBookingActive(b)) return false;
       }
 
       // Search query filter
@@ -122,13 +127,14 @@ export const MyBookingsPage: React.FC = () => {
     });
   }, [bookings, activeTab, searchQuery]);
 
-  // Helper định dạng ngày tháng chuẩn như Check-in
+  // Helper định dạng ngày tháng chuẩn dd/mm/yyyy
   const parseDateInfo = (isoString: string) => {
     const d = new Date(isoString);
-    const dayNum = d.getDate().toString().padStart(2, '0');
-    const monthNum = `THÁNG ${d.getMonth() + 1}`;
-    const fullDate = d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    const timeStr = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const dayNum = pad(d.getDate());
+    const monthNum = `THÁNG ${pad(d.getMonth() + 1)}`;
+    const fullDate = `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+    const timeStr = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
     return { dayNum, monthNum, fullDate, timeStr };
   };
 
@@ -269,7 +275,7 @@ export const MyBookingsPage: React.FC = () => {
             { key: 'PENDING', label: 'Chờ duyệt', count: metrics.pending },
             { key: 'CONFIRMED', label: 'Đã xác nhận', count: metrics.confirmed },
             { key: 'CHECKED_IN', label: 'Đã check-in', count: bookings.filter(b => b.status === 'CHECKED_IN').length },
-            { key: 'HISTORY', label: 'Lịch sử', count: bookings.filter(b => !b.isOccupying).length }
+            { key: 'HISTORY', label: 'Lịch sử', count: bookings.filter(b => !isBookingActive(b)).length }
           ].map((tab) => (
             <button
               key={tab.key}
@@ -352,7 +358,7 @@ export const MyBookingsPage: React.FC = () => {
             return (
               <div
                 key={b.id}
-                className={`mb-booking-card ${b.isOccupying ? 'occupying' : ''} ${b.canCheckIn ? 'checkin-ready' : ''}`}
+                className={`mb-booking-card ${isBookingActive(b) ? 'occupying' : ''} ${b.canCheckIn ? 'checkin-ready' : ''}`}
               >
                 <div>
                   {/* Thanh trên cùng của Thẻ */}
@@ -390,7 +396,10 @@ export const MyBookingsPage: React.FC = () => {
                     {/* Chi tiết Không gian & Thời gian */}
                     <div className="mb-space-details">
                       <div className="mb-space-name-row">
-                        <Link to={`/student/spaces/${b.spaceId}`} className="mb-space-title">
+                        <Link
+                          to={`/student/spaces/${b.spaceId}?date=${(b.startTime || '').split('T')[0]}&startTime=${(b.startTime || '').includes('T') ? b.startTime.split('T')[1].substring(0, 5) : ''}&endTime=${(b.endTime || '').includes('T') ? b.endTime.split('T')[1].substring(0, 5) : ''}&participantCount=${b.participantCount || 1}`}
+                          className="mb-space-title"
+                        >
                           {b.spaceName}
                         </Link>
 
@@ -441,7 +450,7 @@ export const MyBookingsPage: React.FC = () => {
                             <circle cx="12" cy="12" r="10"/>
                             <polyline points="12 6 12 12 16 14"/>
                           </svg>
-                          {startInfo.timeStr} – {endInfo.timeStr}
+                          {startInfo.timeStr} – {endInfo.timeStr} • {startInfo.fullDate}
                         </span>
                         <span className="mb-participants-tag">
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4, verticalAlign: '-1px' }}>
@@ -599,31 +608,26 @@ export const MyBookingsPage: React.FC = () => {
                   <div className="mb-actions-right">
                     {/* Xem chi tiết phòng */}
                     <button
-                      type="button"
-                      className="btn-card-icon-action btn-action-view"
-                      onClick={() => navigate(`/student/spaces/${b.spaceId}`)}
-                      title="Xem phòng"
-                      aria-label="Xem phòng"
-                    >
+                        type="button"
+                        className="btn-card-icon-action btn-action-view"
+                        onClick={() => {
+                          const [bDate] = (b.startTime || '').split('T');
+                          const bStart = (b.startTime || '').includes('T') ? b.startTime.split('T')[1].substring(0, 5) : '';
+                          const bEnd = (b.endTime || '').includes('T') ? b.endTime.split('T')[1].substring(0, 5) : '';
+                          const params = new URLSearchParams();
+                          if (bDate) params.set('date', bDate);
+                          if (bStart) params.set('startTime', bStart);
+                          if (bEnd) params.set('endTime', bEnd);
+                          if (b.participantCount) params.set('participantCount', String(b.participantCount));
+                          const qs = params.toString();
+                          navigate(`/student/spaces/${b.spaceId}${qs ? `?${qs}` : ''}`);
+                        }}
+                        title="Xem phòng"
+                        aria-label="Xem phòng"
+                      >
                       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
                         <circle cx="12" cy="12" r="3"/>
-                      </svg>
-                    </button>
-
-                    {/* Xem Audit Log */}
-                    <button
-                      type="button"
-                      className="btn-card-icon-action btn-action-audit"
-                      onClick={() => setSelectedBookingForAudit(b)}
-                      title="Nhật ký đặt phòng"
-                      aria-label="Nhật ký đặt phòng"
-                    >
-                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                        <polyline points="14 2 14 8 20 8"/>
-                        <line x1="16" y1="13" x2="8" y2="13"/>
-                        <line x1="16" y1="17" x2="8" y2="17"/>
                       </svg>
                     </button>
                   </div>
@@ -709,14 +713,6 @@ export const MyBookingsPage: React.FC = () => {
             </div>
           </div>
         </div>
-      )}
-
-      {/* 6. Modal Xem Nhật Ký Kiểm Toán (Audit Log Modal) */}
-      {selectedBookingForAudit && (
-        <AuditLogModal
-          booking={selectedBookingForAudit}
-          onClose={() => setSelectedBookingForAudit(null)}
-        />
       )}
     </div>
   );
