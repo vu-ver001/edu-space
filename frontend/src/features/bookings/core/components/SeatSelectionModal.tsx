@@ -125,16 +125,8 @@ export const SeatSelectionModal: React.FC<Props> = ({
       if (prev.includes(code)) {
         return prev.filter((item) => item !== code);
       } else {
-        if (isTableMode) {
-          // Với chế độ chọn bàn: thường chọn 1 bàn phù hợp (hoặc có thể chọn thêm)
-          return [code];
-        } else {
-          // Với chế độ chọn ghế: chọn đủ số người tham gia
-          if (prev.length >= participantCount) {
-            return [...prev.slice(1), code];
-          }
-          return [...prev, code];
-        }
+        // Cả chế độ chọn bàn và chọn ghế đều chỉ chọn 1 vị trí (1 bàn hoặc 1 ghế cá nhân)
+        return [code];
       }
     });
   };
@@ -168,9 +160,9 @@ export const SeatSelectionModal: React.FC<Props> = ({
         endTime: endIso,
         participantCount: isTableMode && selectedTable
           ? Math.min(Number(participantCount) || selectedTable.capacity, selectedTable.capacity)
-          : Math.max(selectedItems.length, Number(participantCount) || 1),
+          : 1,
         purpose: purpose.trim() || (isTableMode ? 'Thảo luận theo bàn' : 'Tự học tại chỗ ngồi'),
-        selectedSeats: isTableMode ? [selectedItems[0]] : sortedItems,
+        selectedSeats: [sortedItems[0]],
         tableId: isTableMode && selectedTable ? selectedTable.id : undefined,
       });
 
@@ -345,7 +337,7 @@ export const SeatSelectionModal: React.FC<Props> = ({
                   fontSize: '0.825rem',
                   fontWeight: 600
                 }}>
-                  💡 Nhấp vào ghế bạn muốn ngồi (Mã ghế S01 đến S10).
+                  💡 Mỗi sinh viên chọn 1 chỗ ngồi cá nhân (Mã ghế S01 đến S10). Nhấp vào ghế trống để chọn hoặc đổi vị trí.
                 </span>
               </div>
 
@@ -377,7 +369,7 @@ export const SeatSelectionModal: React.FC<Props> = ({
             </div>
             <div className="legend-item">
               <span className="legend-box selected" />
-              <span>{isTableMode ? 'Bàn đang chọn' : `Ghế đang chọn (${selectedItems.length}/${participantCount})`}</span>
+              <span>{isTableMode ? 'Bàn đang chọn' : 'Ghế bạn đang chọn'}</span>
             </div>
           </div>
         </div>
@@ -398,13 +390,13 @@ export const SeatSelectionModal: React.FC<Props> = ({
                     </span>
                   ) : (
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                      <Armchair size={14} strokeWidth={2.2} /> Ghế {selectedItems.sort().join(', ')} ({selectedItems.length} chỗ)
+                      <Armchair size={14} strokeWidth={2.2} /> Ghế {selectedItems[0]} (1 chỗ ngồi)
                     </span>
                   )}
                 </span>
               ) : (
                 <span className="no-seats-text">
-                  {isTableMode ? 'Chưa chọn bàn nào' : `Chưa chọn ghế nào (Cần chọn ${participantCount} ghế)`}
+                  {isTableMode ? 'Chưa chọn bàn nào' : 'Chưa chọn chỗ ngồi'}
                 </span>
               )}
             </div>

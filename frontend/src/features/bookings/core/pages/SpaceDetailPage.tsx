@@ -149,6 +149,13 @@ export const SpaceDetailPage: React.FC = () => {
   // LOGIC LIÊN KẾT CSDL: Lấy trực tiếp từ space.requiresApproval (cột space_types.requires_approval của Kim Tuyến)
   const requiresApproval = space?.requiresApproval ?? (space?.spaceType?.requiresApproval ?? !isPerSeat);
 
+  // Đối với PER_SEAT (khu tự học cá nhân): luôn cố định 1 sinh viên = 1 chỗ ngồi
+  useEffect(() => {
+    if (isPerSeat) {
+      setParticipantCount(1);
+    }
+  }, [isPerSeat]);
+
   // Quản lý danh sách hình ảnh (lấy từ bảng space_images) & Slider/Carousel
   const [spaceImages, setSpaceImages] = useState<string[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState<number>(0);
@@ -868,18 +875,28 @@ export const SpaceDetailPage: React.FC = () => {
 
               {/* Số người tham gia */}
               <div className="form-field-group">
-                <label className="form-label">Số người tham gia (Tối đa {space.capacity})</label>
+                <label className="form-label">
+                  Số người tham gia {isPerSeat ? '(Khu tự học cá nhân: 1 sinh viên / 1 chỗ ngồi)' : `(Tối đa ${space.capacity})`}
+                </label>
                 <input
                   type="number"
                   className="form-control-input"
-                  value={participantCount}
+                  value={isPerSeat ? 1 : participantCount}
                   min={1}
-                  max={space.capacity}
+                  max={isPerSeat ? 1 : space.capacity}
+                  disabled={isPerSeat}
+                  readOnly={isPerSeat}
+                  style={isPerSeat ? { backgroundColor: '#F8FAFC', color: '#64748B', cursor: 'not-allowed' } : {}}
                   onChange={(e) => {
+                    if (isPerSeat) return;
                     const val = e.target.value;
                     setParticipantCount(val === '' ? '' : parseInt(val) || 1);
                   }}
                   onBlur={() => {
+                    if (isPerSeat) {
+                      setParticipantCount(1);
+                      return;
+                    }
                     if (!participantCount || Number(participantCount) < 1) {
                       setParticipantCount(1);
                     } else if (Number(participantCount) > space.capacity) {
@@ -888,6 +905,11 @@ export const SpaceDetailPage: React.FC = () => {
                   }}
                   required
                 />
+                {isPerSeat && (
+                  <span style={{ fontSize: '12px', color: '#64748B', marginTop: '4px', display: 'block' }}>
+                    ℹ️ Khu tự học áp dụng quy tắc 1 sinh viên = 1 chỗ ngồi. Nếu học nhóm, bạn vui lòng chọn phòng họp nhóm hoặc bàn thảo luận.
+                  </span>
+                )}
               </div>
 
               {/* Mục đích sử dụng */}
@@ -979,7 +1001,7 @@ export const SpaceDetailPage: React.FC = () => {
           date={date}
           startTime={startTime}
           endTime={endTime}
-          participantCount={Number(participantCount) || 1}
+          participantCount={isPerSeat ? 1 : (Number(participantCount) || 1)}
           purpose={purpose}
           mode={isPerTable ? 'TABLE' : 'SEAT'}
           onClose={() => setIsSeatModalOpen(false)}

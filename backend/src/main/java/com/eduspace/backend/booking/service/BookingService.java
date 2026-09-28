@@ -140,6 +140,18 @@ public class BookingService {
                     "Không gian loại [" + space.getSpaceTypeName() + "] chỉ áp dụng đặt trọn gói toàn bộ không gian, không hỗ trợ chọn vị trí ghế hoặc bàn riêng lẻ.");
         }
 
+        if (!isWholeSpace && !isPerTable) {
+            // PER_SEAT mode: Khu tự học chung
+            if (requestedSeats == null || requestedSeats.isEmpty()) {
+                throw BusinessException.badRequest("SEAT_REQUIRED", 
+                        "Khu tự học yêu cầu chọn 1 vị trí chỗ ngồi cụ thể.");
+            }
+            if (requestedSeats.size() > 1) {
+                throw BusinessException.badRequest("SINGLE_SEAT_ONLY", 
+                        "Khu tự học cá nhân áp dụng quy tắc 1 sinh viên = 1 chỗ ngồi. Vui lòng chỉ chọn 1 ghế.");
+            }
+        }
+
         SpaceTable targetTable = null;
         if (isPerTable) {
             if (requestedTableId == null && requestedSeats != null && !requestedSeats.isEmpty() && spaceTableRepository != null) {
