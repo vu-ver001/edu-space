@@ -27,8 +27,6 @@ export interface Booking {
   purpose?: string;
   status: BookingStatus;
   statusDisplayName: string;
-  isOccupying: boolean;
-  occupying?: boolean;
   rejectReason?: string;
   rejectedAt?: string;
   expireReason?: string;
