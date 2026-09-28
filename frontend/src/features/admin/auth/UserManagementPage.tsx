@@ -51,13 +51,11 @@ export const UserManagementPage = () => {
     const [listFilter, setListFilter] = useState<'ALL' | 'STUDENT' | 'STAFF' | 'ADMIN'>('ALL');
     const [usersList, setUsersList] = useState<UserData[]>([]);
 
-    // STATE QUẢN LÝ POPUP CHO THÊM/SỬA TÀI KHOẢN
     const [isUserModalOpen, setIsUserModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<UserData | null>(null);
     const [modalError, setModalError] = useState<string | null>(null);
     const [modalSuccess, setModalSuccess] = useState<string | null>(null);
 
-    // STATE QUẢN LÝ POPUP CHO IMPORT CSV
     const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
 
     useEffect(() => {
@@ -75,12 +73,10 @@ export const UserManagementPage = () => {
 
     const filteredUsers = usersList.filter(user => listFilter === 'ALL' || user.role === listFilter);
 
-    // Mở Modal Thêm/Sửa
     const handleOpenCreateModal = () => { setEditingUser(null); setModalError(null); setModalSuccess(null); setIsUserModalOpen(true); };
     const handleOpenEditModal = (user: UserData) => { setEditingUser(user); setModalError(null); setModalSuccess(null); setIsUserModalOpen(true); };
     const handleCloseUserModal = () => { setIsUserModalOpen(false); setEditingUser(null); setModalError(null); setModalSuccess(null); };
 
-    // API Cập nhật/Thêm mới
     const handleSubmitForm = async (payload: any) => {
         setModalError(null);
         setModalSuccess(null);
@@ -103,7 +99,6 @@ export const UserManagementPage = () => {
         }
     };
 
-    // Khóa / Mở khóa
     const handleToggleStatus = async (userId: number | undefined) => {
         if (!userId) return;
         try {
@@ -114,7 +109,6 @@ export const UserManagementPage = () => {
         }
     };
 
-    // API Import CSV
     const handleSaveCSV = async (usersToImport: UserData[], roleType: string) => {
         if (usersToImport.length === 0) return alert('Chưa có dữ liệu');
         setLoading(true);
@@ -131,7 +125,7 @@ export const UserManagementPage = () => {
         setLoading(false);
         setListFilter(roleType as any);
         fetchUsers();
-        setIsCsvModalOpen(false); // Đóng modal CSV khi import xong
+        setIsCsvModalOpen(false);
     };
 
     return (
@@ -154,7 +148,6 @@ export const UserManagementPage = () => {
                         </div>
                     </div>
 
-                    {/* HAI NÚT HÀNH ĐỘNG GỘP CHUNG VÀO TOOLBAR */}
                     <div style={{ display: 'flex', gap: '12px' }}>
                         <button className="btn-secondary" onClick={() => setIsCsvModalOpen(true)}>
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -187,8 +180,22 @@ export const UserManagementPage = () => {
                                 <td>{user.fullName}</td>
                                 <td>{user.email}</td>
                                 <td>
-                                    {user.studentId && <span style={{fontSize: '0.85rem', color: '#64748b'}}>Mã SV: {user.studentId}</span>}
-                                    {user.department && <span style={{fontSize: '0.85rem', color: '#64748b'}}>Phòng: {user.department}</span>}
+                                    {user.userCode && (
+                                        <span style={{fontSize: '0.85rem', color: '#64748b', display: 'block'}}>
+                                            {user.role === 'STUDENT' ? 'Mã SV: ' : 'Mã NV: '} {user.userCode}
+                                        </span>
+                                    )}
+                                    {/* CẬP NHẬT HIỂN THỊ CỘT LỚP TẠI ĐÂY */}
+                                    {user.className && user.role === 'STUDENT' && (
+                                        <span style={{fontSize: '0.85rem', color: '#64748b', display: 'block'}}>
+                                            Lớp: {user.className}
+                                        </span>
+                                    )}
+                                    {user.department && (
+                                        <span style={{fontSize: '0.85rem', color: '#64748b', display: 'block'}}>
+                                            Phòng ban: {user.department}
+                                        </span>
+                                    )}
                                 </td>
                                 <td><span className={`role-badge role-${user.role?.toLowerCase()}`}>{user.role}</span></td>
                                 <td>
@@ -216,7 +223,6 @@ export const UserManagementPage = () => {
                 </div>
             </div>
 
-            {/* MODAL THÊM/SỬA TÀI KHOẢN (USER FORM) */}
             {isUserModalOpen && (
                 <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0, 0, 0, 0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
                     <div style={{ background: 'white', padding: '30px', borderRadius: '10px', width: '600px', maxWidth: '90%', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
@@ -237,7 +243,6 @@ export const UserManagementPage = () => {
                 </div>
             )}
 
-            {/* MODAL IMPORT CSV */}
             {isCsvModalOpen && (
                 <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0, 0, 0, 0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
                     <div style={{ background: 'white', padding: '30px', borderRadius: '10px', width: '600px', maxWidth: '90%', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>

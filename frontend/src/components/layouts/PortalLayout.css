@@ -2,7 +2,7 @@
 .portal-container { display: flex; min-height: 100vh; background: #f8fafc; font-family: 'Inter', sans-serif; }
 
 /* SIDEBAR MỚI: Flex dọc, đẩy profile xuống đáy, overflow visible để bật popup */
-.portal-sidebar-wide { width: 260px; min-width: 260px; background: #8b15c6; color: white; display: flex; flex-direction: column; justify-content: space-between; transition: width 0.3s ease, min-width 0.3s ease; overflow: visible; z-index: 10; }
+.portal-sidebar-wide { width: 260px; min-width: 260px; background: #7210a3; color: white; display: flex; flex-direction: column; justify-content: space-between; transition: width 0.3s ease, min-width 0.3s ease; overflow: visible; z-index: 10; }
 .portal-sidebar-wide.collapsed { width: 72px; min-width: 72px; }
 
 /* KHU VỰC TRÊN CỦA SIDEBAR (Chứa Logo + Menu, có thể cuộn nếu menu dài) */
