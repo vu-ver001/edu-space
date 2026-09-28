@@ -8,20 +8,20 @@ import type { StaffActionResponse } from '../types/api';
 
 export const maintenanceApi = {
   /**
-   * GET /api/staff/spaces/{spaceId}/maintenance
-   * Lấy danh sách bảo trì active của một không gian
+   * GET /api/staff/maintenance
+   * Lấy toàn bộ lịch bảo trì chưa bị xóa mềm
    */
-  getMaintenanceBySpace: async (spaceId: number): Promise<MaintenanceBlock[]> => {
-    const res = await api.get<MaintenanceBlock[]>(`/api/staff/spaces/${spaceId}/maintenance`);
+  getAllMaintenance: async (): Promise<MaintenanceBlock[]> => {
+    const res = await api.get<MaintenanceBlock[]>('/api/staff/maintenance');
     return res.data;
   },
 
   /**
-   * GET /api/staff/maintenance/{maintenanceId}
-   * Chi tiết bảo trì
+   * GET /api/staff/spaces/{spaceId}/maintenance
+   * Lấy lịch bảo trì của một không gian cho trang chi tiết
    */
-  getMaintenanceById: async (maintenanceId: number): Promise<MaintenanceBlock> => {
-    const res = await api.get<MaintenanceBlock>(`/api/staff/maintenance/${maintenanceId}`);
+  getMaintenanceBySpace: async (spaceId: number): Promise<MaintenanceBlock[]> => {
+    const res = await api.get<MaintenanceBlock[]>(`/api/staff/spaces/${spaceId}/maintenance`);
     return res.data;
   },
 

@@ -40,7 +40,7 @@ const initialTo = defaultTo;
 const pageSize = 10;
 
 const mapStaffLogToOperations = (log: StaffAuditLog): OperationsAuditLog => {
-  const action = (log.action === 'STAFF_CHECK_IN' ? 'STAFF_CHECKED_IN_BOOKING' : log.action) as AuditAction;
+  const action = log.action as AuditAction;
   const rawTarget = (log.targetType ?? 'BOOKING').toUpperCase();
   const targetType = (rawTarget === 'BOOKING' || rawTarget === 'MAINTENANCE' || rawTarget === 'STUDENT'
     ? rawTarget

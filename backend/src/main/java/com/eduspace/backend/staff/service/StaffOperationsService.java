@@ -267,6 +267,8 @@ public class StaffOperationsService {
                 .selectedSeats(b.getSelectedSeats())
                 .studentId(b.getStudentId())
                 .studentName(b.getStudentName())
+                .studentUserCode(b.getStudentUserCode())
+                .studentClassName(b.getStudentClassName())
                 .studentEmail(b.getStudentEmail())
                 .startTime(b.getStartTime())
                 .endTime(b.getEndTime())

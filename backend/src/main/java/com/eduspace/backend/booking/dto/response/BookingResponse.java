@@ -22,6 +22,8 @@ public class BookingResponse {
 
     private Long studentId;
     private String studentName;
+    private String studentUserCode;
+    private String studentClassName;
     private String studentEmail;
     private Long spaceId;
     private String spaceName;

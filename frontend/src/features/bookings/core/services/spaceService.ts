@@ -1,14 +1,14 @@
 import api from '../../../../services/api';
-import type { 
-  Facility, 
-  SpaceType, 
-  SpaceSeat, 
-  SpaceTable, 
+import type {
+  Facility,
+  SpaceType,
+  SpaceSeat,
+  SpaceTable,
   SpaceImage,
-  Space, 
-  ConflictDetail, 
+  Space,
+  ConflictDetail,
   SearchFilter,
-  MaintenanceSchedule 
+  MaintenanceSchedule
 } from '../types/space.types';
 
 export * from '../types/space.types';
@@ -105,5 +105,3 @@ export const spaceService = {
     return res.data;
   }
 };
-
-
