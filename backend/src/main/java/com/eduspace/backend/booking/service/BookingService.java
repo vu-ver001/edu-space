@@ -768,7 +768,6 @@ public class BookingService {
                 .purpose(booking.getPurpose())
                 .status(booking.getStatus())
                 .statusDisplayName(booking.getStatus().getDisplayName())
-                .isOccupying(booking.getStatus().isOccupying())
                 .rejectReason(booking.getRejectReason())
                 .rejectedAt(booking.getRejectedAt())
                 .expireReason(booking.getExpireReason())

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { StatusBadge } from '../components/StatusBadge';
+import { QrCheckInModal } from '../components/QrCheckInModal';
 import type { Booking } from '../services/bookingService';
 import { bookingService } from '../services/bookingService';
 import './MyBookingsPage.css';
@@ -16,6 +17,7 @@ export const MyBookingsPage: React.FC = () => {
   // Modal states
   const [cancellingBooking, setCancellingBooking] = useState<Booking | null>(null);
   const [cancelReason, setCancelReason] = useState<string>('');
+  const [qrCheckInBooking, setQrCheckInBooking] = useState<Booking | null>(null);
 
   const [actionLoading, setActionLoading] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -60,53 +62,33 @@ export const MyBookingsPage: React.FC = () => {
     }
   };
 
-  // Check-in trực tiếp
-  const handleCheckIn = async (booking: Booking) => {
-    setActionLoading(true);
-    try {
-      await bookingService.checkIn(booking.id);
-      setToastMessage(`🎉 Check-in thành công tại ${booking.spaceName}! Bạn có thể bắt đầu sử dụng phòng.`);
-      setTimeout(() => setToastMessage(null), 4500);
-      fetchBookings();
-    } catch (err: any) {
-      alert(err?.response?.data?.message || 'Không thể check-in lúc này.');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  // Helper kiểm tra đơn đặt đang hoạt động / giữ chỗ (phòng thủ Jackson serialize isOccupying/occupying hoặc fallback theo status)
-  const isBookingActive = (b: Booking): boolean => {
-    if (typeof b.isOccupying === 'boolean') return b.isOccupying;
-    if (typeof (b as any).occupying === 'boolean') return (b as any).occupying;
-    return b.status === 'PENDING_APPROVAL' || b.status === 'CONFIRMED' || b.status === 'CHECKED_IN';
-  };
-
   // Tính toán số liệu thống kê (Metrics)
   const metrics = useMemo(() => {
     const total = bookings.length;
-    const occupying = bookings.filter(isBookingActive).length;
     const pending = bookings.filter((b) => b.status === 'PENDING_APPROVAL').length;
-    const readyCheckIn = bookings.filter((b) => b.status === 'CONFIRMED' && b.canCheckIn).length;
     const confirmed = bookings.filter((b) => b.status === 'CONFIRMED').length;
+    const checkedIn = bookings.filter((b) => b.status === 'CHECKED_IN').length;
     const completed = bookings.filter((b) => b.status === 'COMPLETED').length;
-    return { total, occupying, pending, readyCheckIn, confirmed, completed };
+    const history = bookings.filter((b) =>
+      ['COMPLETED', 'CANCELLED', 'REJECTED', 'EXPIRED', 'NO_SHOW'].includes(b.status)
+    ).length;
+    return { total, pending, confirmed, checkedIn, completed, history };
   }, [bookings]);
 
   // Bộ lọc danh sách
   const filteredBookings = useMemo(() => {
     return bookings.filter((b) => {
       // Tab filter
-      if (activeTab === 'ACTIVE') {
-        if (!isBookingActive(b)) return false;
-      } else if (activeTab === 'PENDING') {
+      if (activeTab === 'PENDING') {
         if (b.status !== 'PENDING_APPROVAL') return false;
       } else if (activeTab === 'CONFIRMED') {
         if (b.status !== 'CONFIRMED') return false;
       } else if (activeTab === 'CHECKED_IN') {
         if (b.status !== 'CHECKED_IN') return false;
+      } else if (activeTab === 'COMPLETED') {
+        if (b.status !== 'COMPLETED') return false;
       } else if (activeTab === 'HISTORY') {
-        if (isBookingActive(b)) return false;
+        if (!['COMPLETED', 'CANCELLED', 'REJECTED', 'EXPIRED', 'NO_SHOW'].includes(b.status)) return false;
       }
 
       // Search query filter
@@ -209,15 +191,15 @@ export const MyBookingsPage: React.FC = () => {
         <div className="mb-metric-card">
           <div className="mb-metric-icon-box active">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="4" y="2" width="16" height="20" rx="2" ry="2"/>
-              <path d="M9 22v-4h6v4"/>
-              <path d="M8 6h.01M16 6h.01M8 10h.01M16 10h.01M8 14h.01M16 14h.01"/>
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
             </svg>
           </div>
           <div className="mb-metric-info">
-            <span className="mb-metric-val">{metrics.occupying}</span>
-            <span className="mb-metric-label">Đang giữ chỗ</span>
-
+            <span className="mb-metric-val">{metrics.total}</span>
+            <span className="mb-metric-label">Tất cả</span>
           </div>
         </div>
 
@@ -232,22 +214,19 @@ export const MyBookingsPage: React.FC = () => {
           <div className="mb-metric-info">
             <span className="mb-metric-val">{metrics.pending}</span>
             <span className="mb-metric-label">Chờ Staff duyệt</span>
-
           </div>
         </div>
 
         <div className="mb-metric-card">
           <div className="mb-metric-icon-box checkin">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-              <circle cx="18" cy="4" r="3" fill="#10B981" stroke="#FFFFFF" strokeWidth="1.5"/>
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+              <polyline points="22 4 12 14.01 9 11.01"/>
             </svg>
           </div>
           <div className="mb-metric-info">
-            <span className="mb-metric-val">{metrics.readyCheckIn > 0 ? `${metrics.readyCheckIn} sẵn sàng` : metrics.confirmed}</span>
-            <span className="mb-metric-label">Đã xác nhận & Check-in</span>
-
+            <span className="mb-metric-val">{metrics.confirmed}</span>
+            <span className="mb-metric-label">Đã xác nhận</span>
           </div>
         </div>
 
@@ -261,7 +240,6 @@ export const MyBookingsPage: React.FC = () => {
           <div className="mb-metric-info">
             <span className="mb-metric-val">{metrics.completed}</span>
             <span className="mb-metric-label">Đã hoàn thành</span>
-
           </div>
         </div>
       </div>
@@ -271,11 +249,11 @@ export const MyBookingsPage: React.FC = () => {
         <div className="mb-tabs-nav">
           {[
             { key: 'ALL', label: 'Tất cả', count: metrics.total },
-            { key: 'ACTIVE', label: 'Đang hoạt động', count: metrics.occupying },
             { key: 'PENDING', label: 'Chờ duyệt', count: metrics.pending },
             { key: 'CONFIRMED', label: 'Đã xác nhận', count: metrics.confirmed },
-            { key: 'CHECKED_IN', label: 'Đã check-in', count: bookings.filter(b => b.status === 'CHECKED_IN').length },
-            { key: 'HISTORY', label: 'Lịch sử', count: bookings.filter(b => !isBookingActive(b)).length }
+            { key: 'CHECKED_IN', label: 'Đã check-in', count: metrics.checkedIn },
+            { key: 'COMPLETED', label: 'Đã hoàn thành', count: metrics.completed },
+            { key: 'HISTORY', label: 'Lịch sử', count: metrics.history }
           ].map((tab) => (
             <button
               key={tab.key}
@@ -358,7 +336,7 @@ export const MyBookingsPage: React.FC = () => {
             return (
               <div
                 key={b.id}
-                className={`mb-booking-card ${isBookingActive(b) ? 'occupying' : ''} ${b.canCheckIn ? 'checkin-ready' : ''}`}
+                className={`mb-booking-card ${b.canCheckIn ? 'checkin-ready' : ''}`}
               >
                 <div>
                   {/* Thanh trên cùng của Thẻ */}
@@ -484,7 +462,7 @@ export const MyBookingsPage: React.FC = () => {
                         <polyline points="22 4 12 14.01 9 11.01"/>
                       </svg>
                       <div>
-                        <strong>Cửa sổ check-in đang mở!</strong> Hãy bấm nút check-in bên dưới để xác nhận có mặt sử dụng phòng.
+                        <strong>Cửa sổ check-in đang mở!</strong> Bấm nút check-in bên dưới để lấy mã QR xuất trình cho nhân viên Staff.
                       </div>
                     </div>
                   )}
@@ -568,19 +546,21 @@ export const MyBookingsPage: React.FC = () => {
                 {/* Các nút thao tác ở chân Thẻ */}
                 <div className="mb-card-actions">
                    <div className="mb-actions-left">
-                    {/* Nút Check-in nổi bật nếu đủ điều kiện */}
+                    {/* Nút Mã QR Check-in */}
                     {b.status === 'CONFIRMED' && (
                       <button
                         type="button"
                         className="btn-card-checkin"
-                        onClick={() => handleCheckIn(b)}
-                        disabled={!b.canCheckIn || actionLoading}
-                        title={b.canCheckIn ? 'Bấm để check-in có mặt' : 'Cần chờ đến 15 phút trước giờ bắt đầu mới có thể check-in'}
+                        onClick={() => setQrCheckInBooking(b)}
+                        title="Bấm để mở mã QR Check-in điểm danh"
                       >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="20 6 9 17 4 12"/>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="3" width="7" height="7"/>
+                          <rect x="14" y="3" width="7" height="7"/>
+                          <rect x="14" y="14" width="7" height="7"/>
+                          <rect x="3" y="14" width="7" height="7"/>
                         </svg>
-                        Check-in
+                        Mã QR Check-in
                       </button>
                     )}
 
@@ -713,6 +693,19 @@ export const MyBookingsPage: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* 6. Modal Mã QR Check-in Điểm Danh (Liên kết 100% CSDL của bạn Vũ) */}
+      {qrCheckInBooking && (
+        <QrCheckInModal
+          booking={qrCheckInBooking}
+          onClose={() => setQrCheckInBooking(null)}
+          onCheckInSuccess={() => {
+            setToastMessage(`🎉 Điểm danh thành công tại ${qrCheckInBooking.spaceName}!`);
+            setTimeout(() => setToastMessage(null), 4000);
+            fetchBookings();
+          }}
+        />
       )}
     </div>
   );

@@ -60,6 +60,20 @@ export const bookingService = {
     return res.data;
   },
 
+  // Phát hành mã token check-in (M09 - Liên kết 100% CSDL của bạn Vũ)
+  issueCheckInToken: async (id: number): Promise<{ bookingId: number; token: string; issuedAt: string; expiresAt: string }> => {
+    const res = await api.post<{ bookingId: number; token: string; issuedAt: string; expiresAt: string }>(
+      `/api/bookings/${id}/check-in-token`
+    );
+    return res.data;
+  },
+
+  // Xác thực token check-in (M09 - bạn Vũ)
+  verifyCheckInToken: async (id: number, token: string): Promise<Booking> => {
+    const res = await api.post<Booking>(`/api/bookings/${id}/check-in/verify`, { token });
+    return res.data;
+  },
+
   // Lấy danh sách booking chờ duyệt (Staff)
   getPendingBookings: async (): Promise<Booking[]> => {
     const res = await api.get<Booking[]>('/api/bookings/pending');

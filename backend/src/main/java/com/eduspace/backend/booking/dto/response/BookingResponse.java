@@ -35,8 +35,6 @@ public class BookingResponse {
     private String purpose;
     private BookingStatus status;
     private String statusDisplayName;
-    @com.fasterxml.jackson.annotation.JsonProperty("isOccupying")
-    private boolean isOccupying;
     private String rejectReason;
     private LocalDateTime rejectedAt;
     private String expireReason;

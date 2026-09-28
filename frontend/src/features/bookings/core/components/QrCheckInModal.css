@@ -1,0 +1,325 @@
+/* ========================================================
+   MODAL MÃ QR CHECK-IN - LIÊN KẾT 100% CSDL CỦA BẠN VŨ
+   Giao diện tinh tế, hiện đại, chuẩn EduSpace
+   ======================================================== */
+
+.qr-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 16px;
+  animation: qrFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes qrFadeIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.qr-modal-box {
+  background: #FFFFFF;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 460px;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(226, 232, 240, 0.8);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 1. Header */
+.qr-modal-header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #F1F5F9;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  background: #F8FAFC;
+}
+
+.qr-modal-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.qr-modal-icon-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #EFF6FF;
+  color: #1D72FE;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #DBEAFE;
+  flex-shrink: 0;
+}
+
+.qr-modal-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.qr-modal-subtitle {
+  margin: 3px 0 0;
+  font-size: 0.8rem;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.qr-booking-badge {
+  background: #E2E8F0;
+  color: #334155;
+  padding: 1px 7px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+.qr-modal-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.3rem;
+  color: #94A3B8;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.qr-modal-close-btn:hover {
+  background: #E2E8F0;
+  color: #0F172A;
+}
+
+/* 2. Body */
+.qr-modal-body {
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+/* Thông tin tóm tắt không gian */
+.qr-space-summary-card {
+  width: 100%;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 20px;
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.qr-space-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.qr-space-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1E293B;
+}
+
+.qr-space-meta {
+  font-size: 0.8rem;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Khung hiển thị QR code */
+.qr-code-wrapper {
+  background: #FFFFFF;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1.5px solid #BFDBFE;
+  box-shadow: 0 4px 16px rgba(29, 114, 254, 0.08);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  position: relative;
+}
+
+/* Token code text display */
+.qr-token-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #F1F5F9;
+  border: 1px solid #CBD5E1;
+  padding: 6px 12px;
+  border-radius: 8px;
+  margin-bottom: 14px;
+}
+
+.qr-token-display code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #1E293B;
+  letter-spacing: 0.5px;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.btn-copy-token {
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #1D72FE;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.btn-copy-token:hover {
+  background: #EFF6FF;
+  border-color: #93C5FD;
+}
+
+/* Expiry notice */
+.qr-expiry-tag {
+  font-size: 0.8rem;
+  color: #0369A1;
+  background: #F0F9FF;
+  border: 1px solid #BAE6FD;
+  padding: 6px 12px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+  font-weight: 500;
+}
+
+/* Instructions */
+.qr-instruction-text {
+  font-size: 0.825rem;
+  color: #64748B;
+  line-height: 1.5;
+  margin: 0 0 18px;
+}
+
+/* State: Not yet open (Chưa đến giờ check-in) */
+.qr-early-state {
+  padding: 10px 0 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.qr-early-icon-circle {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #FFFBEB;
+  border: 2px solid #FDE68A;
+  color: #D97706;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.qr-early-title {
+  margin: 0 0 8px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #92400E;
+}
+
+.qr-early-desc {
+  margin: 0 0 16px;
+  font-size: 0.875rem;
+  color: #78350F;
+  line-height: 1.5;
+  background: #FFFDF5;
+  border: 1px dashed #FCD34D;
+  padding: 12px 16px;
+  border-radius: 12px;
+}
+
+/* State: Loading */
+.qr-loading-box {
+  padding: 40px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  color: #64748B;
+  font-size: 0.9rem;
+}
+
+.qr-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3.5px solid #E2E8F0;
+  border-top-color: #1D72FE;
+  border-radius: 50%;
+  animation: qrSpin 0.8s linear infinite;
+}
+
+@keyframes qrSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* 3. Footer actions */
+.qr-modal-footer {
+  padding: 16px 24px;
+  background: #F8FAFC;
+  border-top: 1px solid #F1F5F9;
+  display: flex;
+  justify-content: stretch;
+}
+
+.btn-qr-close {
+  width: 100%;
+  height: 42px;
+  padding: 0 20px;
+  border-radius: 10px;
+  border: 1.5px solid #CBD5E1;
+  background: #FFFFFF;
+  color: #334155;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.btn-qr-close:hover {
+  background: #F1F5F9;
+  border-color: #94A3B8;
+  color: #0F172A;
+}
