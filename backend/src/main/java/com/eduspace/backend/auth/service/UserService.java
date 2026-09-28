@@ -7,7 +7,8 @@ import com.eduspace.backend.auth.entity.User;
 import com.eduspace.backend.auth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Service;import com.eduspace.backend.auth.dto.request.ChangePasswordRequest;
+import org.springframework.security.authentication.BadCredentialsException;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -27,7 +28,8 @@ public class UserService {
                 .fullName(user.getFullName())
                 .role(user.getRole())
                 .dob(user.getDob())
-                .studentId(user.getStudentId())
+                .userCode(user.getUserCode())
+                .className(user.getClassName())
                 .department(user.getDepartment())
                 .active(user.isActive())
                 .build();
@@ -71,8 +73,8 @@ public class UserService {
         // Tự động tạo username nếu request không gửi lên
         String generatedUsername = request.getUsername();
         if (generatedUsername == null || generatedUsername.trim().isEmpty()) {
-            if (request.getStudentId() != null && !request.getStudentId().trim().isEmpty()) {
-                generatedUsername = request.getStudentId();
+            if (request.getUserCode() != null && !request.getUserCode().trim().isEmpty()) {
+                generatedUsername = request.getUserCode();
             } else {
                 generatedUsername = request.getEmail().split("@")[0];
             }
@@ -86,8 +88,9 @@ public class UserService {
                 .fullName(request.getFullName())
                 .role(request.getRole())
                 .dob(request.getDob())                 // Đã có
-                .studentId(request.getStudentId())     // Đã có
+                .userCode(request.getUserCode())     // Đã có
                 .department(request.getDepartment())   // Đã có
+                .className(request.getClassName())
                 .active(true)
                 .build();
 
@@ -121,6 +124,43 @@ public class UserService {
         }
 
         user.setRole(newRole);
+        User updatedUser = userRepository.save(user);
+        return mapToResponse(updatedUser);
+    }
+
+    // 6. [BẤT KỲ AI] Đổi mật khẩu
+    public void changePassword(String usernameOrEmail, ChangePasswordRequest request) {
+        User user = userRepository.findByEmailOrUsername(usernameOrEmail, usernameOrEmail)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy tài khoản"));
+
+        // So sánh mật khẩu cũ
+        if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
+            throw new BadCredentialsException("Mật khẩu hiện tại không chính xác.");
+        }
+
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
+            throw new BadCredentialsException("Mật khẩu mới không được trùng với mật khẩu hiện tại.");
+        }
+
+        // Mã hóa và lưu mật khẩu mới
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+    }
+
+    // 7. [ADMIN] Cập nhật thông tin tài khoản (Dùng cho Modal Edit)
+    public UserResponse updateUser(Long userId, UserCreateRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+
+        // Frontend đã disable email, role, studentId... nên ta chỉ ưu tiên cập nhật thông tin được phép sửa
+        user.setFullName(request.getFullName());
+        user.setDob(request.getDob());
+
+        if (request.getClassName() != null) {
+            user.setClassName(request.getClassName());
+        }
+
+        // Chỉ lưu, không đổi password hay role/studentId ở đây để đảm bảo an toàn dữ liệu định danh
         User updatedUser = userRepository.save(user);
         return mapToResponse(updatedUser);
     }

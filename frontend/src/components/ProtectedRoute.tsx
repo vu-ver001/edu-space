@@ -1,5 +1,5 @@
 import { Navigate, Outlet } from 'react-router-dom';
-import { jwtDecode } from 'jwt-decode'; // <-- THÊM DÒNG NÀY
+import { jwtDecode } from 'jwt-decode';
 
 interface ProtectedRouteProps {
     allowedRoles?: string[];
@@ -18,9 +18,6 @@ export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
         return <Navigate to="/login" replace />;
     }
 
-    // =========================================================================
-    // TRẠM KIỂM TRA AN NINH (THÊM MỚI): Chống hack đổi quyền bằng F12
-    // =========================================================================
     try {
         const decoded: any = jwtDecode(token);
 
@@ -50,9 +47,6 @@ export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
         localStorage.removeItem('eduspace_user');
         return <Navigate to="/login" replace />;
     }
-    // =========================================================================
-    // KẾT THÚC ĐOẠN THÊM MỚI
-    // =========================================================================
 
     // 2. Đã đăng nhập nhưng sai Role -> Đuổi về trang báo lỗi 403 (hoặc trang chủ)
     if (allowedRoles && !allowedRoles.includes(user.role)) {
