@@ -81,7 +81,7 @@ public class MaintenanceService {
         log.info("Staff {} đã tạo bảo trì #{} cho Space #{} từ {} đến {}",
                 actorEmail, saved.getId(), spaceId, request.getStartTime(), request.getEndTime());
 
-        return toResponse(saved, actorEmail);
+        return toResponse(saved, currentUser);
     }
 
     /**
@@ -141,7 +141,7 @@ public class MaintenanceService {
                         : "Cập nhật bảo trì: " + effectiveReason);
 
         log.info("Staff {} đã cập nhật bảo trì #{} cho Space #{}", actorEmail, updated.getId(), spaceId);
-        return toResponse(updated, actorEmail);
+        return toResponse(updated);
     }
 
     /**
@@ -185,20 +185,17 @@ public class MaintenanceService {
     public List<MaintenanceResponseKT> getAllMaintenance() {
         List<MaintenanceBlock> blocks = maintenanceBlockRepository
                 .findAllByDeletedAtIsNullOrderByStartTimeAsc();
-        Map<Long, String> creatorEmails = userRepository.findAllById(
+        Map<Long, User> creators = userRepository.findAllById(
                         blocks.stream()
                                 .map(MaintenanceBlock::getCreatedBy)
                                 .filter(id -> id != null && id > 0)
                                 .distinct()
                                 .toList())
                 .stream()
-                .filter(user -> user.getEmail() != null)
-                .collect(Collectors.toMap(User::getId, User::getEmail));
+                .collect(Collectors.toMap(User::getId, user -> user));
 
         return blocks.stream()
-                .map(block -> toResponse(
-                        block,
-                        creatorEmails.getOrDefault(block.getCreatedBy(), "Không xác định")))
+                .map(block -> toResponse(block, creators.get(block.getCreatedBy())))
                 .toList();
     }
 
@@ -277,16 +274,13 @@ public class MaintenanceService {
     }
 
     private MaintenanceResponseKT toResponse(MaintenanceBlock block) {
-        String creatorEmail = "Không xác định";
-        if (block.getCreatedBy() != null && block.getCreatedBy() > 0) {
-            creatorEmail = userRepository.findById(block.getCreatedBy())
-                    .map(User::getEmail)
-                    .orElse("Không xác định");
-        }
-        return toResponse(block, creatorEmail);
+        User creator = block.getCreatedBy() == null || block.getCreatedBy() <= 0
+                ? null
+                : userRepository.findById(block.getCreatedBy()).orElse(null);
+        return toResponse(block, creator);
     }
 
-    private MaintenanceResponseKT toResponse(MaintenanceBlock block, String creatorEmail) {
+    private MaintenanceResponseKT toResponse(MaintenanceBlock block, User creator) {
         return MaintenanceResponseKT.builder()
                 .id(block.getId())
                 .spaceId(block.getSpace().getId())
@@ -295,11 +289,26 @@ public class MaintenanceService {
                 .endTime(block.getEndTime())
                 .reason(block.getReason())
                 .createdBy(block.getCreatedBy())
-                .creatorEmail(creatorEmail)
+                .creatorName(resolveCreatorName(creator))
+                .creatorUserCode(creator == null || creator.getUserCode() == null
+                        || creator.getUserCode().isBlank() ? null : creator.getUserCode().trim())
                 .createdAt(block.getCreatedAt())
                 .updatedAt(block.getUpdatedAt())
                 .deletedAt(block.getDeletedAt())
                 .active(block.isActive())
                 .build();
+    }
+
+    private String resolveCreatorName(User creator) {
+        if (creator == null) {
+            return "Không xác định";
+        }
+        if (creator.getFullName() != null && !creator.getFullName().isBlank()) {
+            return creator.getFullName().trim();
+        }
+        if (creator.getUsername() != null && !creator.getUsername().isBlank()) {
+            return creator.getUsername().trim();
+        }
+        return "Không xác định";
     }
 }

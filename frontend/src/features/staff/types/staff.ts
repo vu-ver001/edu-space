@@ -22,6 +22,8 @@ export interface PendingBooking {
   building?: string;
   studentId: number;
   studentName: string;
+  studentUserCode?: string;
+  studentClassName?: string;
   studentEmail: string;
   startTime: string;
   endTime: string;
@@ -114,7 +116,8 @@ export interface MaintenanceBlock {
   deletedAt?: string | null;
   active: boolean;
   createdBy?: number;
-  creatorEmail?: string;
+  creatorName?: string;
+  creatorUserCode?: string;
 }
 
 export interface MaintenanceCreateRequest {

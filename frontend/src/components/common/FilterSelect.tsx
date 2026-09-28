@@ -18,6 +18,7 @@ interface FilterSelectProps {
   className?: string;
   disabled?: boolean;
   title?: string;
+  portal?: boolean;
 }
 
 interface MenuPosition {
@@ -36,6 +37,7 @@ export const FilterSelect = ({
   className = '',
   disabled = false,
   title,
+  portal = true,
 }: FilterSelectProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState<MenuPosition | null>(null);
@@ -73,14 +75,16 @@ export const FilterSelect = ({
   useEffect(() => {
     if (!isOpen) return;
 
-    updateMenuPosition();
+    if (portal) updateMenuPosition();
     const closeOnOutsideClick = (event: MouseEvent) => {
       const target = event.target as Node;
       if (!controlRef.current?.contains(target) && !menuRef.current?.contains(target)) {
         setIsOpen(false);
       }
     };
-    const closeOnViewportChange = () => setIsOpen(false);
+    const closeOnViewportChange = () => {
+      if (portal) setIsOpen(false);
+    };
 
     document.addEventListener('mousedown', closeOnOutsideClick);
     window.addEventListener('resize', closeOnViewportChange);
@@ -90,16 +94,16 @@ export const FilterSelect = ({
       window.removeEventListener('resize', closeOnViewportChange);
       window.removeEventListener('scroll', closeOnViewportChange);
     };
-  }, [isOpen, options.length]);
+  }, [isOpen, options.length, portal]);
 
   useEffect(() => {
-    if (!isOpen || !menuPosition) return;
+    if (!isOpen || (portal && !menuPosition)) return;
     window.requestAnimationFrame(() => {
       menuRef.current
         ?.querySelector<HTMLElement>('[data-selected="true"]')
         ?.scrollIntoView({ block: 'nearest' });
     });
-  }, [isOpen, menuPosition]);
+  }, [isOpen, menuPosition, portal]);
 
   const chooseOption = (option: FilterSelectOption) => {
     if (option.disabled) return;
@@ -131,6 +135,41 @@ export const FilterSelect = ({
     if (enabledOptions[nextIndex]) onChange(enabledOptions[nextIndex].value);
   };
 
+  const menu = (
+    <div
+      ref={menuRef}
+      id={listboxId}
+      className={`filter-select-menu ${portal ? '' : 'filter-select-menu-inline'}`.trim()}
+      role="listbox"
+      aria-label={ariaLabel}
+      style={portal && menuPosition ? {
+        top: menuPosition.top,
+        left: menuPosition.left,
+        width: menuPosition.width,
+        maxHeight: menuPosition.maxHeight,
+        transform: menuPosition.openAbove ? 'translateY(-100%)' : undefined,
+      } : undefined}
+    >
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          role="option"
+          aria-selected={option.value === value}
+          data-selected={option.value === value}
+          className={`filter-select-option ${option.value === value ? 'selected' : ''}`}
+          disabled={option.disabled}
+          onClick={() => chooseOption(option)}
+        >
+          <Tooltip content={option.label} maxWidth={460} onlyWhenOverflow>
+            <span>{option.label}</span>
+          </Tooltip>
+          {option.value === value && <Check size={16} />}
+        </button>
+      ))}
+    </div>
+  );
+
   return (
     <div ref={controlRef} className={`filter-select-control ${disabled ? 'disabled' : ''} ${className}`.trim()}>
       <button
@@ -151,41 +190,8 @@ export const FilterSelect = ({
         <ChevronDown size={16} />
       </button>
 
-      {isOpen && menuPosition && createPortal(
-        <div
-          ref={menuRef}
-          id={listboxId}
-          className="filter-select-menu"
-          role="listbox"
-          aria-label={ariaLabel}
-          style={{
-            top: menuPosition.top,
-            left: menuPosition.left,
-            width: menuPosition.width,
-            maxHeight: menuPosition.maxHeight,
-            transform: menuPosition.openAbove ? 'translateY(-100%)' : undefined,
-          }}
-        >
-          {options.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              role="option"
-              aria-selected={option.value === value}
-              data-selected={option.value === value}
-              className={`filter-select-option ${option.value === value ? 'selected' : ''}`}
-              disabled={option.disabled}
-              onClick={() => chooseOption(option)}
-            >
-              <Tooltip content={option.label} maxWidth={460} onlyWhenOverflow>
-                <span>{option.label}</span>
-              </Tooltip>
-              {option.value === value && <Check size={16} />}
-            </button>
-          ))}
-        </div>,
-        document.body,
-      )}
+      {isOpen && !portal && menu}
+      {isOpen && portal && menuPosition && createPortal(menu, document.body)}
     </div>
   );
 };
