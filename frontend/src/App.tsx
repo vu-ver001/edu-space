@@ -9,7 +9,7 @@ import LoginPage from './features/auth/pages/LoginPage';
 import Placeholder from './pages/Placeholder';
 import { GeneralSettingsPage } from "./features/admin/settings-general/pages/GeneralSettingsPage.tsx";
 import { SpaceTypeDetailPageKT, SpaceTypeListPageKT, SpaceListPageKT, SpaceDetailPageKT, FacilityListPageKT } from "./features/space";
-import { BookingManagementPageKT } from "./features/staff";
+import { BookingManagementPageKT, MaintenanceManagementPageKT } from "./features/staff";
 import PolicyManagementPage from './features/admin/policy/pages/PolicyManagementPage';
 import PolicyHistoryPage from './features/admin/policy/pages/PolicyHistoryPage';
 import { TimelinePage } from './features/operations/pages/TimelinePage';
@@ -17,6 +17,7 @@ import { AuditLogPage } from './features/operations/pages/AuditLogPage';
 import { StatisticsDashboardPage } from './features/admin/statistics';
 import { SearchSpacesPage, SpaceDetailPage, MyBookingsPage } from './features/bookings/core';
 import { UserManagementPage } from './features/admin/auth/UserManagementPage.tsx';
+import './styles/kt-management-controls.css';
 
 const ADMIN_BASE = import.meta.env.VITE_ROUTE_ADMIN || '/admin';
 const STAFF_BASE = import.meta.env.VITE_ROUTE_STAFF || '/staff';
@@ -94,6 +95,7 @@ export default function App() {
                         <Route path={`${STAFF_BASE}/bookings`} element={<BookingManagementPageKT />} />
                         <Route path={`${STAFF_BASE}/approvals`} element={<BookingManagementPageKT />} />
                         <Route path={`${STAFF_BASE}/checkin`} element={<BookingManagementPageKT />} />
+                        <Route path={`${STAFF_BASE}/maintenance`} element={<MaintenanceManagementPageKT />} />
                         <Route path={`${STAFF_BASE}/timeline`} element={<TimelinePage />} />
                         <Route path={`${STAFF_BASE}/audit-logs`} element={<AuditLogPage />} />
                         <Route path={`${STAFF_BASE}/qr`} element={<Placeholder title="Check-in QR" owner="Vũ" />} />

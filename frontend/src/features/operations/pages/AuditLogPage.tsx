@@ -17,14 +17,50 @@ import {
   Wrench,
   X,
 } from 'lucide-react';
-import { allAuditActions, getMockAuditLogs, operationSpaces } from '../mockOperations';
+import { allAuditActions, operationSpaces } from '../mockOperations';
+import { auditLogApi } from '../../staff/api/auditLogApi';
+import { spaceApi } from '../../space/api/spaceApi';
+import type { StaffAuditLog } from '../../staff/types/staff';
 import { getOperationsUser } from '../session';
 import type { AuditAction, AuditQuery, OperationsAuditLog, OperationsRole } from '../types';
 import '../operations.css';
 
-const initialFrom = '2025-04-01';
-const initialTo = '2025-04-17';
+const toDateInputValue = (date: Date) => {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+const today = new Date();
+const defaultTo = toDateInputValue(today);
+const defaultFromDate = new Date(today);
+defaultFromDate.setDate(defaultFromDate.getDate() - 30);
+const initialFrom = toDateInputValue(defaultFromDate);
+const initialTo = defaultTo;
 const pageSize = 10;
+
+const mapStaffLogToOperations = (log: StaffAuditLog): OperationsAuditLog => {
+  const action = (log.action === 'STAFF_CHECK_IN' ? 'STAFF_CHECKED_IN_BOOKING' : log.action) as AuditAction;
+  const rawTarget = (log.targetType ?? 'BOOKING').toUpperCase();
+  const targetType = (rawTarget === 'BOOKING' || rawTarget === 'MAINTENANCE' || rawTarget === 'STUDENT'
+    ? rawTarget
+    : 'BOOKING') as OperationsAuditLog['targetType'];
+  const actorRole = (log.actorRole === 'ADMIN' ? 'ADMIN' : 'STAFF') as OperationsAuditLog['actorRole'];
+  return {
+    id: log.id,
+    actorUserId: log.actorUserId,
+    actorName: log.actorName ?? log.actorEmail ?? `User #${log.actorUserId}`,
+    actorEmail: log.actorEmail,
+    actorRole,
+    action,
+    targetType,
+    targetId: log.targetId,
+    targetLabel: log.targetLabel ?? `${log.targetType} #${log.targetId}`,
+    spaceName: log.spaceName ?? '',
+    details: log.details ?? '',
+    createdAt: log.createdAt,
+  };
+};
 
 const actionLabels: Record<AuditAction, string> = {
   BOOKING_APPROVED: 'Duyệt đặt phòng',
@@ -84,6 +120,8 @@ export const AuditLogPage = ({ role }: AuditLogPageProps) => {
   const [appliedQuery, setAppliedQuery] = useState<AuditQuery>({ from: initialFrom, to: initialTo });
   const [page, setPage] = useState(0);
   const [result, setResult] = useState({ content: [] as OperationsAuditLog[], totalElements: 0, totalPages: 1 });
+  const [spaces, setSpaces] = useState(operationSpaces);
+  const [stats, setStats] = useState({ total: 0, approved: 0, rejected: 0, checkIn: 0, maintenance: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedLog, setSelectedLog] = useState<OperationsAuditLog | null>(null);
@@ -92,9 +130,45 @@ export const AuditLogPage = ({ role }: AuditLogPageProps) => {
     setLoading(true);
     setError('');
     try {
-      // The real backend must enforce this scope from JWT as well. This mock mirrors it so Staff cannot inspect another actor's logs.
-      const scopedQuery = currentRole === 'STAFF' ? { ...query, actorUserId: currentUser.id } : query;
-      setResult(await getMockAuditLogs(scopedQuery, nextPage, pageSize));
+      // Backend tự scope STAFF theo JWT; ADMIN mới được lọc theo actorUserId.
+      const params = {
+        action: query.action || undefined,
+        spaceName: query.spaceName || undefined,
+        targetType: query.targetType || undefined,
+        actorUserId: currentRole === 'ADMIN' ? query.actorUserId : undefined,
+        from: query.from || undefined,
+        to: query.to || undefined,
+        page: nextPage,
+        size: pageSize,
+      };
+      const [paged, statRes] = await Promise.all([
+        auditLogApi.getAuditLogsPaged(params),
+        auditLogApi.getAuditStats(params).catch(() => null),
+      ]);
+      setResult({
+        content: (paged.content ?? []).map(mapStaffLogToOperations),
+        totalElements: paged.totalElements ?? 0,
+        totalPages: paged.totalPages ?? 1,
+      });
+      if (statRes) {
+        setStats({
+          total: statRes.totalActions,
+          approved: statRes.approvedCount,
+          rejected: statRes.rejectedCount,
+          checkIn: statRes.checkInCount,
+          maintenance: statRes.maintenanceCount,
+        });
+      } else {
+        const content = (paged.content ?? []).map(mapStaffLogToOperations);
+        setStats({
+          total: paged.totalElements ?? 0,
+          approved: content.filter((l) => l.action === 'BOOKING_APPROVED').length,
+          rejected: content.filter((l) => l.action === 'BOOKING_REJECTED').length,
+          checkIn: content.filter((l) => l.action === 'STAFF_CHECKED_IN_BOOKING').length,
+          maintenance: content.filter((l) => l.action.startsWith('MAINTENANCE')).length,
+        });
+      }
+      void currentUser;
     } catch {
       setError('Không thể tải nhật ký kiểm toán. Vui lòng thử lại.');
     } finally {
@@ -106,6 +180,17 @@ export const AuditLogPage = ({ role }: AuditLogPageProps) => {
     void loadLogs();
     // Load once on entry; filters are applied explicitly by the user.
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    spaceApi.getAllSpaces()
+      .then((realSpaces) => {
+        if (cancelled || !Array.isArray(realSpaces) || realSpaces.length === 0) return;
+        setSpaces(realSpaces.map((space) => ({ id: space.id, name: space.name })));
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
   }, []);
 
   const applyFilters = () => {
@@ -140,18 +225,18 @@ export const AuditLogPage = ({ role }: AuditLogPageProps) => {
       </div>
 
       <div className="audit-stats-grid">
-        <StatsCard icon={<FileClock size={22} />} label="Tổng số thao tác" value="124" trend="+12%" tone="stat-blue" />
-        <StatsCard icon={<CircleCheck size={22} />} label="Số lượt duyệt" value="52" trend="+8%" tone="stat-green" />
-        <StatsCard icon={<CircleX size={22} />} label="Số lượt từ chối" value="18" trend="+5%" tone="stat-red" />
-        <StatsCard icon={<UsersRound size={22} />} label="Số thao tác check-in" value="32" trend="+20%" tone="stat-purple" />
-        <StatsCard icon={<Wrench size={22} />} label="Số thao tác bảo trì" value="22" trend="+10%" tone="stat-orange" />
+        <StatsCard icon={<FileClock size={22} />} label="Tổng số thao tác" value={`${stats.total}`} trend="thực tế" tone="stat-blue" />
+        <StatsCard icon={<CircleCheck size={22} />} label="Số lượt duyệt" value={`${stats.approved}`} trend="thực tế" tone="stat-green" />
+        <StatsCard icon={<CircleX size={22} />} label="Số lượt từ chối" value={`${stats.rejected}`} trend="thực tế" tone="stat-red" />
+        <StatsCard icon={<UsersRound size={22} />} label="Số thao tác check-in" value={`${stats.checkIn}`} trend="thực tế" tone="stat-purple" />
+        <StatsCard icon={<Wrench size={22} />} label="Số thao tác bảo trì" value={`${stats.maintenance}`} trend="thực tế" tone="stat-orange" />
       </div>
 
       <section className="operations-filter-card audit-filter-card" aria-label="Bộ lọc nhật ký kiểm toán">
         <label className="operation-field"><span>Từ ngày</span><div className="operation-date-wrap"><input type="date" value={from} onChange={(event) => setFrom(event.target.value)} /></div></label>
         <label className="operation-field"><span>Đến ngày</span><div className="operation-date-wrap"><input type="date" value={to} onChange={(event) => setTo(event.target.value)} /></div></label>
         <label className="operation-field"><span>Loại hành động</span><div className="operation-select-wrap"><select value={action} onChange={(event) => setAction(event.target.value as AuditAction | '')}><option value="">Tất cả</option>{allAuditActions.map((item) => <option value={item} key={item}>{actionLabels[item]}</option>)}</select><ChevronDown size={15} /></div></label>
-        <label className="operation-field"><span>Không gian</span><div className="operation-select-wrap"><select value={spaceName} onChange={(event) => setSpaceName(event.target.value)}><option value="">Tất cả</option>{operationSpaces.map((space) => <option value={space.name} key={space.id}>{space.name}</option>)}</select><ChevronDown size={15} /></div></label>
+        <label className="operation-field"><span>Không gian</span><div className="operation-select-wrap"><select value={spaceName} onChange={(event) => setSpaceName(event.target.value)}><option value="">Tất cả</option>{spaces.map((space) => <option value={space.name} key={space.id}>{space.name}</option>)}</select><ChevronDown size={15} /></div></label>
         <label className="operation-field"><span>Loại đối tượng</span><div className="operation-select-wrap"><select value={targetType} onChange={(event) => setTargetType(event.target.value)}><option value="">Tất cả</option><option value="BOOKING">Booking</option><option value="MAINTENANCE">Bảo trì</option><option value="STUDENT">Sinh viên</option></select><ChevronDown size={15} /></div></label>
         {currentRole === 'ADMIN' && <label className="operation-field"><span>Người thực hiện</span><div className="operation-select-wrap"><select value={actorUserId} onChange={(event) => setActorUserId(event.target.value ? Number(event.target.value) : '')}><option value="">Tất cả</option><option value="11">Nguyễn Văn An</option><option value="12">Lê Thị Mai</option><option value="1">Admin</option></select><ChevronDown size={15} /></div></label>}
         <div className="operation-filter-actions"><button type="button" className="operation-primary-button" onClick={applyFilters}><Filter size={16} /> Áp dụng</button><button type="button" className="operation-secondary-button" onClick={resetFilters}><RotateCcw size={16} /> Xóa bộ lọc</button></div>

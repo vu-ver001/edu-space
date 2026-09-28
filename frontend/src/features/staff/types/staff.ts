@@ -109,8 +109,10 @@ export interface MaintenanceBlock {
   reason: string;
   startTime: string;
   endTime: string;
-  status: string;
   createdAt: string;
+  updatedAt?: string;
+  deletedAt?: string | null;
+  active: boolean;
   createdBy?: number;
   creatorEmail?: string;
 }
@@ -119,33 +121,53 @@ export interface MaintenanceCreateRequest {
   reason: string;
   startTime: string;
   endTime: string;
-  description?: string;
 }
 
 export interface MaintenanceUpdateRequest {
   reason: string;
   startTime: string;
   endTime: string;
-  description?: string;
 }
 
 export type StaffAuditAction =
   | 'BOOKING_APPROVED'
   | 'BOOKING_REJECTED'
   | 'STAFF_CHECK_IN'
+  | 'STAFF_CHECKED_IN_BOOKING'
   | 'MAINTENANCE_CREATED'
   | 'MAINTENANCE_UPDATED'
-  | 'MAINTENANCE_DELETED';
+  | 'MAINTENANCE_DELETED'
+  | 'MAINTENANCE_CANCELLED';
 
 export interface StaffAuditLog {
   id: number;
   actorUserId: number;
   actorEmail: string;
+  actorName?: string;
+  actorRole?: string;
   action: StaffAuditAction;
   actionDescription?: string;
   targetType: string;
   targetId: number;
+  targetLabel?: string;
   spaceId?: number;
+  spaceName?: string;
   details?: string;
   createdAt: string;
+}
+
+export interface StaffAuditLogPage {
+  content: StaffAuditLog[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
+export interface StaffAuditStats {
+  totalActions: number;
+  approvedCount: number;
+  rejectedCount: number;
+  checkInCount: number;
+  maintenanceCount: number;
 }

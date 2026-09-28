@@ -1,5 +1,6 @@
 import React from 'react';
-import { RotateCcw } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
+import { FilterSelect } from '../../../components/common/FilterSelect';
 import { SearchInput } from '../../../components/common/SearchInput';
 
 interface Props {
@@ -40,26 +41,30 @@ export const SpaceTypeFilterBarKT: React.FC<Props> = ({
           height={36}
         />
 
-        <select
+        <FilterSelect
           className="filter-select"
           value={modeFilter}
-          onChange={(e) => onModeFilterChange(e.target.value)}
-        >
-          <option value="ALL">Tất cả chế độ</option>
-          <option value="WHOLE_SPACE">Đặt nguyên phòng</option>
-          <option value="PER_SEAT">Đặt theo chỗ ngồi</option>
-          <option value="PER_TABLE">Đặt theo bàn</option>
-        </select>
+          onChange={onModeFilterChange}
+          ariaLabel="Chế độ đặt"
+          options={[
+            { value: 'ALL', label: 'Tất cả chế độ' },
+            { value: 'WHOLE_SPACE', label: 'Đặt nguyên phòng' },
+            { value: 'PER_SEAT', label: 'Đặt theo chỗ ngồi' },
+            { value: 'PER_TABLE', label: 'Đặt theo bàn' },
+          ]}
+        />
 
-        <select
+        <FilterSelect
           className="filter-select"
           value={approvalFilter}
-          onChange={(e) => onApprovalFilterChange(e.target.value)}
-        >
-          <option value="ALL">Tất cả trạng thái duyệt</option>
-          <option value="YES">Có yêu cầu duyệt</option>
-          <option value="NO">Không yêu cầu duyệt</option>
-        </select>
+          onChange={onApprovalFilterChange}
+          ariaLabel="Trạng thái duyệt"
+          options={[
+            { value: 'ALL', label: 'Tất cả trạng thái duyệt' },
+            { value: 'YES', label: 'Có yêu cầu duyệt' },
+            { value: 'NO', label: 'Không yêu cầu duyệt' },
+          ]}
+        />
 
         <button
           className="btn-filter-refresh btn-filter-refresh-icon-only"
@@ -68,7 +73,7 @@ export const SpaceTypeFilterBarKT: React.FC<Props> = ({
           title="Làm mới bộ lọc và danh sách"
           aria-label="Làm mới bộ lọc và danh sách"
         >
-          <RotateCcw size={16} />
+          <RefreshCw size={18} />
         </button>
       </div>
     </div>

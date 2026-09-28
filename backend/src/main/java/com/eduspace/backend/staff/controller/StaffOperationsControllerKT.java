@@ -4,7 +4,8 @@ import com.eduspace.backend.booking.dto.response.BookingResponse;
 import com.eduspace.backend.booking.entity.BookingStatus;
 import com.eduspace.backend.staff.dto.request.BookingRejectRequestKT;
 import com.eduspace.backend.staff.dto.response.PendingBookingResponseKT;
-import com.eduspace.backend.staff.dto.response.StaffAuditLogResponseKT;
+import com.eduspace.backend.staff.dto.response.StaffAuditLogPageResponseKT;
+import com.eduspace.backend.staff.dto.response.StaffAuditStatsResponseKT;
 import com.eduspace.backend.staff.dto.response.StaffTimelineResponseKT;
 import com.eduspace.backend.staff.service.StaffAuditService;
 import com.eduspace.backend.staff.service.StaffOperationsService;
@@ -90,14 +91,49 @@ public class StaffOperationsControllerKT {
 
     /**
      * Chức năng 7: Xem nhật ký kiểm toán thao tác Staff.
-     * GET /api/staff/audit-logs?action=...&targetType=...&targetId=...&spaceId=...
+     * GET /api/staff/audit-logs?action=...&targetType=...&targetId=...&spaceId=...&spaceName=...
+     *     &actorUserId=...&from=yyyy-MM-dd&to=yyyy-MM-dd&page=0&size=10
+     * - Có page/size (hoặc from/to/spaceName/actorUserId) -> trả trang (chuẩn cho AuditLogPage).
+     * - Không có -> trả List (tương thích API cũ).
+     * - STAFF tự bị scope theo JWT, ADMIN lọc tự do.
      */
     @GetMapping("/audit-logs")
-    public ResponseEntity<List<StaffAuditLogResponseKT>> getAuditLogs(
+    public ResponseEntity<?> getAuditLogs(
             @RequestParam(required = false) String action,
             @RequestParam(required = false) String targetType,
             @RequestParam(required = false) Long targetId,
-            @RequestParam(required = false) Long spaceId) {
+            @RequestParam(required = false) Long spaceId,
+            @RequestParam(required = false) String spaceName,
+            @RequestParam(required = false) Long actorUserId,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        boolean paged = page != null || size != null || from != null || to != null
+                || spaceName != null || actorUserId != null;
+        if (paged) {
+            StaffAuditLogPageResponseKT result = staffAuditService.searchAuditLogs(
+                    action, targetType, targetId, spaceId, spaceName, actorUserId, from, to, page, size);
+            return ResponseEntity.ok(result);
+        }
         return ResponseEntity.ok(staffAuditService.getAuditLogs(action, targetType, targetId, spaceId));
+    }
+
+    /**
+     * Thống kê audit-log cho cards trên AuditLogPage.
+     * GET /api/staff/audit-logs/stats?... (cùng bộ lọc như /audit-logs)
+     */
+    @GetMapping("/audit-logs/stats")
+    public ResponseEntity<StaffAuditStatsResponseKT> getAuditStats(
+            @RequestParam(required = false) String action,
+            @RequestParam(required = false) String targetType,
+            @RequestParam(required = false) Long targetId,
+            @RequestParam(required = false) Long spaceId,
+            @RequestParam(required = false) String spaceName,
+            @RequestParam(required = false) Long actorUserId,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to) {
+        return ResponseEntity.ok(staffAuditService.getAuditStats(
+                action, targetType, targetId, spaceId, spaceName, actorUserId, from, to));
     }
 }
