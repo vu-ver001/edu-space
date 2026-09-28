@@ -34,6 +34,10 @@ public class PendingBookingResponseKT {
 
     private String studentName;
 
+    private String studentUserCode;
+
+    private String studentClassName;
+
     private String studentEmail;
 
     private LocalDateTime startTime;

@@ -22,6 +22,8 @@ export interface PendingBooking {
   building?: string;
   studentId: number;
   studentName: string;
+  studentUserCode?: string;
+  studentClassName?: string;
   studentEmail: string;
   startTime: string;
   endTime: string;

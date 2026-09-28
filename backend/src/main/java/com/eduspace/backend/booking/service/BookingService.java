@@ -749,13 +749,16 @@ public class BookingService {
                     .format(java.time.format.DateTimeFormatter.ofPattern("yyMMdd"));
             bookingCode = String.format("BK-%s-%04d", datePart, booking.getId() != null ? booking.getId() : 1);
         }
+        User student = userRepository.findById(booking.getStudentId()).orElse(null);
 
         return BookingResponse.builder()
                 .id(booking.getId())
                 .bookingCode(bookingCode)
                 .studentId(booking.getStudentId())
-                .studentName(userRepository.findById(booking.getStudentId()).map(User::getFullName).orElse(null))
-                .studentEmail(resolveEmailFromStudentId(booking.getStudentId()))
+                .studentName(student != null ? student.getFullName() : null)
+                .studentUserCode(student != null ? student.getUserCode() : null)
+                .studentClassName(student != null ? student.getClassName() : null)
+                .studentEmail(student != null ? student.getEmail() : null)
                 .spaceId(booking.getSpaceId())
                 .spaceName(spaceName)
                 .spaceTypeName(spaceTypeName)
@@ -798,10 +801,6 @@ public class BookingService {
         return userRepository.findByEmail(email).filter(User::isActive)
                 .map(User::getId)
                 .orElseThrow(() -> new BusinessException("UNAUTHENTICATED", "Tài khoản không khả dụng.", org.springframework.http.HttpStatus.UNAUTHORIZED));
-    }
-
-    private String resolveEmailFromStudentId(Long id) {
-        return userRepository.findById(id).map(User::getEmail).orElse(null);
     }
 
     /**

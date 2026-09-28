@@ -16,7 +16,6 @@ import {
   UsersRound,
   X,
 } from 'lucide-react';
-import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
 import { Pagination } from '../../../components/common/Pagination';
 import { FilterSelect } from '../../../components/common/FilterSelect';
 import { StatusBadge } from '../../../components/common/StatusBadge';
@@ -27,6 +26,7 @@ import { formatImageUrl } from '../../../utils/imageUrl';
 import { staffApi } from '../api/staffApi';
 import { ApproveBookingModalKT } from '../components/ApproveBookingModalKT';
 import { BulkBookingActionModalKT } from '../components/BulkBookingActionModalKT';
+import { CheckInBookingModalKT } from '../components/CheckInBookingModalKT';
 import { RejectBookingConfirmModalKT } from '../components/RejectBookingConfirmModalKT';
 import type { BookingStatus, StaffBooking } from '../types/staff';
 import './BookingManagementPageKT.css';
@@ -800,16 +800,12 @@ export const BookingManagementPageKT = () => {
         onConfirm={handleConfirmAction}
       />
 
-      <ConfirmDialog
+      <CheckInBookingModalKT
         isOpen={confirmAction?.type === 'checkin'}
-        title="Xác nhận check-in?"
-        message={confirmAction?.type === 'checkin'
-          ? `${bookingCode(confirmAction.booking)} · ${confirmAction.booking.studentName} · ${confirmAction.booking.spaceName}`
-          : ''}
-        confirmText="Xác nhận check-in"
-        isDanger={false}
+        booking={confirmAction?.type === 'checkin' ? confirmAction.booking : null}
+        space={confirmAction?.type === 'checkin' ? spaceById.get(confirmAction.booking.spaceId) : undefined}
         isLoading={actionLoading}
-        onCancel={() => setConfirmAction(null)}
+        onClose={() => setConfirmAction(null)}
         onConfirm={handleConfirmAction}
       />
 
