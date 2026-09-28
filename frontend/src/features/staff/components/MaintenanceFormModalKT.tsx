@@ -216,6 +216,7 @@ export const MaintenanceFormModalKT = ({
               <span>Không gian <b>*</b></span>
               <FilterSelect
                 value={String(spaceId)}
+                portal={false}
                 disabled={mode === 'edit' || isSubmitting}
                 className={fieldErrors.spaceId ? 'maintenance-input-error' : ''}
                 ariaLabel="Chọn không gian cần bảo trì"

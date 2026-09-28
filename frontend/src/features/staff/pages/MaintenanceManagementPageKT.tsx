@@ -129,19 +129,34 @@ export const MaintenanceManagementPageKT = () => {
   const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
-    try {
-      const [spaceData, maintenanceData] = await Promise.all([
-        spaceApi.getAllAdminSpaces(),
-        maintenanceApi.getAllMaintenance(),
-      ]);
-      setSpaces(spaceData);
-      setMaintenanceList(maintenanceData);
-    } catch (loadError: unknown) {
-      const apiError = readStaffApiError(loadError, 'Không thể tải danh sách bảo trì.');
-      setError(apiError.message);
-    } finally {
-      setLoading(false);
+    const [spaceResult, maintenanceResult] = await Promise.allSettled([
+      spaceApi.getAllSpaces(),
+      maintenanceApi.getAllMaintenance(),
+    ]);
+    const loadErrors: string[] = [];
+
+    if (spaceResult.status === 'fulfilled') {
+      setSpaces(spaceResult.value);
+    } else {
+      setSpaces([]);
+      loadErrors.push(readStaffApiError(
+        spaceResult.reason,
+        'Không thể tải danh sách không gian.',
+      ).message);
     }
+
+    if (maintenanceResult.status === 'fulfilled') {
+      setMaintenanceList(maintenanceResult.value);
+    } else {
+      setMaintenanceList([]);
+      loadErrors.push(readStaffApiError(
+        maintenanceResult.reason,
+        'Không thể tải danh sách bảo trì.',
+      ).message);
+    }
+
+    setError(loadErrors.length > 0 ? loadErrors.join(' ') : null);
+    setLoading(false);
   }, []);
 
   useEffect(() => { void loadData(); }, [loadData]);
@@ -175,7 +190,8 @@ export const MaintenanceManagementPageKT = () => {
           || item.spaceName.toLowerCase().includes(query)
           || space?.spaceCode?.toLowerCase().includes(query)
           || item.reason.toLowerCase().includes(query)
-          || item.creatorEmail?.toLowerCase().includes(query);
+          || item.creatorName?.toLowerCase().includes(query)
+          || item.creatorUserCode?.toLowerCase().includes(query);
         const matchesSpace = spaceFilter === 'ALL' || item.spaceId === Number(spaceFilter);
         const matchesStatus = statusFilter === 'ALL' || getTimeStatus(item, now) === statusFilter;
         const matchesDate = !dateFilter || item.startTime.slice(0, 10) === dateFilter;
@@ -199,7 +215,23 @@ export const MaintenanceManagementPageKT = () => {
     setCurrentPage(1);
   };
 
-  const openCreate = () => {
+  const openCreate = async () => {
+    if (spaces.length === 0) {
+      try {
+        const freshSpaces = await spaceApi.getAllSpaces();
+        if (freshSpaces.length === 0) {
+          showToast('Chưa có không gian nào để tạo lịch bảo trì.', 'error');
+          return;
+        }
+        setSpaces(freshSpaces);
+      } catch (spaceError: unknown) {
+        showToast(readStaffApiError(
+          spaceError,
+          'Không thể tải danh sách không gian. Vui lòng thử lại.',
+        ).message, 'error');
+        return;
+      }
+    }
     setFormMode('create');
     setEditingMaintenance(null);
     setFormOpen(true);
@@ -271,7 +303,7 @@ export const MaintenanceManagementPageKT = () => {
           <h1>Quản lý bảo trì</h1>
           <p>Lập lịch và theo dõi các khoảng thời gian không gian tạm ngừng phục vụ</p>
         </div>
-        <button type="button" className="maintenance-create-btn" onClick={openCreate}>
+        <button type="button" className="maintenance-create-btn" onClick={() => void openCreate()}>
           <Plus size={18} /> Tạo lịch bảo trì
         </button>
       </header>
@@ -402,8 +434,15 @@ export const MaintenanceManagementPageKT = () => {
                           </Tooltip>
                         </td>
                         <td>
-                          <Tooltip content={item.creatorEmail || 'Không xác định'} maxWidth={360} onlyWhenOverflow>
-                            <strong className="maintenance-creator">{item.creatorEmail || 'Không xác định'}</strong>
+                          <Tooltip
+                            content={`${item.creatorName || 'Không xác định'} · ${item.creatorUserCode || 'Chưa có mã'}`}
+                            maxWidth={360}
+                            onlyWhenOverflow
+                          >
+                            <div className="maintenance-creator">
+                              <strong>{item.creatorName || 'Không xác định'}</strong>
+                              <small>{item.creatorUserCode || 'Chưa có mã'}</small>
+                            </div>
                           </Tooltip>
                         </td>
                         <td><span className={`maintenance-status ${status.className}`}>{status.label}</span></td>

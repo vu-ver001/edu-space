@@ -114,7 +114,8 @@ export interface MaintenanceBlock {
   deletedAt?: string | null;
   active: boolean;
   createdBy?: number;
-  creatorEmail?: string;
+  creatorName?: string;
+  creatorUserCode?: string;
 }
 
 export interface MaintenanceCreateRequest {
