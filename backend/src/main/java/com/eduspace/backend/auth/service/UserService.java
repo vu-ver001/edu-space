@@ -29,6 +29,7 @@ public class UserService {
                 .role(user.getRole())
                 .dob(user.getDob())
                 .userCode(user.getUserCode())
+                .className(user.getClassName())
                 .department(user.getDepartment())
                 .active(user.isActive())
                 .build();
@@ -89,6 +90,7 @@ public class UserService {
                 .dob(request.getDob())                 // Đã có
                 .userCode(request.getUserCode())     // Đã có
                 .department(request.getDepartment())   // Đã có
+                .className(request.getClassName())
                 .active(true)
                 .build();
 
@@ -153,6 +155,10 @@ public class UserService {
         // Frontend đã disable email, role, studentId... nên ta chỉ ưu tiên cập nhật thông tin được phép sửa
         user.setFullName(request.getFullName());
         user.setDob(request.getDob());
+
+        if (request.getClassName() != null) {
+            user.setClassName(request.getClassName());
+        }
 
         // Chỉ lưu, không đổi password hay role/studentId ở đây để đảm bảo an toàn dữ liệu định danh
         User updatedUser = userRepository.save(user);

@@ -9,6 +9,7 @@ interface UserFormProps {
         role: string;
         userCode?: string;
         department?: string;
+        className?: string; // Bổ sung trường className
     };
     isEditMode?: boolean;
     onSubmit: (formData: any) => void;
@@ -33,7 +34,8 @@ export const UserForm: React.FC<UserFormProps> = ({
         email: '',
         role: 'STUDENT',
         userCode: '',
-        department: ''
+        department: '',
+        className: '' // Khởi tạo state className
     });
 
     const [localError, setLocalError] = useState<string | null>(null);
@@ -47,7 +49,8 @@ export const UserForm: React.FC<UserFormProps> = ({
                 email: initialData.email || '',
                 role: initialData.role || 'STUDENT',
                 userCode: initialData.userCode || '',
-                department: initialData.department || ''
+                department: initialData.department || '',
+                className: initialData.className || '' // Load dữ liệu cũ nếu có
             });
         }
     }, [initialData]);
@@ -83,6 +86,11 @@ export const UserForm: React.FC<UserFormProps> = ({
         if (!form.userCode?.trim()) {
             errors.userCode = form.role === 'STUDENT' ? 'Vui lòng nhập Mã Sinh Viên' : 'Vui lòng nhập Mã Định Danh';
         }
+
+        // Validation phân nhánh theo Role
+        if (form.role === 'STUDENT' && !form.className?.trim()) {
+            errors.className = 'Vui lòng nhập Lớp học';
+        }
         if (form.role !== 'STUDENT' && !form.department?.trim()) {
             errors.department = 'Vui lòng nhập Phòng ban / Đơn vị';
         }
@@ -96,8 +104,9 @@ export const UserForm: React.FC<UserFormProps> = ({
         const payload = {
             ...form,
             password: isEditMode ? undefined : formatPasswordFromDob(form.dob),
-            // Trả chung thuộc tính userCode lên BE
             userCode: form.userCode,
+            // Trả null cho các trường không thuộc Role đó để CSDL sạch sẽ
+            className: form.role === 'STUDENT' ? form.className : null,
             department: form.role !== 'STUDENT' ? form.department : null
         };
 
@@ -206,7 +215,22 @@ export const UserForm: React.FC<UserFormProps> = ({
                     {fieldErrors.dob && <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>{fieldErrors.dob}</span>}
                 </div>
 
-                {form.role !== 'STUDENT' && (
+                {/* Phân nhánh render ô nhập Lớp hoặc Phòng ban tùy theo Role */}
+                {form.role === 'STUDENT' ? (
+                    <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <label style={{ fontWeight: 500, color: '#334155' }}>Lớp học *</label>
+                        <input
+                            type="text"
+                            name="className"
+                            value={form.className}
+                            onChange={handleChange}
+                            placeholder="VD: CNTT1"
+                            style={getInputStyle('className', isEditMode)}
+                            disabled={isEditMode} // Disable nếu không muốn cho sửa lớp khi Edit
+                        />
+                        {fieldErrors.className && <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>{fieldErrors.className}</span>}
+                    </div>
+                ) : (
                     <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <label style={{ fontWeight: 500, color: '#334155' }}>Phòng ban / Đơn vị *</label>
                         <input

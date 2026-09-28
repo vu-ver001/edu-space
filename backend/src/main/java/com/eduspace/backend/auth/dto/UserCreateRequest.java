@@ -24,4 +24,5 @@ public class UserCreateRequest {
     private String dob;
     private String userCode;
     private String department;
+    private String className;
 }

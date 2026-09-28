@@ -47,6 +47,9 @@ public class User {
     @Column(name = "department", length = 100)
     private String department;
 
+    @Column(name = "class_name")
+    private String className;
+
     @PrePersist
     @PreUpdate
     public void generateUsername() {

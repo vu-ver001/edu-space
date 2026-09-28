@@ -20,6 +20,7 @@ public class UserResponse {
     private String dob;
     private String userCode;
     private String department;
+    private String className;
 
     private boolean active;
 

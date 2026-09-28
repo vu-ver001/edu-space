@@ -11,6 +11,7 @@ export interface UserData {
     isActive?: boolean;
     userCode?: string;
     department?: string;
+    className?: string; // Bổ sung trường Lớp
 }
 
 interface UserCSVImportProps {
@@ -52,17 +53,18 @@ export const UserCSVImport: React.FC<UserCSVImportProps> = ({
                 let parsedUser: UserData = { fullName: '', dob: '', email: '', role: importType };
 
                 if (importType === 'STUDENT') {
-                    const [userCode, fullName, dob, email] = cols;
+                    // Cập nhật để đọc thêm cột className
+                    const [userCode, fullName, dob, className, email] = cols;
                     if (email) parsedUser = {
                         ...parsedUser,
                         userCode: userCode?.trim(),
                         fullName: fullName?.trim(),
                         dob: dob?.trim(),
+                        className: className?.trim(),
                         email: email?.trim(),
                         username: userCode?.trim() || email.trim().split('@')[0]
                     };
                 } else {
-                    // STAFF bổ sung thêm mã định danh ở đầu
                     const [userCode, fullName, dob, email, department] = cols;
                     if (email) parsedUser = {
                         ...parsedUser,
@@ -83,7 +85,7 @@ export const UserCSVImport: React.FC<UserCSVImportProps> = ({
             setCsvData(parsedUsers);
         };
         reader.readAsText(file);
-        e.target.value = ''; // Reset input
+        e.target.value = '';
     };
 
     return (
@@ -119,7 +121,7 @@ export const UserCSVImport: React.FC<UserCSVImportProps> = ({
                 <h4 style={{margin: '0 0 8px 0', color: '#0f172a'}}>Kéo thả file CSV vào đây hoặc click để chọn</h4>
                 <p style={{margin: 0, color: '#64748b', fontSize: '0.9rem'}}>
                     Định dạng:
-                    {importType === 'STUDENT' ? ' Mã SV, Họ Tên, Ngày Sinh (DD/MM/YYYY), Email' : ' Mã MNV, Họ Tên, Ngày Sinh (DD/MM/YYYY), Email, Phòng ban'}
+                    {importType === 'STUDENT' ? ' Mã SV, Họ Tên, Ngày Sinh (DD/MM/YYYY), Lớp, Email' : ' Mã MNV, Họ Tên, Ngày Sinh (DD/MM/YYYY), Email, Phòng ban'}
                 </p>
             </label>
 
@@ -131,6 +133,7 @@ export const UserCSVImport: React.FC<UserCSVImportProps> = ({
                         <tr style={{ background: '#f8fafc', color: '#64748b' }}>
                             <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>{importType === 'STUDENT' ? 'Mã SV' : 'Mã NV'}</th>
                             <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Họ và Tên</th>
+                            {importType === 'STUDENT' && <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Lớp</th>}
                             <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Email</th>
                             {importType === 'STAFF' && <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Phòng ban</th>}
                         </tr>
@@ -140,6 +143,7 @@ export const UserCSVImport: React.FC<UserCSVImportProps> = ({
                             <tr key={idx}>
                                 <td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>{user.userCode}</td>
                                 <td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>{user.fullName}</td>
+                                {importType === 'STUDENT' && <td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>{user.className}</td>}
                                 <td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>{user.email}</td>
                                 {importType === 'STAFF' && <td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>{user.department}</td>}
                             </tr>
