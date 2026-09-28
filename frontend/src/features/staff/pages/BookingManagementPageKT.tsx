@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   Clock3,
   DoorOpen,
+  IdCard,
   Mail,
   MapPin,
   RefreshCw,
@@ -817,10 +818,14 @@ export const BookingManagementPageKT = () => {
               </div>
 
               <section className="booking-detail-section booking-student-section">
-                <h3>Thông tin sinh viên</h3>
                 <div className="booking-student-profile">
                   <span className="booking-avatar small">{initials(selectedBooking.studentName)}</span>
-                  <div><strong>{selectedBooking.studentName || 'Sinh viên'}</strong><span><Mail size={14} /> {selectedBooking.studentEmail || 'Chưa có email'}</span></div>
+                  <div>
+                    <strong>{selectedBooking.studentName || 'Sinh viên'}</strong>
+                    <span><IdCard size={14} /> {selectedBooking.studentUserCode || 'Chưa cập nhật mã sinh viên'}</span>
+                    <span><UserRound size={14} /> Lớp: {selectedBooking.studentClassName || 'Chưa cập nhật'}</span>
+                    <span><Mail size={14} /> {selectedBooking.studentEmail || 'Chưa cập nhật email'}</span>
+                  </div>
                 </div>
               </section>
 
