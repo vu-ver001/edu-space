@@ -140,6 +140,33 @@ public class BookingService {
                     "Không gian loại [" + space.getSpaceTypeName() + "] chỉ áp dụng đặt trọn gói toàn bộ không gian, không hỗ trợ chọn vị trí ghế hoặc bàn riêng lẻ.");
         }
 
+        // RÀNG BUỘC SỐ LƯỢNG NGƯỜI THAM GIA THEO TỪNG LOẠI KHÔNG GIAN:
+        // 1. Nếu là không gian học nhóm (Bàn nhóm PER_TABLE hoặc Phòng trọn gói WHOLE_SPACE có sức chứa > 1 người):
+        //    Yêu cầu tối thiểu từ 2 người trở lên. Nghiêm cấm 1 người đặt nguyên bàn nhóm hoặc phòng lớn.
+        boolean isGroupSpace = isPerTable || (isWholeSpace && space.getCapacity() > 1);
+        if (isGroupSpace) {
+            if (request.getParticipantCount() == null || request.getParticipantCount() < 2) {
+                throw BusinessException.badRequest("MIN_PARTICIPANTS_REQUIRED", 
+                        "Không gian học nhóm / thảo luận yêu cầu tối thiểu từ 2 người trở lên. Nếu bạn đi 1 mình, vui lòng chọn đặt chỗ ngồi tại Khu tự học cá nhân.");
+            }
+            if (space.getCapacity() > 0 && request.getParticipantCount() > space.getCapacity()) {
+                throw BusinessException.badRequest("SPACE_CAPACITY_EXCEEDED", 
+                        "Số người tham gia (" + request.getParticipantCount() + ") vượt quá sức chứa tối đa của không gian (" + space.getCapacity() + " người).");
+            }
+        }
+
+        if (!isWholeSpace && !isPerTable) {
+            // PER_SEAT mode: Khu tự học chung
+            if (requestedSeats == null || requestedSeats.isEmpty()) {
+                throw BusinessException.badRequest("SEAT_REQUIRED", 
+                        "Khu tự học yêu cầu chọn 1 vị trí chỗ ngồi cụ thể.");
+            }
+            if (requestedSeats.size() > 1) {
+                throw BusinessException.badRequest("SINGLE_SEAT_ONLY", 
+                        "Khu tự học cá nhân áp dụng quy tắc 1 sinh viên = 1 chỗ ngồi. Vui lòng chỉ chọn 1 ghế.");
+            }
+        }
+
         SpaceTable targetTable = null;
         if (isPerTable) {
             if (requestedTableId == null && requestedSeats != null && !requestedSeats.isEmpty() && spaceTableRepository != null) {
@@ -172,9 +199,9 @@ public class BookingService {
                     throw BusinessException.badRequest("TABLE_NOT_AVAILABLE", 
                             "Bàn [" + targetTable.getTableCode() + "] hiện đang tạm ngưng sử dụng hoặc đang bảo trì.");
                 }
-                if (request.getParticipantCount() > targetTable.getCapacity()) {
+                if (request.getParticipantCount() != null && request.getParticipantCount() > targetTable.getCapacity()) {
                     throw BusinessException.badRequest("CAPACITY_EXCEEDED", 
-                            "Số người tham gia (" + request.getParticipantCount() + ") vượt quá sức chứa của bàn " + targetTable.getTableCode() + " (" + targetTable.getCapacity() + " chỗ)");
+                            "Số người tham gia (" + request.getParticipantCount() + ") vượt quá sức chứa của bàn " + targetTable.getTableCode() + " (" + targetTable.getCapacity() + " chỗ). Vui lòng chọn bàn lớn hơn.");
                 }
             }
         }
@@ -339,9 +366,14 @@ public class BookingService {
         BookingStatus initialStatus = requiresApproval ? BookingStatus.PENDING_APPROVAL : BookingStatus.CONFIRMED;
 
         // BƯỚC 10: Lưu booking và nhật ký thao tác
-        int actualParticipantCount = (request.getSelectedSeats() != null && !request.getSelectedSeats().isEmpty())
-                ? request.getSelectedSeats().size()
-                : request.getParticipantCount();
+        int actualParticipantCount;
+        if (isPerSeat) {
+            actualParticipantCount = 1;
+        } else {
+            actualParticipantCount = (request.getParticipantCount() != null && request.getParticipantCount() > 0)
+                    ? request.getParticipantCount()
+                    : 1;
+        }
 
         String finalPurpose = (request.getPurpose() != null && !request.getPurpose().trim().isBlank())
                 ? request.getPurpose().trim()
@@ -388,6 +420,12 @@ public class BookingService {
 
     /**
      * Lấy danh sách booking của sinh viên đang đăng nhập.
+     * Sắp xếp logic theo độ ưu tiên nghiệp vụ và thời gian:
+     * 1. CHECKED_IN (Đang trong ca học)
+     * 2. CONFIRMED (Đã duyệt, sắp diễn ra - ca gần nhất lên trước)
+     * 3. PENDING_APPROVAL (Chờ duyệt - ca gần nhất lên trước)
+     * 4. COMPLETED (Đã hoàn thành - mới nhất gần đây lên trước)
+     * 5. CANCELLED, REJECTED, EXPIRED, NO_SHOW (Đã đóng - mới nhất gần đây lên trước)
      */
     @Transactional(readOnly = true)
     public List<BookingResponse> getMyBookings(String userEmail, BookingStatus status) {
@@ -399,7 +437,52 @@ public class BookingService {
 
         return bookings.stream()
                 .map(b -> toBookingResponse(b, now))
+                .sorted(this::compareBookingsLogically)
                 .collect(Collectors.toList());
+    }
+
+    private int getBookingStatusRank(BookingStatus status) {
+        if (status == null) return 99;
+        switch (status) {
+            case CHECKED_IN:
+                return 1;
+            case CONFIRMED:
+                return 2;
+            case PENDING_APPROVAL:
+                return 3;
+            case COMPLETED:
+                return 4;
+            default: // CANCELLED, REJECTED, EXPIRED, NO_SHOW
+                return 5;
+        }
+    }
+
+    private int compareBookingsLogically(BookingResponse a, BookingResponse b) {
+        int rankA = getBookingStatusRank(a.getStatus());
+        int rankB = getBookingStatusRank(b.getStatus());
+        if (rankA != rankB) {
+            return Integer.compare(rankA, rankB);
+        }
+
+        if (rankA <= 3) {
+            // Sắp diễn ra / cần chú ý: gần nhất lên trước (startTime ASC)
+            LocalDateTime timeA = a.getStartTime() != null ? a.getStartTime() : LocalDateTime.MAX;
+            LocalDateTime timeB = b.getStartTime() != null ? b.getStartTime() : LocalDateTime.MAX;
+            int timeCompare = timeA.compareTo(timeB);
+            if (timeCompare != 0) return timeCompare;
+            Long idA = a.getId() != null ? a.getId() : 0L;
+            Long idB = b.getId() != null ? b.getId() : 0L;
+            return idA.compareTo(idB);
+        } else {
+            // Lịch sử / đã kết thúc: mới nhất gần đây lên trước (startTime DESC)
+            LocalDateTime timeA = a.getStartTime() != null ? a.getStartTime() : LocalDateTime.MIN;
+            LocalDateTime timeB = b.getStartTime() != null ? b.getStartTime() : LocalDateTime.MIN;
+            int timeCompare = timeB.compareTo(timeA);
+            if (timeCompare != 0) return timeCompare;
+            Long idA = a.getId() != null ? a.getId() : 0L;
+            Long idB = b.getId() != null ? b.getId() : 0L;
+            return idB.compareTo(idA);
+        }
     }
 
     /**
@@ -422,6 +505,12 @@ public class BookingService {
         Booking booking = bookingRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> BusinessException.notFound("BOOKING_NOT_FOUND", "Không tìm thấy booking với ID: " + id));
         requireOwnerOrStaff(booking, userEmail);
+
+        if (reason == null || reason.isBlank()) {
+            throw BusinessException.badRequest("CANCEL_REASON_REQUIRED", "Vui lòng nhập lý do hủy.");
+        }
+        String normalizedReason = reason.trim();
+
         LocalDateTime now = LocalDateTime.now(checkInClock);
 
         if (booking.getStatus() != BookingStatus.PENDING_APPROVAL && booking.getStatus() != BookingStatus.CONFIRMED) {
@@ -443,7 +532,7 @@ public class BookingService {
                 .performedBy(resolveStudentId(userEmail))
                 .performedByEmail(userEmail)
                 .performedAt(now)
-                .reason(reason != null ? reason : "Người dùng chủ động hủy")
+                .reason(normalizedReason)
                 .note("Giải phóng phòng cho sinh viên khác")
                 .build();
         auditLogRepository.save(audit);

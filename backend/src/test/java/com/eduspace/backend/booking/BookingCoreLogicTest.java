@@ -559,6 +559,28 @@ class BookingCoreLogicTest {
         }
 
         @Test
+        @DisplayName("3.1a. Không cho phép hủy khi lý do chỉ chứa khoảng trắng")
+        void testCancelBooking_BlankReason() {
+            Long bookingId = 30L;
+            Booking booking = Booking.builder()
+                    .id(bookingId)
+                    .studentId(student.getId())
+                    .status(BookingStatus.CONFIRMED)
+                    .startTime(baseTime.plusHours(2))
+                    .endTime(baseTime.plusHours(4))
+                    .build();
+            when(bookingRepository.findByIdForUpdate(bookingId)).thenReturn(Optional.of(booking));
+
+            BusinessException ex = assertThrows(BusinessException.class, () ->
+                    bookingService.cancelBooking(bookingId, student.getEmail(), "   ")
+            );
+
+            assertEquals("CANCEL_REASON_REQUIRED", ex.getCode());
+            verify(bookingRepository, never()).save(any(Booking.class));
+            verifyNoInteractions(auditLogRepository);
+        }
+
+        @Test
         @DisplayName("3.2. Chặn sinh viên hủy khi đã đến hoặc qua giờ bắt đầu -> CANNOT_CANCEL_PAST_START")
         void testCancelBooking_PastStartTime() {
             Long bookingId = 31L;

@@ -499,6 +499,35 @@
   opacity: 0.65;
 }
 
+.cinema-table-card.table-insufficient {
+  background: #FFF1F2;
+  border-color: #FECDD3;
+  color: #9F1239;
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+
+.cinema-table-card.table-insufficient:hover {
+  background: #FFE4E6;
+  border-color: #FDA4AF;
+  transform: none;
+  box-shadow: none;
+}
+
+.cinema-table-card.table-insufficient .table-card-capacity {
+  background: #FEE2E2;
+  color: #DC2626;
+  font-weight: 800;
+}
+
+.cinema-table-card.table-inactive {
+  background: #FEF2F2;
+  border-color: #FECACA;
+  color: #DC2626;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .table-card-top {
   display: flex;
   align-items: center;

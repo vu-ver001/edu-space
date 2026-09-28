@@ -17,6 +17,7 @@ export const MyBookingsPage: React.FC = () => {
   // Modal states
   const [cancellingBooking, setCancellingBooking] = useState<Booking | null>(null);
   const [cancelReason, setCancelReason] = useState<string>('');
+  const [cancelReasonTouched, setCancelReasonTouched] = useState<boolean>(false);
   const [qrCheckInBooking, setQrCheckInBooking] = useState<Booking | null>(null);
 
   const [actionLoading, setActionLoading] = useState<boolean>(false);
@@ -47,13 +48,18 @@ export const MyBookingsPage: React.FC = () => {
   // Xác nhận hủy đặt phòng
   const handleConfirmCancel = async () => {
     if (!cancellingBooking) return;
+    if (!cancelReason.trim()) {
+      setCancelReasonTouched(true);
+      return;
+    }
     setActionLoading(true);
     try {
-      await bookingService.cancelBooking(cancellingBooking.id, cancelReason.trim() || 'Người dùng chủ động hủy');
+      await bookingService.cancelBooking(cancellingBooking.id, cancelReason.trim());
       setToastMessage(`✓ Đã hủy thành công đơn #${cancellingBooking.id}. Phòng đã được giải phóng.`);
       setTimeout(() => setToastMessage(null), 4000);
       setCancellingBooking(null);
       setCancelReason('');
+      setCancelReasonTouched(false);
       fetchBookings();
     } catch (err: any) {
       alert(err?.response?.data?.message || 'Không thể hủy đơn đặt phòng này.');
@@ -75,9 +81,20 @@ export const MyBookingsPage: React.FC = () => {
     return { total, pending, confirmed, checkedIn, completed, history };
   }, [bookings]);
 
-  // Bộ lọc danh sách
+  // Helper tính độ ưu tiên trạng thái
+  const getStatusPriority = (status: string) => {
+    switch (status) {
+      case 'CHECKED_IN': return 1;
+      case 'CONFIRMED': return 2;
+      case 'PENDING_APPROVAL': return 3;
+      case 'COMPLETED': return 4;
+      default: return 5; // CANCELLED, REJECTED, EXPIRED, NO_SHOW
+    }
+  };
+
+  // Bộ lọc danh sách và sắp xếp logic
   const filteredBookings = useMemo(() => {
-    return bookings.filter((b) => {
+    const list = bookings.filter((b) => {
       // Tab filter
       if (activeTab === 'PENDING') {
         if (b.status !== 'PENDING_APPROVAL') return false;
@@ -106,6 +123,28 @@ export const MyBookingsPage: React.FC = () => {
       }
 
       return true;
+    });
+
+    return [...list].sort((a, b) => {
+      const rankA = getStatusPriority(a.status);
+      const rankB = getStatusPriority(b.status);
+
+      if (rankA !== rankB) {
+        return rankA - rankB;
+      }
+
+      const timeA = new Date(a.startTime).getTime();
+      const timeB = new Date(b.startTime).getTime();
+
+      // Đơn sắp diễn ra / cần chú ý (Rank 1, 2, 3): ca sớm nhất, gần nhất lên trước (ASC)
+      if (rankA <= 3) {
+        if (timeA !== timeB) return timeA - timeB;
+        return a.id - b.id;
+      }
+
+      // Đơn lịch sử / đã đóng (Rank 4, 5): mới hoàn thành / mới đóng gần đây nhất lên trước (DESC)
+      if (timeA !== timeB) return timeB - timeA;
+      return b.id - a.id;
     });
   }, [bookings, activeTab, searchQuery]);
 
@@ -620,7 +659,13 @@ export const MyBookingsPage: React.FC = () => {
 
       {/* 5. Modal Xác Nhận Hủy Đặt Phòng (Cancel Booking Modal) */}
       {cancellingBooking && (
-        <div className="mb-modal-overlay" onClick={() => setCancellingBooking(null)}>
+        <div
+          className="mb-modal-overlay"
+          onClick={() => {
+            setCancellingBooking(null);
+            setCancelReasonTouched(false);
+          }}
+        >
           <div className="mb-modal-box" onClick={(e) => e.stopPropagation()}>
             <div className="mb-modal-header">
               <h3 className="mb-modal-title">
@@ -633,8 +678,12 @@ export const MyBookingsPage: React.FC = () => {
               </h3>
               <button
                 type="button"
-                onClick={() => setCancellingBooking(null)}
+                onClick={() => {
+                  setCancellingBooking(null);
+                  setCancelReasonTouched(false);
+                }}
                 style={{ background: 'none', border: 'none', fontSize: '1.2rem', color: '#94A3B8', cursor: 'pointer' }}
+                aria-label="Đóng hộp thoại hủy đặt chỗ"
               >
                 ✕
               </button>
@@ -655,21 +704,38 @@ export const MyBookingsPage: React.FC = () => {
                 marginBottom: '16px',
                 lineHeight: 1.4
               }}>
-                📌 <strong>Lưu ý:</strong> Ngay sau khi hủy, phòng sẽ được giải phóng lập tức trong cơ sở dữ liệu để các bạn sinh viên khác có thể đặt.
+                📌 <strong>Lưu ý:</strong> Ngay sau khi hủy, phòng sẽ được giải phóng lập tức để các bạn sinh viên khác có thể đặt.
               </div>
 
               <div>
                 <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, color: '#475569', marginBottom: 6 }}>
-                  Lý do hủy (tùy chọn)
+                  Lý do hủy <span style={{ color: '#EF4444', fontWeight: 700 }}>*</span>
                 </label>
                 <input
                   type="text"
                   className="mb-search-input"
-                  style={{ width: '100%', height: '40px', padding: '0 12px' }}
+                  style={{
+                    width: '100%',
+                    height: '40px',
+                    padding: '0 12px',
+                    borderColor: cancelReasonTouched && !cancelReason.trim() ? '#EF4444' : undefined
+                  }}
                   placeholder="Ví dụ: Bận lịch thi đột xuất, đổi kế hoạch nhóm..."
                   value={cancelReason}
-                  onChange={(e) => setCancelReason(e.target.value)}
+                  onChange={(e) => {
+                    setCancelReason(e.target.value);
+                    if (e.target.value.trim()) setCancelReasonTouched(false);
+                  }}
+                  onBlur={() => setCancelReasonTouched(true)}
+                  aria-required="true"
+                  aria-invalid={cancelReasonTouched && !cancelReason.trim()}
+                  required
                 />
+                {cancelReasonTouched && !cancelReason.trim() && (
+                  <span style={{ fontSize: '11px', color: '#EF4444', marginTop: '4px', display: 'block' }}>
+                    Vui lòng nhập lý do hủy để tiếp tục.
+                  </span>
+                )}
               </div>
             </div>
 
@@ -677,7 +743,10 @@ export const MyBookingsPage: React.FC = () => {
               <button
                 type="button"
                 className="btn-modal-back"
-                onClick={() => setCancellingBooking(null)}
+                onClick={() => {
+                  setCancellingBooking(null);
+                  setCancelReasonTouched(false);
+                }}
                 disabled={actionLoading}
               >
                 Quay lại

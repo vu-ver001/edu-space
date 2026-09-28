@@ -42,6 +42,9 @@ export const BookingModal: React.FC<Props> = ({
     'WHOLE_SPACE'
   );
   const isPerSeat = bookingMode === 'PER_SEAT';
+  const isPerTable = bookingMode === 'PER_TABLE';
+  const isWholeSpace = !isPerSeat && !isPerTable;
+  const isGroupSpace = isPerTable || (isWholeSpace && (space.capacity ?? 1) > 1);
   // LOGIC MỚI: PER_SEAT duyệt tức thì (false), PER_TABLE & WHOLE_SPACE chờ Staff duyệt (true)
   const requiresApproval = space.requiresApproval !== undefined ? space.requiresApproval : !isPerSeat;
 
@@ -54,6 +57,14 @@ export const BookingModal: React.FC<Props> = ({
       setErrorInfo({
         code: 'PURPOSE_REQUIRED',
         message: 'Vui lòng nhập mục đích sử dụng (bắt buộc đối với phòng trọn gói và đặt theo bàn).'
+      });
+      return;
+    }
+
+    if (isGroupSpace && Number(participantCount) < 2) {
+      setErrorInfo({
+        code: 'MIN_PARTICIPANTS_REQUIRED',
+        message: 'Không gian học nhóm / thảo luận yêu cầu tối thiểu từ 2 người trở lên. Nếu bạn đi 1 mình, vui lòng chọn đặt chỗ ngồi tại Khu tự học cá nhân.'
       });
       return;
     }
