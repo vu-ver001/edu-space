@@ -665,14 +665,15 @@ export const BookingManagementPageKT = () => {
                     <tr>
                       <th>
                         <div className="booking-select-code">
-                          <input
-                            type="checkbox"
-                            checked={allVisiblePendingSelected}
-                            disabled={visiblePendingBookings.length === 0}
-                            aria-label="Chọn tất cả booking chờ duyệt trên trang này"
-                            title="Chọn tất cả booking chờ duyệt trên trang này"
-                            onChange={toggleVisiblePendingBookings}
-                          />
+                          {visiblePendingBookings.length > 0 ? (
+                            <input
+                              type="checkbox"
+                              checked={allVisiblePendingSelected}
+                              aria-label="Chọn tất cả booking chờ duyệt trên trang này"
+                              title="Chọn tất cả booking chờ duyệt trên trang này"
+                              onChange={toggleVisiblePendingBookings}
+                            />
+                          ) : null}
                           <span>Mã đặt chỗ</span>
                         </div>
                       </th>
@@ -705,7 +706,9 @@ export const BookingManagementPageKT = () => {
                                   onClick={(event) => event.stopPropagation()}
                                   onChange={() => togglePendingBooking(booking.id)}
                                 />
-                              ) : <span className="booking-checkbox-placeholder" />}
+                              ) : visiblePendingBookings.length > 0 ? (
+                                <span className="booking-checkbox-placeholder" />
+                              ) : null}
                               <strong className="booking-code">{bookingCode(booking)}</strong>
                             </div>
                           </td>
