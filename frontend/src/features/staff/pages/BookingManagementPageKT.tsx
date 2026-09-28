@@ -279,6 +279,38 @@ export const BookingManagementPageKT = () => {
         if (firstUpcoming) return firstStart - secondStart;
         return secondStart - firstStart;
       });
+    } else if (activeTab === 'checkin') {
+      const nowTimestamp = now.getTime();
+
+      result.sort((first, second) => {
+        const firstStart = new Date(first.startTime).getTime();
+        const secondStart = new Date(second.startTime).getTime();
+        const firstValid = !Number.isNaN(firstStart);
+        const secondValid = !Number.isNaN(secondStart);
+
+        if (!firstValid || !secondValid) {
+          if (firstValid) return -1;
+          if (secondValid) return 1;
+          return first.id - second.id;
+        }
+
+        const firstCanCheckIn = first.canCheckIn === true;
+        const secondCanCheckIn = second.canCheckIn === true;
+        if (firstCanCheckIn !== secondCanCheckIn) return firstCanCheckIn ? -1 : 1;
+
+        if (firstCanCheckIn) {
+          // Giờ bắt đầu sớm hơn đồng nghĩa hạn check-in cũng đến sớm hơn.
+          return firstStart - secondStart;
+        }
+
+        const firstUpcoming = firstStart >= nowTimestamp;
+        const secondUpcoming = secondStart >= nowTimestamp;
+        if (firstUpcoming !== secondUpcoming) return firstUpcoming ? -1 : 1;
+        if (firstUpcoming) return firstStart - secondStart;
+
+        // Dữ liệu quá hạn chưa kịp chuyển NO_SHOW nằm cuối danh sách.
+        return secondStart - firstStart;
+      });
     }
 
     return result;
