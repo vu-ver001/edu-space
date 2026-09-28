@@ -72,11 +72,24 @@ export const bookingService = {
     return res.data;
   },
 
-  // Lấy danh sách ghế đang bận theo thời gian thực
+  // Lấy danh sách ghế/bàn đang bận theo thời gian thực (hỗ trợ cả PENDING_APPROVAL và CONFIRMED)
   getOccupiedSeats: async (spaceId: number, startTime: string, endTime: string): Promise<string[]> => {
-    const res = await api.get<string[]>(`/api/spaces/${spaceId}/occupied-seats`, {
-      params: { startTime, endTime }
-    });
-    return res.data;
+    try {
+      const res = await api.get<any>(`/api/spaces/${spaceId}/occupied-seats`, {
+        params: { startTime, endTime }
+      });
+      const data = res.data;
+      if (Array.isArray(data)) {
+        return data.map((s) => String(s).trim().toUpperCase()).filter(Boolean);
+      }
+      if (typeof data === 'string') {
+        const cleaned = data.replace(/[\[\]"']/g, '');
+        return cleaned.split(',').map((s) => s.trim().toUpperCase()).filter(Boolean);
+      }
+      return [];
+    } catch (err) {
+      console.error('Lỗi khi gọi API getOccupiedSeats:', err);
+      return [];
+    }
   }
 };

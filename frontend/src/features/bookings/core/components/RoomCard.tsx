@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Armchair, Building2 } from 'lucide-react';
 import type { Space } from '../services/spaceService';
+import '../pages/SearchSpacesPage.css';
+import './MaintenanceModal.css';
 
 interface Props {
   space: Space;
@@ -40,14 +42,16 @@ export const formatMaintenanceTime = (startStr: string, endStr: string): string 
     const endMinutes = pad(end.getMinutes());
     const day = pad(start.getDate());
     const month = pad(start.getMonth() + 1);
+    const year = start.getFullYear();
 
     const isSameDay = start.toDateString() === end.toDateString();
     if (isSameDay) {
-      return `${startHours}:${startMinutes}-${endHours}:${endMinutes} ${day}/${month}`;
+      return `${startHours}:${startMinutes} - ${endHours}:${endMinutes}, ${day}/${month}/${year}`;
     } else {
       const endDay = pad(end.getDate());
       const endMonth = pad(end.getMonth() + 1);
-      return `${startHours}:${startMinutes} ${day}/${month} - ${endHours}:${endMinutes} ${endDay}/${endMonth}`;
+      const endYear = end.getFullYear();
+      return `${startHours}:${startMinutes} ${day}/${month}/${year} - ${endHours}:${endMinutes} ${endDay}/${endMonth}/${endYear}`;
     }
   } catch {
     return '';

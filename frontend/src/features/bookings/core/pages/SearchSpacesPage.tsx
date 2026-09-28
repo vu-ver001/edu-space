@@ -4,6 +4,8 @@ import { RoomCard } from '../components/RoomCard';
 import { BookingModal } from '../components/BookingModal';
 import type { SearchFilter, Space } from '../services/spaceService';
 import { spaceService } from '../services/spaceService';
+import './SearchSpacesPage.css';
+import '../components/MaintenanceModal.css';
 
 export const SearchSpacesPage: React.FC = () => {
   const initialSlot = getNextAvailableSlot();
@@ -58,26 +60,71 @@ export const SearchSpacesPage: React.FC = () => {
         return false;
       }
 
-      // 1. Kiểm tra nextMaintenance
-      if (s.nextMaintenance) {
-        const mStart = parseMs(s.nextMaintenance.startTime);
-        const mEnd = parseMs(s.nextMaintenance.endTime);
+      const durationMs = searchEndMs - searchStartMs;
+      const isShortSearch = durationMs <= 180 * 60 * 1000; // <= 3 giờ
+
+      // Thu thập tất cả các khoảng bảo trì giao cắt với [searchStartMs, searchEndMs]
+      const maintRanges: { start: number; end: number }[] = [];
+      const addMaint = (startStr?: string, endStr?: string) => {
+        const mStart = parseMs(startStr);
+        const mEnd = parseMs(endStr);
         if (mStart && mEnd && searchStartMs < mEnd && searchEndMs > mStart) {
-          return true;
+          maintRanges.push({
+            start: Math.max(searchStartMs, mStart),
+            end: Math.min(searchEndMs, mEnd),
+          });
+        }
+      };
+
+      if (s.nextMaintenance) {
+        addMaint(s.nextMaintenance.startTime, s.nextMaintenance.endTime);
+      }
+      if (s.upcomingMaintenances && s.upcomingMaintenances.length > 0) {
+        s.upcomingMaintenances.forEach((m) => addMaint(m.startTime, m.endTime));
+      }
+
+      if (maintRanges.length === 0) return false;
+
+      // Nếu là tìm kiếm khung giờ ngắn (<= 3h) mà có bảo trì -> Ẩn phòng
+      if (isShortSearch) {
+        return true;
+      }
+
+      // Nếu tìm kiếm khung giờ dài (> 3h): Gộp các khoảng bảo trì và kiểm tra xem còn khoảng trống >= 30 phút không
+      maintRanges.sort((a, b) => a.start - b.start);
+      const merged: { start: number; end: number }[] = [];
+      for (const r of maintRanges) {
+        if (merged.length === 0) {
+          merged.push({ ...r });
+        } else {
+          const last = merged[merged.length - 1];
+          if (r.start <= last.end) {
+            last.end = Math.max(last.end, r.end);
+          } else {
+            merged.push({ ...r });
+          }
         }
       }
 
-      // 2. Kiểm tra danh sách upcomingMaintenances
-      if (s.upcomingMaintenances && s.upcomingMaintenances.length > 0) {
-        const hasOverlap = s.upcomingMaintenances.some((m) => {
-          const mStart = parseMs(m.startTime);
-          const mEnd = parseMs(m.endTime);
-          return mStart && mEnd && searchStartMs < mEnd && searchEndMs > mStart;
-        });
-        if (hasOverlap) return true;
+      let currentCursor = searchStartMs;
+      let hasAvailableGap = false;
+      const minSlotMs = 30 * 60 * 1000; // Tối thiểu 30 phút
+
+      for (const m of merged) {
+        if (m.start - currentCursor >= minSlotMs) {
+          hasAvailableGap = true;
+          break;
+        }
+        if (m.end > currentCursor) {
+          currentCursor = m.end;
+        }
+      }
+      if (!hasAvailableGap && searchEndMs - currentCursor >= minSlotMs) {
+        hasAvailableGap = true;
       }
 
-      return false;
+      // Nếu không còn khoảng trống nào >= 30 phút -> Bị bảo trì phủ kín toàn bộ -> Ẩn phòng
+      return !hasAvailableGap;
     };
 
     spaceService
@@ -151,8 +198,18 @@ export const SearchSpacesPage: React.FC = () => {
     fetchSpaces(activeFilter);
   };
 
+  const formatDisplayDate = (dStr: string) => {
+    if (!dStr) return '';
+    const parts = dStr.split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return dStr;
+  };
+
   const availableCount = spaces.filter((s) => s.isAvailable ?? (s.status === 'AVAILABLE')).length;
-  const displayDate = activeFilter.date || initialSlot.date;
+  const rawDate = activeFilter.date || initialSlot.date;
+  const displayDate = formatDisplayDate(rawDate);
   const displayStart = activeFilter.startTime ? activeFilter.startTime.substring(0, 5) : initialSlot.startTime;
   const displayEnd = activeFilter.endTime ? activeFilter.endTime.substring(0, 5) : initialSlot.endTime;
 

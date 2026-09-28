@@ -1,0 +1,225 @@
+/* CSS CHO COMPONENT TIMEINPUT24H CHUẨN 24 GIỜ (KHÔNG AM / PM) */
+
+.time-input-24h-container {
+  position: relative;
+  width: 100%;
+}
+
+.time-input-24h-input-box {
+  display: flex;
+  align-items: center;
+  position: relative;
+  width: 100%;
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  border-radius: 8px;
+  height: 42px;
+  transition: all 0.2s ease-in-out;
+}
+
+.time-input-24h-input-box:focus-within {
+  border-color: #2563EB;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.time-input-24h-text-field {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 0 12px;
+  font-size: 0.925rem;
+  font-weight: 500;
+  color: #1E293B;
+  outline: none;
+  height: 100%;
+}
+
+.time-input-24h-clock-btn {
+  background: transparent;
+  border: none;
+  padding: 0 12px;
+  color: #64748B;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
+  height: 100%;
+}
+
+.time-input-24h-clock-btn:hover {
+  color: #2563EB;
+}
+
+/* POPUP MENU 24H */
+.time-picker-24h-popup {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 250px;
+  width: 100%;
+  max-width: 290px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  z-index: 1000;
+  padding: 12px;
+  animation: timePickerFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes timePickerFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.time-picker-24h-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #F1F5F9;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.time-picker-close-btn {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  color: #94A3B8;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.time-picker-close-btn:hover {
+  background: #F1F5F9;
+  color: #1E293B;
+}
+
+.time-picker-24h-columns {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.time-picker-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.time-picker-col-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748B;
+  text-align: center;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.time-picker-col-scroll {
+  max-height: 180px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-right: 4px;
+}
+
+/* Custom scrollbar */
+.time-picker-col-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.time-picker-col-scroll::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 4px;
+}
+
+.time-picker-slot-btn {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  padding: 6px 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s ease;
+}
+
+.time-picker-slot-btn:hover:not(:disabled) {
+  background: #EFF6FF;
+  border-color: #BFDBFE;
+  color: #2563EB;
+}
+
+.time-picker-slot-btn.selected {
+  background: #2563EB;
+  border-color: #2563EB;
+  color: #FFFFFF;
+}
+
+.time-picker-slot-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: #F1F5F9;
+}
+
+/* QUICK PRESETS */
+.time-picker-quick-presets {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #F1F5F9;
+}
+
+.preset-label {
+  display: block;
+  font-size: 0.725rem;
+  font-weight: 600;
+  color: #64748B;
+  margin-bottom: 6px;
+}
+
+.preset-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.preset-chip-btn {
+  background: #F1F5F9;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.preset-chip-btn:hover:not(:disabled) {
+  background: #E2E8F0;
+  color: #1E293B;
+}
+
+.preset-chip-btn.active {
+  background: #2563EB;
+  color: #FFFFFF;
+}
+
+.preset-chip-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}

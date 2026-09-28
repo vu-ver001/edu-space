@@ -4,6 +4,8 @@ import { TableMeetingIcon } from './RoomCard';
 import type { Space, SpaceTable, SpaceSeat } from '../services/spaceService';
 import { spaceService } from '../services/spaceService';
 import { bookingService } from '../services/bookingService';
+import { formatDateVI } from './DateInputVI';
+import './SeatSelectionModal.css';
 
 interface Props {
   space: Space;
@@ -100,8 +102,9 @@ export const SeatSelectionModal: React.FC<Props> = ({
 
       // Tải danh sách mã đã bị đặt (ghế hoặc bàn) trong khung giờ từ API của Khánh Vân
       const occupied = await bookingService.getOccupiedSeats(space.id, startIso, endIso);
-      setOccupiedItems(new Set(occupied));
-      setSelectedItems((prev) => prev.filter((code) => !occupied.includes(code)));
+      const normOccupied = new Set(occupied.map((s) => String(s).trim().toUpperCase()));
+      setOccupiedItems(normOccupied);
+      setSelectedItems((prev) => prev.filter((code) => !normOccupied.has(String(code).trim().toUpperCase())));
     } catch (err) {
       console.error('Lỗi khi tải dữ liệu bàn/ghế từ server:', err);
     } finally {
@@ -115,7 +118,8 @@ export const SeatSelectionModal: React.FC<Props> = ({
 
   // Xử lý click chọn / hủy chọn Item (bàn hoặc ghế)
   const handleItemClick = (code: string, isInactive?: boolean) => {
-    if (occupiedItems.has(code) || isInactive) return;
+    const normCode = String(code).trim().toUpperCase();
+    if (occupiedItems.has(normCode) || isInactive) return;
 
     setSelectedItems((prev) => {
       if (prev.includes(code)) {
@@ -182,9 +186,10 @@ export const SeatSelectionModal: React.FC<Props> = ({
 
   // Render từng bàn thảo luận (mô hình to hơn ghế một chút, hình khối bàn nhóm)
   const renderTableCard = (tbl: SpaceTable) => {
-    const isOccupied = occupiedItems.has(tbl.tableCode);
+    const normCode = String(tbl.tableCode).trim().toUpperCase();
+    const isOccupied = occupiedItems.has(normCode);
     const isInactive = tbl.status === 'INACTIVE';
-    const isSelected = selectedItems.includes(tbl.tableCode);
+    const isSelected = selectedItems.includes(tbl.tableCode) || selectedItems.includes(normCode);
     const isUnavailable = isOccupied || isInactive;
 
     return (
@@ -224,9 +229,10 @@ export const SeatSelectionModal: React.FC<Props> = ({
 
   // Render từng ghế ngồi cá nhân
   const renderSeatButton = (st: SpaceSeat) => {
-    const isOccupied = occupiedItems.has(st.seatCode);
+    const normCode = String(st.seatCode).trim().toUpperCase();
+    const isOccupied = occupiedItems.has(normCode);
     const isInactive = st.status === 'INACTIVE';
-    const isSelected = selectedItems.includes(st.seatCode);
+    const isSelected = selectedItems.includes(st.seatCode) || selectedItems.includes(normCode);
     const isUnavailable = isOccupied || isInactive;
 
     return (
@@ -376,7 +382,7 @@ export const SeatSelectionModal: React.FC<Props> = ({
         <div className="cinema-modal-footer">
           <div className="footer-booking-info">
             <div className="footer-meta-time">
-              📅 <strong>{date}</strong> • <strong>{startTime.substring(0, 5)} - {endTime.substring(0, 5)}</strong>
+              📅 <strong>{formatDateVI(date)}</strong> • <strong>{startTime.substring(0, 5)} - {endTime.substring(0, 5)}</strong>
             </div>
             <div className="footer-seats-selected">
               <span>{isTableMode ? 'Bàn đã chọn: ' : 'Chỗ ngồi đã chọn: '}</span>

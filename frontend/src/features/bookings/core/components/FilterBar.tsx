@@ -1,6 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { Facility, SearchFilter, SpaceType } from '../services/spaceService';
 import { spaceService } from '../services/spaceService';
+import { DateInputVI } from './DateInputVI';
+import { TimeInput24H } from './TimeInput24H';
+import '../pages/SearchSpacesPage.css';
 
 interface Props {
   onSearch: (filter: SearchFilter) => void;
@@ -283,12 +286,11 @@ export const FilterBar: React.FC<Props> = ({ onSearch, isLoading, availableCount
       <div className="internal-form-row four-cols">
         <div className="internal-field">
           <label className="internal-label">Ngày sử dụng</label>
-          <input
-            type="date"
+          <DateInputVI
             className={`internal-input internal-date-input ${dateError ? 'input-error' : ''}`}
             value={date}
-            onChange={(e) => {
-              const val = e.target.value;
+            min={today}
+            onChange={(val) => {
               setDate(val);
               if (val && val < today) {
                 setDateError('Không được nhập ngày trong quá khứ. Vui lòng chọn ngày hôm nay hoặc trong tương lai.');
@@ -305,15 +307,12 @@ export const FilterBar: React.FC<Props> = ({ onSearch, isLoading, availableCount
                 }
               }
             }}
-            min={today}
           />
         </div>
 
         <div className="internal-field">
           <label className="internal-label">Giờ bắt đầu</label>
-          <input
-            type="time"
-            step="60"
+          <TimeInput24H
             min={
               date === today
                 ? (toMinutes(`${new Date().getHours()}:${new Date().getMinutes()}`) > toMinutes(operatingHours.openingHour)
@@ -322,10 +321,8 @@ export const FilterBar: React.FC<Props> = ({ onSearch, isLoading, availableCount
                 : operatingHours.openingHour
             }
             max={operatingHours.closingHour}
-            className={`internal-input internal-time-input ${timeError ? 'input-error' : ''}`}
             value={startTime}
-            onChange={(e) => {
-              const val = e.target.value;
+            onChange={(val) => {
               setStartTime(val);
               const valM = toMinutes(val);
               const endM = toMinutes(endTime);
@@ -335,11 +332,18 @@ export const FilterBar: React.FC<Props> = ({ onSearch, isLoading, availableCount
 
               if (date === today && valM < curM) {
                 setTimeError('Thời gian bắt đầu phải bằng hoặc lớn hơn thời điểm hiện tại.');
-              } else if (endTime && valM >= endM) {
-                setTimeError(`Giờ bắt đầu (${val}) phải trước giờ kết thúc (${endTime}). Vui lòng chọn lại khung giờ.`);
               } else if (valM < openM) {
                 setTimeError(`Giờ bắt đầu phải từ ${operatingHours.openingHour} trở đi (giờ mở cửa tòa nhà).`);
               } else {
+                if (endTime && valM >= endM) {
+                  // Tự động đẩy endTime lên sau startTime 2 tiếng (không quá giờ đóng cửa)
+                  const closeM = toMinutes(operatingHours.closingHour);
+                  const suggestedEndM = Math.min(valM + 120, closeM);
+                  const h = Math.floor(suggestedEndM / 60);
+                  const m = suggestedEndM % 60;
+                  const newEndStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                  setEndTime(newEndStr);
+                }
                 setTimeError(null);
               }
             }}
@@ -348,15 +352,11 @@ export const FilterBar: React.FC<Props> = ({ onSearch, isLoading, availableCount
 
         <div className="internal-field">
           <label className="internal-label">Giờ kết thúc</label>
-          <input
-            type="time"
-            step="60"
+          <TimeInput24H
             min={operatingHours.openingHour}
             max={operatingHours.closingHour}
-            className={`internal-input internal-time-input ${timeError ? 'input-error' : ''}`}
             value={endTime}
-            onChange={(e) => {
-              const val = e.target.value;
+            onChange={(val) => {
               setEndTime(val);
               const valM = toMinutes(val);
               const startM = toMinutes(startTime);

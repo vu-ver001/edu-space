@@ -71,6 +71,9 @@ public class AvailabilityService {
     private com.eduspace.backend.space.repository.SpaceTableRepository spaceTableRepository;
 
     @Autowired(required = false)
+    private com.eduspace.backend.space.repository.SeatRepository seatRepository;
+
+    @Autowired(required = false)
     private java.time.Clock clock = java.time.Clock.systemDefaultZone();
 
     public void setClock(java.time.Clock clock) {
@@ -463,20 +466,9 @@ public class AvailabilityService {
                         }
                     }
 
-                    // Ẩn hoàn toàn phòng nếu có lịch bảo trì trong khoảng thời gian tìm kiếm
+                    // Kiểm tra khả dụng thực tế theo thời gian và mô hình đặt chỗ
                     if (effectiveStart != null && effectiveEnd != null) {
-                        boolean hasMaintenance = (bookingMaintenanceRepository != null)
-                                ? !bookingMaintenanceRepository.findOverlappingBlocks(space.getId(), effectiveStart, effectiveEnd).isEmpty()
-                                : (maintenanceBlockRepository != null && !maintenanceBlockRepository.findOverlappingBlocks(space.getId(), effectiveStart, effectiveEnd).isEmpty());
-                        if (hasMaintenance) {
-                            return false; // Ẩn phòng bị bảo trì trong khung giờ tìm kiếm
-                        }
-
-                        // Đối với phòng đặt trọn gói (WHOLE_SPACE): Ẩn nếu đã có người đặt trong khung giờ này
-                        boolean hasBooking = !bookingRepository.findOverlappingSpaceBookings(
-                                space.getId(), effectiveStart, effectiveEnd, OCCUPYING_STATUSES
-                        ).isEmpty();
-                        if ("WHOLE_SPACE".equalsIgnoreCase(space.getBookingMode()) && hasBooking) {
+                        if (!isSpaceAvailableInInterval(space, effectiveStart, effectiveEnd, filter.getParticipantCount())) {
                             return false;
                         }
                     }
@@ -511,6 +503,218 @@ public class AvailabilityService {
                             .build();
                 })
                 .collect(Collectors.toList());
+    }
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class TimeInterval {
+        private LocalDateTime start;
+        private LocalDateTime end;
+
+        public long getDurationMinutes() {
+            return java.time.Duration.between(start, end).toMinutes();
+        }
+    }
+
+    public static List<TimeInterval> mergeIntervals(List<TimeInterval> intervals) {
+        if (intervals == null || intervals.isEmpty()) return Collections.emptyList();
+        List<TimeInterval> sorted = new ArrayList<>(intervals);
+        sorted.sort(Comparator.comparing(TimeInterval::getStart));
+
+        List<TimeInterval> merged = new ArrayList<>();
+        TimeInterval current = sorted.get(0);
+
+        for (int i = 1; i < sorted.size(); i++) {
+            TimeInterval next = sorted.get(i);
+            if (!current.getEnd().isBefore(next.getStart())) {
+                if (next.getEnd().isAfter(current.getEnd())) {
+                    current = new TimeInterval(current.getStart(), next.getEnd());
+                }
+            } else {
+                merged.add(current);
+                current = next;
+            }
+        }
+        merged.add(current);
+        return merged;
+    }
+
+    public static List<TimeInterval> findGaps(LocalDateTime windowStart, LocalDateTime windowEnd, List<TimeInterval> busyList) {
+        if (busyList == null || busyList.isEmpty()) {
+            return Collections.singletonList(new TimeInterval(windowStart, windowEnd));
+        }
+
+        List<TimeInterval> gaps = new ArrayList<>();
+        LocalDateTime cursor = windowStart;
+
+        for (TimeInterval busy : busyList) {
+            if (busy.getStart().isAfter(cursor)) {
+                gaps.add(new TimeInterval(cursor, busy.getStart()));
+            }
+            if (busy.getEnd().isAfter(cursor)) {
+                cursor = busy.getEnd();
+            }
+        }
+
+        if (cursor.isBefore(windowEnd)) {
+            gaps.add(new TimeInterval(cursor, windowEnd));
+        }
+
+        return gaps;
+    }
+
+    /**
+     * Logic nghiệp vụ thực tế kiểm tra phòng khả dụng trong khoảng thời gian [searchStart, searchEnd]:
+     * - Nếu tìm khung giờ vừa vặn (<= 180 phút, ví dụ 20:00 - 22:00):
+     *   + WHOLE_SPACE: Ẩn nếu đã có người đặt hoặc phòng có lịch bảo trì trong khung giờ này.
+     *   + PER_SEAT: Ẩn nếu tất cả các ghế đã bị đặt (hoặc số ghế trống < participantCount).
+     *   + PER_TABLE: Ẩn nếu tất cả các bàn đã bị đặt.
+     * - Nếu tìm khoảng thời gian dài (> 180 phút, ví dụ 10:00 - 17:00):
+     *   + Nếu có booking ở giữa (ví dụ 13:00 - 15:00), nhưng các khoảng trước và sau (10:00 - 13:00 và 15:00 - 17:00)
+     *     vẫn còn trống >= 30 phút -> VẪN HIỂN THỊ để sinh viên chọn slot phù hợp!
+     *   + Chỉ ẩn nếu toàn bộ khoảng thời gian bị phủ kín 100% không còn slot trống nào.
+     */
+    public boolean isSpaceAvailableInInterval(SpaceCatalogItem space, LocalDateTime searchStart, LocalDateTime searchEnd, Integer participantCount) {
+        if (space == null || searchStart == null || searchEnd == null || !searchStart.isBefore(searchEnd)) {
+            return true;
+        }
+
+        long searchDurationMinutes = java.time.Duration.between(searchStart, searchEnd).toMinutes();
+
+        // 1. Lấy tất cả các block bảo trì giao nhau với khoảng tìm kiếm
+        List<com.eduspace.backend.space.entity.MaintenanceBlock> maintenanceBlocks = Collections.emptyList();
+        if (bookingMaintenanceRepository != null) {
+            maintenanceBlocks = bookingMaintenanceRepository.findOverlappingBlocks(space.getId(), searchStart, searchEnd);
+        } else if (maintenanceBlockRepository != null) {
+            maintenanceBlocks = maintenanceBlockRepository.findOverlappingBlocks(space.getId(), searchStart, searchEnd);
+        }
+
+        // Lấy danh sách booking đang chiếm chỗ (PENDING_APPROVAL, CONFIRMED, CHECKED_IN)
+        List<Booking> overlappingBookings = bookingRepository.findOverlappingSpaceBookings(
+                space.getId(), searchStart, searchEnd, OCCUPYING_STATUSES
+        );
+
+        String mode = space.getBookingMode() != null ? space.getBookingMode() : "WHOLE_SPACE";
+        boolean isWholeSpace = "WHOLE_SPACE".equalsIgnoreCase(mode);
+        boolean isPerSeat = "PER_SEAT".equalsIgnoreCase(mode);
+        boolean isPerTable = "PER_TABLE".equalsIgnoreCase(mode);
+
+        int minSlotMinutes = 30; // Ngưỡng tối thiểu của một ca đặt phòng
+
+        // Kiểm tra sức chứa: Đối với WHOLE_SPACE, nếu số người tìm kiếm vượt quá sức chứa phòng thì loại
+        if (isWholeSpace && participantCount != null && participantCount > 0 && space.getCapacity() > 0) {
+            if (participantCount > space.getCapacity()) {
+                return false;
+            }
+        }
+
+        // XỬ LÝ KHUNG GIỜ NGẮN / VỪA VẶN (<= 180 phút, ví dụ: 20:00 - 22:00 = 120 phút)
+        if (searchDurationMinutes <= 180) {
+            // A. Nếu là WHOLE_SPACE:
+            if (isWholeSpace) {
+                // Nếu có bất kỳ lịch bảo trì nào giao vào khung giờ này -> Ẩn
+                if (!maintenanceBlocks.isEmpty()) return false;
+                // Nếu có bất kỳ booking nào giao vào khung giờ này -> Ẩn (đã có người đặt trọn gói)
+                if (!overlappingBookings.isEmpty()) return false;
+                return true;
+            }
+
+            // B. Nếu là PER_SEAT hoặc PER_TABLE nhưng có booking trọn phòng:
+            boolean hasWholeRoomBooking = overlappingBookings.stream()
+                    .anyMatch(b -> b.getTableId() == null && b.getSelectedSeatsList().isEmpty());
+            if (hasWholeRoomBooking) return false;
+
+            // Kiểm tra bảo trì
+            if (!maintenanceBlocks.isEmpty()) {
+                List<TimeInterval> maintIntervals = new ArrayList<>();
+                for (com.eduspace.backend.space.entity.MaintenanceBlock m : maintenanceBlocks) {
+                    LocalDateTime s = m.getStartTime().isBefore(searchStart) ? searchStart : m.getStartTime();
+                    LocalDateTime e = m.getEndTime().isAfter(searchEnd) ? searchEnd : m.getEndTime();
+                    if (s.isBefore(e)) maintIntervals.add(new TimeInterval(s, e));
+                }
+                List<TimeInterval> freeGaps = findGaps(searchStart, searchEnd, mergeIntervals(maintIntervals));
+                if (freeGaps.stream().noneMatch(gap -> gap.getDurationMinutes() >= minSlotMinutes)) {
+                    return false; // Bị bảo trì phủ kín khung giờ
+                }
+            }
+
+            // C. Nếu là PER_SEAT: Kiểm tra số ghế trống
+            if (isPerSeat) {
+                int capacity = space.getCapacity() > 0 ? space.getCapacity() : 10;
+                int reqSeats = (participantCount != null && participantCount > 0) ? participantCount : 1;
+
+                Set<String> occupiedSeatCodes = new HashSet<>();
+                for (Booking b : overlappingBookings) {
+                    occupiedSeatCodes.addAll(b.getSelectedSeatsList());
+                }
+
+                int remainingSeats = capacity - occupiedSeatCodes.size();
+                return remainingSeats >= reqSeats && remainingSeats > 0;
+            }
+
+            // D. Nếu là PER_TABLE: Kiểm tra số bàn trống
+            if (isPerTable) {
+                int totalTables = 4; // Mặc định phòng thảo luận có 4 bàn (T01 - T04)
+                if (spaceTableRepository != null) {
+                    try {
+                        long count = spaceTableRepository.findBySpaceIdAndDeletedAtIsNull(space.getId()).stream()
+                                .filter(t -> t.getStatus() != null && "AVAILABLE".equalsIgnoreCase(t.getStatus().name()))
+                                .count();
+                        if (count > 0) totalTables = (int) count;
+                    } catch (Exception ignored) {}
+                }
+
+                Set<String> occupiedTables = new HashSet<>();
+                for (Booking b : overlappingBookings) {
+                    if (b.getTableId() != null && spaceTableRepository != null) {
+                        try {
+                            spaceTableRepository.findById(b.getTableId()).ifPresent(t -> {
+                                if (t.getTableCode() != null) occupiedTables.add(t.getTableCode().trim().toUpperCase());
+                            });
+                        } catch (Exception ignored) {}
+                    }
+                    b.getSelectedSeatsList().forEach(s -> occupiedTables.add(s.trim().toUpperCase()));
+                }
+
+                int remainingTables = totalTables - occupiedTables.size();
+                return remainingTables > 0;
+            }
+
+            return true;
+        }
+
+        // XỬ LÝ KHOẢNG THỜI GIAN DÀI (> 180 phút, ví dụ: 10:00 - 17:00 = 420 phút)
+        // Lấy tất cả khoảng thời gian bận (bảo trì + booking)
+        List<TimeInterval> busyList = new ArrayList<>();
+        for (com.eduspace.backend.space.entity.MaintenanceBlock m : maintenanceBlocks) {
+            LocalDateTime s = m.getStartTime().isBefore(searchStart) ? searchStart : m.getStartTime();
+            LocalDateTime e = m.getEndTime().isAfter(searchEnd) ? searchEnd : m.getEndTime();
+            if (s.isBefore(e)) busyList.add(new TimeInterval(s, e));
+        }
+
+        if (isWholeSpace) {
+            for (Booking b : overlappingBookings) {
+                LocalDateTime s = b.getStartTime().isBefore(searchStart) ? searchStart : b.getStartTime();
+                LocalDateTime e = b.getEndTime().isAfter(searchEnd) ? searchEnd : b.getEndTime();
+                if (s.isBefore(e)) busyList.add(new TimeInterval(s, e));
+            }
+        } else {
+            // Với PER_SEAT / PER_TABLE: chỉ booking trọn phòng (whole room) mới khóa hoàn toàn
+            for (Booking b : overlappingBookings) {
+                if (b.getTableId() == null && b.getSelectedSeatsList().isEmpty()) {
+                    LocalDateTime s = b.getStartTime().isBefore(searchStart) ? searchStart : b.getStartTime();
+                    LocalDateTime e = b.getEndTime().isAfter(searchEnd) ? searchEnd : b.getEndTime();
+                    if (s.isBefore(e)) busyList.add(new TimeInterval(s, e));
+                }
+            }
+        }
+
+        List<TimeInterval> mergedBusy = mergeIntervals(busyList);
+        List<TimeInterval> gaps = findGaps(searchStart, searchEnd, mergedBusy);
+
+        // Vẫn hiển thị phòng nếu tồn tại ít nhất 1 khoảng trống >= 30 phút
+        return gaps.stream().anyMatch(g -> g.getDurationMinutes() >= minSlotMinutes);
     }
 
     private List<com.eduspace.backend.staff.dto.response.MaintenanceResponseKT> getUpcomingMaintenanceDtos(Long spaceId) {
@@ -727,9 +931,33 @@ public class AvailabilityService {
         );
 
         boolean wholeRoomOccupied = overlapping.stream()
-                .anyMatch(b -> b.getSelectedSeatsList().isEmpty());
+                .anyMatch(b -> b.getTableId() == null && b.getSelectedSeatsList().isEmpty());
 
         if (wholeRoomOccupied) {
+            List<String> allCodes = new ArrayList<>();
+            if (seatRepository != null) {
+                try {
+                    seatRepository.findBySpaceIdAndDeletedAtIsNull(spaceId)
+                            .forEach(s -> {
+                                if (s.getSeatCode() != null && !s.getSeatCode().isBlank()) {
+                                    allCodes.add(s.getSeatCode().trim().toUpperCase());
+                                }
+                            });
+                } catch (Exception ignored) {}
+            }
+            if (spaceTableRepository != null) {
+                try {
+                    spaceTableRepository.findBySpaceIdAndDeletedAtIsNull(spaceId)
+                            .forEach(t -> {
+                                if (t.getTableCode() != null && !t.getTableCode().isBlank()) {
+                                    allCodes.add(t.getTableCode().trim().toUpperCase());
+                                }
+                            });
+                } catch (Exception ignored) {}
+            }
+            if (!allCodes.isEmpty()) {
+                return allCodes.stream().distinct().sorted().collect(Collectors.toList());
+            }
             SpaceCatalogItem space = SPACE_CATALOG.get(spaceId);
             int capacity = (space != null) ? space.getCapacity() : 30;
             return generateDefaultSeatCodes(capacity);
@@ -737,11 +965,17 @@ public class AvailabilityService {
 
         List<String> occupied = new ArrayList<>();
         for (Booking b : overlapping) {
-            occupied.addAll(b.getSelectedSeatsList());
+            b.getSelectedSeatsList().forEach(s -> {
+                if (s != null && !s.isBlank()) {
+                    occupied.add(s.trim().toUpperCase());
+                }
+            });
             if (b.getTableId() != null && spaceTableRepository != null) {
                 try {
                     spaceTableRepository.findById(b.getTableId()).ifPresent(t -> {
-                        if (t.getTableCode() != null) occupied.add(t.getTableCode());
+                        if (t.getTableCode() != null && !t.getTableCode().isBlank()) {
+                            occupied.add(t.getTableCode().trim().toUpperCase());
+                        }
                     });
                 } catch (Exception ignored) {}
             }

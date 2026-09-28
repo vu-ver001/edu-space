@@ -2,10 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { SeatSelectionModal } from '../components/SeatSelectionModal';
 import { formatMaintenanceTime, TableMeetingIcon } from '../components/RoomCard';
+import { DateInputVI } from '../components/DateInputVI';
+import { TimeInput24H } from '../components/TimeInput24H';
 import { Armchair, Building2 } from 'lucide-react';
 import type { Space, MaintenanceSchedule } from '../services/spaceService';
 import { spaceService } from '../services/spaceService';
 import { bookingService } from '../services/bookingService';
+import './SpaceDetailPage.css';
+import '../components/SeatSelectionModal.css';
+import '../components/MaintenanceModal.css';
 
 // Default photos fallback
 const ROOM_IMAGES: Record<number, string> = {
@@ -75,12 +80,28 @@ export const SpaceDetailPage: React.FC = () => {
 
   const { initStart, initEnd } = getSmartInitialTimes();
   const [date, setDate] = useState<string>(searchParams.get('date') || today);
-  const [startTime, setStartTime] = useState<string>(initStart);
-  const [endTime, setEndTime] = useState<string>(initEnd);
+  const [startTime, setStartTime] = useState<string>(
+    searchParams.get('startTime') ? searchParams.get('startTime')!.substring(0, 5) : initStart
+  );
+  const [endTime, setEndTime] = useState<string>(
+    searchParams.get('endTime') ? searchParams.get('endTime')!.substring(0, 5) : initEnd
+  );
   const [participantCount, setParticipantCount] = useState<number | string>(
     Number(searchParams.get('participantCount')) || 4
   );
   const [purpose, setPurpose] = useState<string>('');
+
+  // Tự động đồng bộ khi searchParams thay đổi (ví dụ bấm từ Lịch đặt của tôi hoặc Tìm kiếm)
+  useEffect(() => {
+    const qDate = searchParams.get('date');
+    const qStart = searchParams.get('startTime');
+    const qEnd = searchParams.get('endTime');
+    const qCount = searchParams.get('participantCount');
+    if (qDate) setDate(qDate);
+    if (qStart) setStartTime(qStart.substring(0, 5));
+    if (qEnd) setEndTime(qEnd.substring(0, 5));
+    if (qCount) setParticipantCount(Number(qCount));
+  }, [searchParams]);
 
   // Modal chọn chỗ ngồi / chọn bàn
   const [isSeatModalOpen, setIsSeatModalOpen] = useState<boolean>(false);
@@ -434,7 +455,7 @@ export const SpaceDetailPage: React.FC = () => {
 
       const isSameDay = start.toDateString() === end.toDateString();
       if (isSameDay) {
-        return `${startHours}:${startMinutes}- ${endHours}:${endMinutes} ${day}/${month}/${year}`;
+        return `${startHours}:${startMinutes} - ${endHours}:${endMinutes}, ${day}/${month}/${year}`;
       } else {
         const endDay = pad(end.getDate());
         const endMonth = pad(end.getMonth() + 1);
@@ -772,13 +793,11 @@ export const SpaceDetailPage: React.FC = () => {
               {/* Ngày */}
               <div className="form-field-group">
                 <label className="form-label">Ngày sử dụng</label>
-                <input
-                  type="date"
+                <DateInputVI
                   className="form-control-input internal-date-input"
                   value={date}
                   min={today}
-                  onChange={(e) => {
-                    const val = e.target.value;
+                  onChange={(val) => {
                     setDate(val);
                     if (val < today) {
                       setBookingError('Không thể đặt phòng vào ngày trong quá khứ. Vui lòng chọn ngày hôm nay hoặc trong tương lai.');
@@ -797,13 +816,11 @@ export const SpaceDetailPage: React.FC = () => {
                 />
               </div>
 
-              {/* Khung giờ: Bắt đầu & Kết thúc */}
+              {/* Khung giờ: Bắt đầu & Kết thúc (Chuẩn 24 giờ, KHÔNG dùng AM / PM) */}
               <div className="form-time-row">
                 <div className="form-field-group">
                   <label className="form-label">Giờ bắt đầu</label>
-                  <input
-                    type="time"
-                    step="60"
+                  <TimeInput24H
                     min={
                       date === today
                         ? (toMinutes(`${now.getHours()}:${now.getMinutes()}`) > toMinutes(operatingHours.openingHour)
@@ -812,10 +829,8 @@ export const SpaceDetailPage: React.FC = () => {
                         : operatingHours.openingHour
                     }
                     max={operatingHours.closingHour}
-                    className="form-control-input internal-time-input"
                     value={startTime}
-                    onChange={(e) => {
-                      const val = e.target.value;
+                    onChange={(val) => {
                       setStartTime(val);
                       if (date === today) {
                         const curMinutes = now.getHours() * 60 + now.getMinutes();
@@ -834,14 +849,11 @@ export const SpaceDetailPage: React.FC = () => {
 
                 <div className="form-field-group">
                   <label className="form-label">Giờ kết thúc</label>
-                  <input
-                    type="time"
-                    step="60"
+                  <TimeInput24H
                     min={operatingHours.openingHour}
                     max={operatingHours.closingHour}
-                    className="form-control-input internal-time-input"
                     value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
+                    onChange={(val) => setEndTime(val)}
                     required
                   />
                 </div>

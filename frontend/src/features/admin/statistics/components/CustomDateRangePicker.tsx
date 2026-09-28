@@ -188,7 +188,7 @@ export const CustomDateRangePicker: React.FC<CustomDateRangePickerProps> = ({
   const activeEnd = tempEnd || (tempStart ? hoverDate || tempStart : '');
 
   // Days count between tempStart and tempEnd
-  const selectedDaysCount = useMemo(() => {
+  const _selectedDaysCount = useMemo(() => {
     if (!tempStart || !tempEnd) return 0;
     if (tempEnd <= tempStart) return 0;
     const start = parseLocalDate(tempStart).getTime();
@@ -196,6 +196,7 @@ export const CustomDateRangePicker: React.FC<CustomDateRangePickerProps> = ({
     const diff = end - start;
     return Math.round(diff / (1000 * 3600 * 24)) + 1;
   }, [tempStart, tempEnd]);
+  void _selectedDaysCount;
 
   return (
     <div className="custom-date-picker-container" ref={containerRef}>
