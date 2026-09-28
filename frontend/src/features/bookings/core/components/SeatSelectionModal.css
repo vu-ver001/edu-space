@@ -256,7 +256,7 @@
   box-shadow: 0 4px 12px rgba(29, 114, 254, 0.2);
 }
 
-/* 2. Ghế đã đặt (Occupied / Disabled) */
+/* 2. Ghế đã đặt (Occupied / Disabled trong khung giờ) */
 .cinema-seat.seat-occupied {
   background: #F1F5F9;
   color: #94A3B8;
@@ -272,6 +272,23 @@
   color: #94A3B8;
   top: 2px;
   right: 4px;
+}
+
+/* 2b. Ghế tạm khóa bảo trì thiết bị từ ban quản lý (Inactive) */
+.cinema-seat.seat-inactive {
+  background: #FFFBEB;
+  color: #D97706;
+  border-color: #FDE68A;
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+
+.cinema-seat.seat-inactive::after {
+  content: '🔒';
+  position: absolute;
+  font-size: 9px;
+  top: 2px;
+  right: 3px;
 }
 
 /* 3. Ghế đang chọn (Selected - Xanh Dương Hoàng Gia #1D72FE) */
@@ -318,7 +335,12 @@
 
 .legend-box.occupied {
   background: #F1F5F9;
-  border: 1.5px solid #E2E8F0;
+  border: 1.5px solid #CBD5E1;
+}
+
+.legend-box.inactive {
+  background: #FFFBEB;
+  border: 1.5px solid #FDE68A;
 }
 
 .legend-box.selected {

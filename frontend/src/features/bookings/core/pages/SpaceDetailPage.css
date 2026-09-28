@@ -736,6 +736,16 @@
   box-sizing: border-box;
 }
 
+.form-time-row .form-field-group {
+  min-width: 0;
+  width: 100%;
+}
+
+.form-time-row .time-input-24h-container {
+  width: 100%;
+  position: relative;
+}
+
 .form-control-input,
 .form-control-select {
   width: 100%;

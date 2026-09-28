@@ -75,10 +75,17 @@ export const MyBookingsPage: React.FC = () => {
     }
   };
 
+  // Helper kiểm tra đơn đặt đang hoạt động / giữ chỗ (phòng thủ Jackson serialize isOccupying/occupying hoặc fallback theo status)
+  const isBookingActive = (b: Booking): boolean => {
+    if (typeof b.isOccupying === 'boolean') return b.isOccupying;
+    if (typeof (b as any).occupying === 'boolean') return (b as any).occupying;
+    return b.status === 'PENDING_APPROVAL' || b.status === 'CONFIRMED' || b.status === 'CHECKED_IN';
+  };
+
   // Tính toán số liệu thống kê (Metrics)
   const metrics = useMemo(() => {
     const total = bookings.length;
-    const occupying = bookings.filter((b) => b.isOccupying).length;
+    const occupying = bookings.filter(isBookingActive).length;
     const pending = bookings.filter((b) => b.status === 'PENDING_APPROVAL').length;
     const readyCheckIn = bookings.filter((b) => b.status === 'CONFIRMED' && b.canCheckIn).length;
     const confirmed = bookings.filter((b) => b.status === 'CONFIRMED').length;
@@ -91,7 +98,7 @@ export const MyBookingsPage: React.FC = () => {
     return bookings.filter((b) => {
       // Tab filter
       if (activeTab === 'ACTIVE') {
-        if (!b.isOccupying) return false;
+        if (!isBookingActive(b)) return false;
       } else if (activeTab === 'PENDING') {
         if (b.status !== 'PENDING_APPROVAL') return false;
       } else if (activeTab === 'CONFIRMED') {
@@ -99,7 +106,7 @@ export const MyBookingsPage: React.FC = () => {
       } else if (activeTab === 'CHECKED_IN') {
         if (b.status !== 'CHECKED_IN') return false;
       } else if (activeTab === 'HISTORY') {
-        if (b.isOccupying) return false;
+        if (isBookingActive(b)) return false;
       }
 
       // Search query filter
@@ -268,7 +275,7 @@ export const MyBookingsPage: React.FC = () => {
             { key: 'PENDING', label: 'Chờ duyệt', count: metrics.pending },
             { key: 'CONFIRMED', label: 'Đã xác nhận', count: metrics.confirmed },
             { key: 'CHECKED_IN', label: 'Đã check-in', count: bookings.filter(b => b.status === 'CHECKED_IN').length },
-            { key: 'HISTORY', label: 'Lịch sử', count: bookings.filter(b => !b.isOccupying).length }
+            { key: 'HISTORY', label: 'Lịch sử', count: bookings.filter(b => !isBookingActive(b)).length }
           ].map((tab) => (
             <button
               key={tab.key}
@@ -351,7 +358,7 @@ export const MyBookingsPage: React.FC = () => {
             return (
               <div
                 key={b.id}
-                className={`mb-booking-card ${b.isOccupying ? 'occupying' : ''} ${b.canCheckIn ? 'checkin-ready' : ''}`}
+                className={`mb-booking-card ${isBookingActive(b) ? 'occupying' : ''} ${b.canCheckIn ? 'checkin-ready' : ''}`}
               >
                 <div>
                   {/* Thanh trên cùng của Thẻ */}

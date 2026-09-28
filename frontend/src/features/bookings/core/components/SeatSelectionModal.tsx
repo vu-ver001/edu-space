@@ -239,16 +239,16 @@ export const SeatSelectionModal: React.FC<Props> = ({
       <button
         key={st.id || st.seatCode}
         type="button"
-        className={`cinema-seat ${isUnavailable ? 'seat-occupied' : ''} ${
-          isSelected ? 'seat-selected' : 'seat-available'
+        className={`cinema-seat ${
+          isInactive ? 'seat-inactive' : isOccupied ? 'seat-occupied' : isSelected ? 'seat-selected' : 'seat-available'
         }`}
         onClick={() => handleItemClick(st.seatCode, isInactive)}
         disabled={isUnavailable || submitting}
         title={
           isInactive
-            ? `Ghế ${st.seatCode}: Tạm khóa bảo dưỡng`
+            ? `Ghế ${st.seatCode}: ${st.description || 'Tạm khóa bảo dưỡng / Thay thiết bị'}`
             : isOccupied
-            ? `Ghế ${st.seatCode}: Đã có người đặt trước (Bận)`
+            ? `Ghế ${st.seatCode}: Đã có người đặt trước trong khung giờ này`
             : isSelected
             ? `Ghế ${st.seatCode}: Bạn đang chọn`
             : `Ghế ${st.seatCode}: Ghế trống sẵn sàng đặt`
@@ -369,7 +369,11 @@ export const SeatSelectionModal: React.FC<Props> = ({
             </div>
             <div className="legend-item">
               <span className="legend-box occupied" />
-              <span>Đã có người đặt (Bận)</span>
+              <span>Đã có người đặt (Bận giờ này)</span>
+            </div>
+            <div className="legend-item">
+              <span className="legend-box inactive" />
+              <span>Tạm khóa bảo trì</span>
             </div>
             <div className="legend-item">
               <span className="legend-box selected" />
