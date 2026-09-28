@@ -232,7 +232,7 @@ export const BookingManagementPageKT = () => {
   const filteredBookings = useMemo(() => {
     const normalizedSearch = searchQuery.trim().toLowerCase();
 
-    return bookings.filter((booking) => {
+    const result = bookings.filter((booking) => {
       if (activeTab === 'pending' && booking.status !== 'PENDING_APPROVAL') return false;
       if (activeTab === 'checkin' && booking.status !== 'CONFIRMED') return false;
       if (statusFilter !== 'ALL' && booking.status !== statusFilter) return false;
@@ -256,7 +256,33 @@ export const BookingManagementPageKT = () => {
 
       return true;
     });
-  }, [bookings, activeTab, statusFilter, dateFilter, spaceFilter, modeFilter, searchQuery, spaceById]);
+
+    if (activeTab === 'pending') {
+      const nowTimestamp = now.getTime();
+
+      result.sort((first, second) => {
+        const firstStart = new Date(first.startTime).getTime();
+        const secondStart = new Date(second.startTime).getTime();
+        const firstValid = !Number.isNaN(firstStart);
+        const secondValid = !Number.isNaN(secondStart);
+
+        if (!firstValid || !secondValid) {
+          if (firstValid) return -1;
+          if (secondValid) return 1;
+          return first.id - second.id;
+        }
+
+        const firstUpcoming = firstStart >= nowTimestamp;
+        const secondUpcoming = secondStart >= nowTimestamp;
+
+        if (firstUpcoming !== secondUpcoming) return firstUpcoming ? -1 : 1;
+        if (firstUpcoming) return firstStart - secondStart;
+        return secondStart - firstStart;
+      });
+    }
+
+    return result;
+  }, [bookings, activeTab, statusFilter, dateFilter, spaceFilter, modeFilter, searchQuery, spaceById, now]);
 
   const totalPages = Math.max(1, Math.ceil(filteredBookings.length / pageSize));
   const safePage = Math.min(currentPage, totalPages);
