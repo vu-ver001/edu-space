@@ -140,6 +140,21 @@ public class BookingService {
                     "Không gian loại [" + space.getSpaceTypeName() + "] chỉ áp dụng đặt trọn gói toàn bộ không gian, không hỗ trợ chọn vị trí ghế hoặc bàn riêng lẻ.");
         }
 
+        // RÀNG BUỘC SỐ LƯỢNG NGƯỜI THAM GIA THEO TỪNG LOẠI KHÔNG GIAN:
+        // 1. Nếu là không gian học nhóm (Bàn nhóm PER_TABLE hoặc Phòng trọn gói WHOLE_SPACE có sức chứa > 1 người):
+        //    Yêu cầu tối thiểu từ 2 người trở lên. Nghiêm cấm 1 người đặt nguyên bàn nhóm hoặc phòng lớn.
+        boolean isGroupSpace = isPerTable || (isWholeSpace && space.getCapacity() > 1);
+        if (isGroupSpace) {
+            if (request.getParticipantCount() == null || request.getParticipantCount() < 2) {
+                throw BusinessException.badRequest("MIN_PARTICIPANTS_REQUIRED", 
+                        "Không gian học nhóm / thảo luận yêu cầu tối thiểu từ 2 người trở lên. Nếu bạn đi 1 mình, vui lòng chọn đặt chỗ ngồi tại Khu tự học cá nhân.");
+            }
+            if (space.getCapacity() > 0 && request.getParticipantCount() > space.getCapacity()) {
+                throw BusinessException.badRequest("SPACE_CAPACITY_EXCEEDED", 
+                        "Số người tham gia (" + request.getParticipantCount() + ") vượt quá sức chứa tối đa của không gian (" + space.getCapacity() + " người).");
+            }
+        }
+
         if (!isWholeSpace && !isPerTable) {
             // PER_SEAT mode: Khu tự học chung
             if (requestedSeats == null || requestedSeats.isEmpty()) {
@@ -184,9 +199,9 @@ public class BookingService {
                     throw BusinessException.badRequest("TABLE_NOT_AVAILABLE", 
                             "Bàn [" + targetTable.getTableCode() + "] hiện đang tạm ngưng sử dụng hoặc đang bảo trì.");
                 }
-                if (request.getParticipantCount() > targetTable.getCapacity()) {
+                if (request.getParticipantCount() != null && request.getParticipantCount() > targetTable.getCapacity()) {
                     throw BusinessException.badRequest("CAPACITY_EXCEEDED", 
-                            "Số người tham gia (" + request.getParticipantCount() + ") vượt quá sức chứa của bàn " + targetTable.getTableCode() + " (" + targetTable.getCapacity() + " chỗ)");
+                            "Số người tham gia (" + request.getParticipantCount() + ") vượt quá sức chứa của bàn " + targetTable.getTableCode() + " (" + targetTable.getCapacity() + " chỗ). Vui lòng chọn bàn lớn hơn.");
                 }
             }
         }
@@ -351,9 +366,14 @@ public class BookingService {
         BookingStatus initialStatus = requiresApproval ? BookingStatus.PENDING_APPROVAL : BookingStatus.CONFIRMED;
 
         // BƯỚC 10: Lưu booking và nhật ký thao tác
-        int actualParticipantCount = (request.getSelectedSeats() != null && !request.getSelectedSeats().isEmpty())
-                ? request.getSelectedSeats().size()
-                : request.getParticipantCount();
+        int actualParticipantCount;
+        if (isPerSeat) {
+            actualParticipantCount = 1;
+        } else {
+            actualParticipantCount = (request.getParticipantCount() != null && request.getParticipantCount() > 0)
+                    ? request.getParticipantCount()
+                    : 1;
+        }
 
         String finalPurpose = (request.getPurpose() != null && !request.getPurpose().trim().isBlank())
                 ? request.getPurpose().trim()
@@ -485,6 +505,12 @@ public class BookingService {
         Booking booking = bookingRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> BusinessException.notFound("BOOKING_NOT_FOUND", "Không tìm thấy booking với ID: " + id));
         requireOwnerOrStaff(booking, userEmail);
+
+        if (reason == null || reason.isBlank()) {
+            throw BusinessException.badRequest("CANCEL_REASON_REQUIRED", "Vui lòng nhập lý do hủy.");
+        }
+        String normalizedReason = reason.trim();
+
         LocalDateTime now = LocalDateTime.now(checkInClock);
 
         if (booking.getStatus() != BookingStatus.PENDING_APPROVAL && booking.getStatus() != BookingStatus.CONFIRMED) {
@@ -506,7 +532,7 @@ public class BookingService {
                 .performedBy(resolveStudentId(userEmail))
                 .performedByEmail(userEmail)
                 .performedAt(now)
-                .reason(reason != null ? reason : "Người dùng chủ động hủy")
+                .reason(normalizedReason)
                 .note("Giải phóng phòng cho sinh viên khác")
                 .build();
         auditLogRepository.save(audit);

@@ -146,10 +146,15 @@ export const SpaceDetailPage: React.FC = () => {
 
   const isPerSeat = bookingMode === 'PER_SEAT'; // Khu tự học chung (Mở) -> Chọn theo ghế
   const isPerTable = bookingMode === 'PER_TABLE'; // Phòng thảo luận theo bàn -> Chọn theo bàn
+  const isWholeSpace = !isPerSeat && !isPerTable;
+  // Không gian nhóm: Bàn nhóm (PER_TABLE) hoặc Không gian trọn gói (WHOLE_SPACE) có sức chứa > 1 người
+  const isGroupSpace = isPerTable || (isWholeSpace && (space?.capacity ?? 1) > 1);
+
   // LOGIC LIÊN KẾT CSDL: Lấy trực tiếp từ space.requiresApproval (cột space_types.requires_approval của Kim Tuyến)
   const requiresApproval = space?.requiresApproval ?? (space?.spaceType?.requiresApproval ?? !isPerSeat);
 
   // Đối với PER_SEAT (khu tự học cá nhân): luôn cố định 1 sinh viên = 1 chỗ ngồi
+  // Không tự động sửa số người tham gia - để user nhập và validate khi submit
   useEffect(() => {
     if (isPerSeat) {
       setParticipantCount(1);
@@ -369,7 +374,17 @@ export const SpaceDetailPage: React.FC = () => {
     // Bắt buộc nhập lý do sử dụng nếu phòng cần duyệt trước theo CSDL
     if (requiresApproval && (!purpose || !purpose.trim())) {
       setBookingError('Vui lòng nhập mục đích sử dụng (bắt buộc đối với không gian cần nhân viên duyệt).');
+      return;
+    }
 
+    // Kiểm tra ràng buộc số người tham gia:
+    // Không gian nhóm (bàn nhóm PER_TABLE hoặc phòng trọn gói WHOLE_SPACE có sức chứa > 1) yêu cầu tối thiểu 2 người
+    if (isGroupSpace && Number(participantCount) < 2) {
+      setBookingError('Không gian học nhóm / thảo luận yêu cầu tối thiểu từ 2 người trở lên. Nếu bạn đi 1 mình, vui lòng chọn đặt chỗ ngồi tại Khu tự học cá nhân.');
+      return;
+    }
+    if (space?.capacity && Number(participantCount) > space.capacity) {
+      setBookingError(`Số người tham gia (${participantCount}) vượt quá sức chứa tối đa (${space.capacity} người) của không gian này.`);
       return;
     }
 
@@ -389,7 +404,7 @@ export const SpaceDetailPage: React.FC = () => {
         spaceId: space.id,
         startTime: startDateTime,
         endTime: endDateTime,
-        participantCount: Number(participantCount) || 1,
+        participantCount: Number(participantCount),
         purpose: purpose.trim() || 'Học tập & Thảo luận nhóm',
         selectedSeats: []
       });
@@ -876,7 +891,12 @@ export const SpaceDetailPage: React.FC = () => {
               {/* Số người tham gia */}
               <div className="form-field-group">
                 <label className="form-label">
-                  Số người tham gia {isPerSeat ? '(Khu tự học cá nhân: 1 sinh viên / 1 chỗ ngồi)' : `(Tối đa ${space.capacity})`}
+                  Số người tham gia{' '}
+                  {isPerSeat
+                    ? '(Khu tự học cá nhân: Cố định 1 sinh viên / 1 chỗ ngồi)'
+                    : isGroupSpace
+                    ? `(Không gian nhóm: Tối thiểu 2 người, tối đa ${space.capacity} người)`
+                    : `(Tối đa ${space.capacity} người)`}
                 </label>
                 <input
                   type="number"
@@ -897,6 +917,7 @@ export const SpaceDetailPage: React.FC = () => {
                       setParticipantCount(1);
                       return;
                     }
+                    // Chỉ clamp về giá trị hợp lệ (không tự ép lên 2 — validate khi submit)
                     if (!participantCount || Number(participantCount) < 1) {
                       setParticipantCount(1);
                     } else if (Number(participantCount) > space.capacity) {
@@ -905,11 +926,15 @@ export const SpaceDetailPage: React.FC = () => {
                   }}
                   required
                 />
-                {isPerSeat && (
+                {isPerSeat ? (
                   <span style={{ fontSize: '12px', color: '#64748B', marginTop: '4px', display: 'block' }}>
                     ℹ️ Khu tự học áp dụng quy tắc 1 sinh viên = 1 chỗ ngồi. Nếu học nhóm, bạn vui lòng chọn phòng họp nhóm hoặc bàn thảo luận.
                   </span>
-                )}
+                ) : isGroupSpace ? (
+                  <span style={{ fontSize: '12px', color: '#0369A1', marginTop: '4px', display: 'block' }}>
+                    ℹ️ Không gian nhóm (bàn học nhóm / phòng thuyết trình) yêu cầu tối thiểu từ 2 người trở lên. Nếu đi 1 mình, bạn vui lòng đặt tại Khu tự học cá nhân.
+                  </span>
+                ) : null}
               </div>
 
               {/* Mục đích sử dụng */}
@@ -984,9 +1009,9 @@ export const SpaceDetailPage: React.FC = () => {
                 {isPerSeat ? (
                   <>💡 Bấm <strong>Chọn chỗ ngồi & Đặt chỗ</strong> để mở sơ đồ chọn ghế cá nhân (S01 - S10). Chế độ đặt theo chỗ ngồi được duyệt tự động ngay lập tức, không bắt buộc điền mục đích sử dụng.</>
                 ) : isPerTable ? (
-                  <>💡 Bấm <strong>Chọn bàn thảo luận & Đặt bàn</strong> để mở sơ đồ chọn bàn học nhóm (T01 - T04). Bắt buộc điền mục đích sử dụng và chờ Staff xét duyệt.</>
+                  <>💡 Bàn thảo luận nhóm yêu cầu tối thiểu 2 người trở lên (chỉ chọn bàn có sức chứa đủ cho nhóm). Bắt buộc điền mục đích sử dụng và chờ Staff xét duyệt.</>
                 ) : (
-                  <>💡 <strong>{space?.name}</strong> được đặt trọn gói toàn bộ không gian ({space?.capacity} chỗ). Bắt buộc điền mục đích sử dụng và chờ Staff xét duyệt.</>
+                  <>💡 <strong>{space?.name}</strong> là phòng nhóm trọn không gian (tối thiểu 2 người, tối đa {space?.capacity} người). Bắt buộc điền mục đích sử dụng và chờ Staff xét duyệt.</>
                 )}
               </p>
             </form>
@@ -1001,7 +1026,7 @@ export const SpaceDetailPage: React.FC = () => {
           date={date}
           startTime={startTime}
           endTime={endTime}
-          participantCount={isPerSeat ? 1 : (Number(participantCount) || 1)}
+          participantCount={isPerSeat ? 1 : (Number(participantCount) || 2)}
           purpose={purpose}
           mode={isPerTable ? 'TABLE' : 'SEAT'}
           onClose={() => setIsSeatModalOpen(false)}

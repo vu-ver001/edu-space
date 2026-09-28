@@ -24,8 +24,8 @@ export const bookingService = {
   },
 
   // Hủy booking
-  cancelBooking: async (id: number, reason?: string): Promise<Booking> => {
-    const params = reason ? { reason } : {};
+  cancelBooking: async (id: number, reason: string): Promise<Booking> => {
+    const params = { reason };
     const res = await api.post<Booking>(`/api/bookings/${id}/cancel`, null, { params });
     return res.data;
   },
