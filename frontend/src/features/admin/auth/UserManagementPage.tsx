@@ -187,8 +187,16 @@ export const UserManagementPage = () => {
                                 <td>{user.fullName}</td>
                                 <td>{user.email}</td>
                                 <td>
-                                    {user.studentId && <span style={{fontSize: '0.85rem', color: '#64748b'}}>Mã SV: {user.studentId}</span>}
-                                    {user.department && <span style={{fontSize: '0.85rem', color: '#64748b'}}>Phòng: {user.department}</span>}
+                                    {user.userCode && (
+                                        <span style={{fontSize: '0.85rem', color: '#64748b', display: 'block'}}>
+                                            {user.role === 'STUDENT' ? 'Mã SV: ' : 'Mã NV: '} {user.userCode}
+                                        </span>
+                                    )}
+                                    {user.department && (
+                                        <span style={{fontSize: '0.85rem', color: '#64748b', display: 'block'}}>
+                                            Phòng ban: {user.department}
+                                        </span>
+                                    )}
                                 </td>
                                 <td><span className={`role-badge role-${user.role?.toLowerCase()}`}>{user.role}</span></td>
                                 <td>

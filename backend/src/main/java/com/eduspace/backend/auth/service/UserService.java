@@ -28,7 +28,7 @@ public class UserService {
                 .fullName(user.getFullName())
                 .role(user.getRole())
                 .dob(user.getDob())
-                .studentId(user.getStudentId())
+                .userCode(user.getUserCode())
                 .department(user.getDepartment())
                 .active(user.isActive())
                 .build();
@@ -72,8 +72,8 @@ public class UserService {
         // Tự động tạo username nếu request không gửi lên
         String generatedUsername = request.getUsername();
         if (generatedUsername == null || generatedUsername.trim().isEmpty()) {
-            if (request.getStudentId() != null && !request.getStudentId().trim().isEmpty()) {
-                generatedUsername = request.getStudentId();
+            if (request.getUserCode() != null && !request.getUserCode().trim().isEmpty()) {
+                generatedUsername = request.getUserCode();
             } else {
                 generatedUsername = request.getEmail().split("@")[0];
             }
@@ -87,7 +87,7 @@ public class UserService {
                 .fullName(request.getFullName())
                 .role(request.getRole())
                 .dob(request.getDob())                 // Đã có
-                .studentId(request.getStudentId())     // Đã có
+                .userCode(request.getUserCode())     // Đã có
                 .department(request.getDepartment())   // Đã có
                 .active(true)
                 .build();

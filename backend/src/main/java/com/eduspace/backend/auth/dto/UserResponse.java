@@ -18,7 +18,7 @@ public class UserResponse {
     private String fullName;
     private Role role;
     private String dob;
-    private String studentId;
+    private String userCode;
     private String department;
 
     private boolean active;
