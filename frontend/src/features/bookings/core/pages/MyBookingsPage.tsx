@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { StatusBadge } from '../components/StatusBadge';
-import { AuditLogModal } from '../components/AuditLogModal';
 import type { Booking } from '../services/bookingService';
 import { bookingService } from '../services/bookingService';
 import './MyBookingsPage.css';
@@ -15,7 +14,6 @@ export const MyBookingsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Modal states
-  const [selectedBookingForAudit, setSelectedBookingForAudit] = useState<Booking | null>(null);
   const [cancellingBooking, setCancellingBooking] = useState<Booking | null>(null);
   const [cancelReason, setCancelReason] = useState<string>('');
 
@@ -625,22 +623,6 @@ export const MyBookingsPage: React.FC = () => {
                         <circle cx="12" cy="12" r="3"/>
                       </svg>
                     </button>
-
-                    {/* Xem Audit Log */}
-                    <button
-                      type="button"
-                      className="btn-card-icon-action btn-action-audit"
-                      onClick={() => setSelectedBookingForAudit(b)}
-                      title="Nhật ký đặt phòng"
-                      aria-label="Nhật ký đặt phòng"
-                    >
-                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                        <polyline points="14 2 14 8 20 8"/>
-                        <line x1="16" y1="13" x2="8" y2="13"/>
-                        <line x1="16" y1="17" x2="8" y2="17"/>
-                      </svg>
-                    </button>
                   </div>
                 </div>
               </div>
@@ -724,14 +706,6 @@ export const MyBookingsPage: React.FC = () => {
             </div>
           </div>
         </div>
-      )}
-
-      {/* 6. Modal Xem Nhật Ký Kiểm Toán (Audit Log Modal) */}
-      {selectedBookingForAudit && (
-        <AuditLogModal
-          booking={selectedBookingForAudit}
-          onClose={() => setSelectedBookingForAudit(null)}
-        />
       )}
     </div>
   );
