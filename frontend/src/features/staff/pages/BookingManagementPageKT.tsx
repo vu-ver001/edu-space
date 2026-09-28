@@ -311,6 +311,40 @@ export const BookingManagementPageKT = () => {
         // Dữ liệu quá hạn chưa kịp chuyển NO_SHOW nằm cuối danh sách.
         return secondStart - firstStart;
       });
+    } else {
+      const nowTimestamp = now.getTime();
+
+      result.sort((first, second) => {
+        const firstStart = new Date(first.startTime).getTime();
+        const secondStart = new Date(second.startTime).getTime();
+        const firstEnd = new Date(first.endTime).getTime();
+        const secondEnd = new Date(second.endTime).getTime();
+        const firstValid = !Number.isNaN(firstStart) && !Number.isNaN(firstEnd);
+        const secondValid = !Number.isNaN(secondStart) && !Number.isNaN(secondEnd);
+
+        if (!firstValid || !secondValid) {
+          if (firstValid) return -1;
+          if (secondValid) return 1;
+          return first.id - second.id;
+        }
+
+        const firstOngoing = firstStart <= nowTimestamp && firstEnd >= nowTimestamp;
+        const secondOngoing = secondStart <= nowTimestamp && secondEnd >= nowTimestamp;
+        if (firstOngoing !== secondOngoing) return firstOngoing ? -1 : 1;
+
+        if (firstOngoing) {
+          // Booking bắt đầu gần hiện tại nhất nằm trước trong nhóm đang diễn ra.
+          return secondStart - firstStart;
+        }
+
+        const firstUpcoming = firstStart > nowTimestamp;
+        const secondUpcoming = secondStart > nowTimestamp;
+        if (firstUpcoming !== secondUpcoming) return firstUpcoming ? -1 : 1;
+        if (firstUpcoming) return firstStart - secondStart;
+
+        // Booking đã qua: thời điểm kết thúc mới nhất nằm trước.
+        return secondEnd - firstEnd;
+      });
     }
 
     return result;
