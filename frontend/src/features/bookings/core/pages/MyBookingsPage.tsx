@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { StatusBadge } from '../components/StatusBadge';
 import { QrCheckInModal } from '../components/QrCheckInModal';
+import { formatMessageDatesVI } from '../components/DateInputVI';
 import type { Booking } from '../services/bookingService';
 import { bookingService } from '../services/bookingService';
 import './MyBookingsPage.css';
@@ -36,7 +37,7 @@ export const MyBookingsPage: React.FC = () => {
       .getMyBookings()
       .then(setBookings)
       .catch((err) => {
-        setError(err?.response?.data?.message || 'Không thể tải danh sách đặt phòng.');
+        setError(formatMessageDatesVI(err?.response?.data?.message) || 'Không thể tải danh sách đặt phòng.');
       })
       .finally(() => setLoading(false));
   };
@@ -77,7 +78,7 @@ export const MyBookingsPage: React.FC = () => {
       setCancelReasonTouched(false);
       fetchBookings();
     } catch (err: any) {
-      alert(err?.response?.data?.message || 'Không thể hủy đơn đặt phòng này.');
+      alert(formatMessageDatesVI(err?.response?.data?.message) || 'Không thể hủy đơn đặt phòng này.');
     } finally {
       setActionLoading(false);
     }
@@ -585,7 +586,7 @@ export const MyBookingsPage: React.FC = () => {
                         <line x1="9" y1="9" x2="15" y2="15"/>
                       </svg>
                       <div>
-                        <strong>Lý do từ chối:</strong> {b.rejectReason}
+                        <strong>Lý do từ chối:</strong> {formatMessageDatesVI(b.rejectReason)}
                       </div>
                     </div>
                   )}
@@ -596,7 +597,8 @@ export const MyBookingsPage: React.FC = () => {
                         <path d="M10 2h4M12 14v-4M4 10a8 8 0 1 1 16 0c0 4.418-3.582 8-8 8s-8-3.582-8-8z"/>
                       </svg>
                       <div>
-                        <strong>Hết hạn xử lý:</strong> {b.expireReason || 'Đã quá giờ bắt đầu mà chưa được duyệt.'}
+                        <strong>Hết hạn xử lý:</strong>{' '}
+                        {formatMessageDatesVI(b.expireReason) || 'Đã quá giờ bắt đầu mà chưa được duyệt.'}
                       </div>
                     </div>
                   )}
@@ -610,7 +612,8 @@ export const MyBookingsPage: React.FC = () => {
                         <line x1="23" y1="8" x2="18" y2="13"/>
                       </svg>
                       <div>
-                        <strong>Vắng mặt (No-show):</strong> {b.expireReason || 'Quá 15 phút sau giờ bắt đầu mà không thực hiện check-in.'}
+                        <strong>Vắng mặt (No-show):</strong>{' '}
+                        {formatMessageDatesVI(b.expireReason) || 'Quá 15 phút sau giờ bắt đầu mà không thực hiện check-in.'}
                       </div>
                     </div>
                   )}

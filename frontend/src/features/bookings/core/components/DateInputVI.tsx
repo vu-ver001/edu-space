@@ -40,6 +40,21 @@ export const formatDateTimeVI = (dateTimeInput?: string | Date | null): string =
   }
 };
 
+/**
+ * Chuẩn hóa các ngày nằm bên trong nội dung note/thông báo lỗi.
+ * Ví dụ: "trong ngày 2026-09-29" -> "trong ngày 29-09-2026".
+ */
+export const formatMessageDatesVI = (message?: unknown): string => {
+  if (message === null || message === undefined) return '';
+
+  return String(message)
+    .replace(
+      /\b(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})?/g,
+      '$4:$5 $3-$2-$1'
+    )
+    .replace(/\b(\d{4})-(\d{2})-(\d{2})\b/g, '$3-$2-$1');
+};
+
 interface DateInputVIProps {
   value: string; // Định dạng YYYY-MM-DD
   onChange: (val: string) => void;

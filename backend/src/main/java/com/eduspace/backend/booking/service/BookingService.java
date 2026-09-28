@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -47,6 +48,8 @@ import com.eduspace.backend.space.repository.SpaceTableRepository;
 @RequiredArgsConstructor
 @Slf4j
 public class BookingService {
+
+    private static final DateTimeFormatter DISPLAY_DATE_FORMATTER = DateTimeFormatter.ofPattern("dd-MM-yyyy");
 
     private final BookingRepository bookingRepository;
     private final BookingAuditLogRepository auditLogRepository;
@@ -351,7 +354,8 @@ public class BookingService {
         );
         if (currentOccupyingCount >= dailyQuotaLimit) {
             throw BusinessException.badRequest("QUOTA_EXCEEDED", 
-                    "Bạn đã đạt hạn mức tối đa " + dailyQuotaLimit + " lượt đặt phòng trong ngày " + bookingDate);
+                    "Bạn đã đạt hạn mức tối đa " + dailyQuotaLimit + " lượt đặt phòng trong ngày "
+                            + bookingDate.format(DISPLAY_DATE_FORMATTER));
         }
 
         long hourlyRateLimit = availabilityService.getPolicyLong("RATE_LIMIT_HOURLY", 10L);

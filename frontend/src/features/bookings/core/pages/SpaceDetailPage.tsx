@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { SeatSelectionModal } from '../components/SeatSelectionModal';
 import { formatMaintenanceTime, TableMeetingIcon } from '../components/RoomCard';
-import { DateInputVI } from '../components/DateInputVI';
+import { DateInputVI, formatMessageDatesVI } from '../components/DateInputVI';
 import { TimeInput24H } from '../components/TimeInput24H';
 import { Armchair, Building2 } from 'lucide-react';
 import type { Space, MaintenanceSchedule } from '../services/spaceService';
@@ -248,7 +248,7 @@ export const SpaceDetailPage: React.FC = () => {
         }
       })
       .catch((err) => {
-        setError(err?.response?.data?.message || 'Không thể tải thông tin phòng học.');
+        setError(formatMessageDatesVI(err?.response?.data?.message) || 'Không thể tải thông tin phòng học.');
       })
       .finally(() => setLoading(false));
 
@@ -417,7 +417,9 @@ export const SpaceDetailPage: React.FC = () => {
         navigate('/student/my-bookings');
       }, 1500);
     } catch (err: any) {
-      setBookingError(err?.response?.data?.message || err?.message || 'Không thể hoàn tất đặt phòng.');
+      setBookingError(
+        formatMessageDatesVI(err?.response?.data?.message || err?.message) || 'Không thể hoàn tất đặt phòng.'
+      );
     } finally {
       setSubmitting(false);
     }

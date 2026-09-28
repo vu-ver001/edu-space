@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { Space } from '../services/spaceService';
 import { bookingService } from '../services/bookingService';
-import { DateInputVI } from './DateInputVI';
+import { DateInputVI, formatMessageDatesVI } from './DateInputVI';
 import { TimeInput24H } from './TimeInput24H';
 
 interface Props {
@@ -164,12 +164,13 @@ export const BookingModal: React.FC<Props> = ({
               <span className="error-icon">🚫</span>
               <strong>{errorInfo.code}</strong>
             </div>
-            <p className="error-msg">{errorInfo.message}</p>
+            <p className="error-msg">{formatMessageDatesVI(errorInfo.message)}</p>
             {errorInfo.details && errorInfo.details.length > 0 && (
               <div className="error-details-box">
                 {errorInfo.details.map((d: any, idx: number) => (
                   <div key={idx} className="error-detail-item">
-                    • <strong>{d.type || 'XUNG ĐỘT'}:</strong> {d.description || `Từ ${d.startTime} đến ${d.endTime}`}
+                    • <strong>{d.type || 'XUNG ĐỘT'}:</strong>{' '}
+                    {formatMessageDatesVI(d.description || `Từ ${d.startTime} đến ${d.endTime}`)}
                   </div>
                 ))}
               </div>

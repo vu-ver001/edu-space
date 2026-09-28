@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { FilterBar, getNextAvailableSlot } from '../components/FilterBar';
 import { RoomCard } from '../components/RoomCard';
 import { BookingModal } from '../components/BookingModal';
+import { formatMessageDatesVI } from '../components/DateInputVI';
 import type { SearchFilter, Space } from '../services/spaceService';
 import { spaceService } from '../services/spaceService';
 import './SearchSpacesPage.css';
@@ -151,7 +152,7 @@ export const SearchSpacesPage: React.FC = () => {
         setSpaces(filtered);
       })
       .catch((err) => {
-        const serverMsg = err?.response?.data?.message;
+        const serverMsg = formatMessageDatesVI(err?.response?.data?.message);
         const errCode = err?.response?.data?.code;
 
         // Nếu là lỗi dữ liệu không hợp lệ (400 Bad Request như INVALID_TIME_RANGE), hiển thị lỗi chính xác

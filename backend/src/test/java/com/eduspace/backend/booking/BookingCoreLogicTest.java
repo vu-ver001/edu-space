@@ -527,6 +527,7 @@ class BookingCoreLogicTest {
                     bookingService.createBooking(request, student.getEmail())
             );
             assertEquals("QUOTA_EXCEEDED", ex.getCode());
+            assertTrue(ex.getMessage().contains("20-09-2026"));
         }
     }
 
