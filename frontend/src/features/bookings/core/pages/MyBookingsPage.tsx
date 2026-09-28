@@ -75,9 +75,20 @@ export const MyBookingsPage: React.FC = () => {
     return { total, pending, confirmed, checkedIn, completed, history };
   }, [bookings]);
 
-  // Bộ lọc danh sách
+  // Helper tính độ ưu tiên trạng thái
+  const getStatusPriority = (status: string) => {
+    switch (status) {
+      case 'CHECKED_IN': return 1;
+      case 'CONFIRMED': return 2;
+      case 'PENDING_APPROVAL': return 3;
+      case 'COMPLETED': return 4;
+      default: return 5; // CANCELLED, REJECTED, EXPIRED, NO_SHOW
+    }
+  };
+
+  // Bộ lọc danh sách và sắp xếp logic
   const filteredBookings = useMemo(() => {
-    return bookings.filter((b) => {
+    const list = bookings.filter((b) => {
       // Tab filter
       if (activeTab === 'PENDING') {
         if (b.status !== 'PENDING_APPROVAL') return false;
@@ -106,6 +117,28 @@ export const MyBookingsPage: React.FC = () => {
       }
 
       return true;
+    });
+
+    return [...list].sort((a, b) => {
+      const rankA = getStatusPriority(a.status);
+      const rankB = getStatusPriority(b.status);
+
+      if (rankA !== rankB) {
+        return rankA - rankB;
+      }
+
+      const timeA = new Date(a.startTime).getTime();
+      const timeB = new Date(b.startTime).getTime();
+
+      // Đơn sắp diễn ra / cần chú ý (Rank 1, 2, 3): ca sớm nhất, gần nhất lên trước (ASC)
+      if (rankA <= 3) {
+        if (timeA !== timeB) return timeA - timeB;
+        return a.id - b.id;
+      }
+
+      // Đơn lịch sử / đã đóng (Rank 4, 5): mới hoàn thành / mới đóng gần đây nhất lên trước (DESC)
+      if (timeA !== timeB) return timeB - timeA;
+      return b.id - a.id;
     });
   }, [bookings, activeTab, searchQuery]);
 

@@ -388,6 +388,12 @@ public class BookingService {
 
     /**
      * Lấy danh sách booking của sinh viên đang đăng nhập.
+     * Sắp xếp logic theo độ ưu tiên nghiệp vụ và thời gian:
+     * 1. CHECKED_IN (Đang trong ca học)
+     * 2. CONFIRMED (Đã duyệt, sắp diễn ra - ca gần nhất lên trước)
+     * 3. PENDING_APPROVAL (Chờ duyệt - ca gần nhất lên trước)
+     * 4. COMPLETED (Đã hoàn thành - mới nhất gần đây lên trước)
+     * 5. CANCELLED, REJECTED, EXPIRED, NO_SHOW (Đã đóng - mới nhất gần đây lên trước)
      */
     @Transactional(readOnly = true)
     public List<BookingResponse> getMyBookings(String userEmail, BookingStatus status) {
@@ -399,7 +405,52 @@ public class BookingService {
 
         return bookings.stream()
                 .map(b -> toBookingResponse(b, now))
+                .sorted(this::compareBookingsLogically)
                 .collect(Collectors.toList());
+    }
+
+    private int getBookingStatusRank(BookingStatus status) {
+        if (status == null) return 99;
+        switch (status) {
+            case CHECKED_IN:
+                return 1;
+            case CONFIRMED:
+                return 2;
+            case PENDING_APPROVAL:
+                return 3;
+            case COMPLETED:
+                return 4;
+            default: // CANCELLED, REJECTED, EXPIRED, NO_SHOW
+                return 5;
+        }
+    }
+
+    private int compareBookingsLogically(BookingResponse a, BookingResponse b) {
+        int rankA = getBookingStatusRank(a.getStatus());
+        int rankB = getBookingStatusRank(b.getStatus());
+        if (rankA != rankB) {
+            return Integer.compare(rankA, rankB);
+        }
+
+        if (rankA <= 3) {
+            // Sắp diễn ra / cần chú ý: gần nhất lên trước (startTime ASC)
+            LocalDateTime timeA = a.getStartTime() != null ? a.getStartTime() : LocalDateTime.MAX;
+            LocalDateTime timeB = b.getStartTime() != null ? b.getStartTime() : LocalDateTime.MAX;
+            int timeCompare = timeA.compareTo(timeB);
+            if (timeCompare != 0) return timeCompare;
+            Long idA = a.getId() != null ? a.getId() : 0L;
+            Long idB = b.getId() != null ? b.getId() : 0L;
+            return idA.compareTo(idB);
+        } else {
+            // Lịch sử / đã kết thúc: mới nhất gần đây lên trước (startTime DESC)
+            LocalDateTime timeA = a.getStartTime() != null ? a.getStartTime() : LocalDateTime.MIN;
+            LocalDateTime timeB = b.getStartTime() != null ? b.getStartTime() : LocalDateTime.MIN;
+            int timeCompare = timeB.compareTo(timeA);
+            if (timeCompare != 0) return timeCompare;
+            Long idA = a.getId() != null ? a.getId() : 0L;
+            Long idB = b.getId() != null ? b.getId() : 0L;
+            return idB.compareTo(idA);
+        }
     }
 
     /**
