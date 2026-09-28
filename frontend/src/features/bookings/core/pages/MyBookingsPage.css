@@ -4,10 +4,10 @@
    ======================================================== */
 
 .my-bookings-container {
-  padding: 8px 0 32px;
+  padding: 0 0 32px;
+  margin: -8px auto 0;
   max-width: 1600px;
   width: 100%;
-  margin: 0 auto;
   font-family: inherit;
   box-sizing: border-box;
 }
@@ -344,6 +344,114 @@
   .mb-cards-grid {
     grid-template-columns: 1fr;
     gap: 16px;
+  }
+}
+
+/* 4.1. Phân trang lịch đặt: tối đa 4 hàng thẻ trên mỗi trang */
+.mb-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 22px;
+  padding: 14px 18px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+}
+
+.mb-pagination-summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: #64748B;
+  font-size: 0.82rem;
+}
+
+.mb-pagination-summary strong {
+  color: #0F172A;
+  font-weight: 700;
+}
+
+.mb-pagination-controls,
+.mb-pagination-pages {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mb-pagination-arrow,
+.mb-pagination-page {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 9px;
+  color: #475569;
+  background: #FFFFFF;
+  border: 1px solid #D8E1EC;
+  border-radius: 9px;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: border-color 0.16s ease, background 0.16s ease, color 0.16s ease, transform 0.16s ease;
+}
+
+.mb-pagination-arrow:hover:not(:disabled),
+.mb-pagination-page:hover:not(.active) {
+  color: #1D4ED8;
+  background: #EFF6FF;
+  border-color: #93C5FD;
+  transform: translateY(-1px);
+}
+
+.mb-pagination-page.active {
+  color: #FFFFFF;
+  background: linear-gradient(135deg, #1D72FE 0%, #2563EB 100%);
+  border-color: #2563EB;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.24);
+}
+
+.mb-pagination-arrow:disabled {
+  color: #CBD5E1;
+  background: #F8FAFC;
+  border-color: #E2E8F0;
+  cursor: not-allowed;
+}
+
+.mb-pagination-dots {
+  min-width: 24px;
+  color: #94A3B8;
+  text-align: center;
+  user-select: none;
+}
+
+@media (max-width: 700px) {
+  .mb-pagination {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 14px;
+  }
+
+  .mb-pagination-summary {
+    justify-content: space-between;
+  }
+
+  .mb-pagination-controls {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 420px) {
+  .mb-pagination-arrow,
+  .mb-pagination-page {
+    min-width: 32px;
+    height: 32px;
+    padding: 0 7px;
   }
 }
 

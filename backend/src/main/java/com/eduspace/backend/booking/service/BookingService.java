@@ -474,7 +474,7 @@ public class BookingService {
             Long idB = b.getId() != null ? b.getId() : 0L;
             return idA.compareTo(idB);
         } else {
-            // Lịch sử / đã kết thúc: mới nhất gần đây lên trước (startTime DESC)
+            // Booking đã kết thúc: mới nhất gần đây lên trước (startTime DESC)
             LocalDateTime timeA = a.getStartTime() != null ? a.getStartTime() : LocalDateTime.MIN;
             LocalDateTime timeB = b.getStartTime() != null ? b.getStartTime() : LocalDateTime.MIN;
             int timeCompare = timeB.compareTo(timeA);

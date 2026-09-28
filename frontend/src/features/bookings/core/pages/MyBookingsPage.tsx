@@ -6,6 +6,8 @@ import type { Booking } from '../services/bookingService';
 import { bookingService } from '../services/bookingService';
 import './MyBookingsPage.css';
 
+const BOOKING_ROWS_PER_PAGE = 4;
+
 export const MyBookingsPage: React.FC = () => {
   const navigate = useNavigate();
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -13,6 +15,10 @@ export const MyBookingsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [cardsPerRow, setCardsPerRow] = useState<number>(() =>
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches ? 1 : 3
+  );
 
   // Modal states
   const [cancellingBooking, setCancellingBooking] = useState<Booking | null>(null);
@@ -45,6 +51,15 @@ export const MyBookingsPage: React.FC = () => {
     return () => window.removeEventListener('user-switched', handleUserSwitch);
   }, []);
 
+  useEffect(() => {
+    const mobileLayout = window.matchMedia('(max-width: 900px)');
+    const syncCardsPerRow = () => setCardsPerRow(mobileLayout.matches ? 1 : 3);
+
+    syncCardsPerRow();
+    mobileLayout.addEventListener('change', syncCardsPerRow);
+    return () => mobileLayout.removeEventListener('change', syncCardsPerRow);
+  }, []);
+
   // Xác nhận hủy đặt phòng
   const handleConfirmCancel = async () => {
     if (!cancellingBooking) return;
@@ -75,10 +90,7 @@ export const MyBookingsPage: React.FC = () => {
     const confirmed = bookings.filter((b) => b.status === 'CONFIRMED').length;
     const checkedIn = bookings.filter((b) => b.status === 'CHECKED_IN').length;
     const completed = bookings.filter((b) => b.status === 'COMPLETED').length;
-    const history = bookings.filter((b) =>
-      ['COMPLETED', 'CANCELLED', 'REJECTED', 'EXPIRED', 'NO_SHOW'].includes(b.status)
-    ).length;
-    return { total, pending, confirmed, checkedIn, completed, history };
+    return { total, pending, confirmed, checkedIn, completed };
   }, [bookings]);
 
   // Helper tính độ ưu tiên trạng thái
@@ -104,8 +116,6 @@ export const MyBookingsPage: React.FC = () => {
         if (b.status !== 'CHECKED_IN') return false;
       } else if (activeTab === 'COMPLETED') {
         if (b.status !== 'COMPLETED') return false;
-      } else if (activeTab === 'HISTORY') {
-        if (!['COMPLETED', 'CANCELLED', 'REJECTED', 'EXPIRED', 'NO_SHOW'].includes(b.status)) return false;
       }
 
       // Search query filter
@@ -142,11 +152,47 @@ export const MyBookingsPage: React.FC = () => {
         return a.id - b.id;
       }
 
-      // Đơn lịch sử / đã đóng (Rank 4, 5): mới hoàn thành / mới đóng gần đây nhất lên trước (DESC)
+      // Đơn đã đóng (Rank 4, 5): mới hoàn thành / mới đóng gần đây nhất lên trước (DESC)
       if (timeA !== timeB) return timeB - timeA;
       return b.id - a.id;
     });
   }, [bookings, activeTab, searchQuery]);
+
+  const pageSize = BOOKING_ROWS_PER_PAGE * cardsPerRow;
+  const totalPages = Math.max(1, Math.ceil(filteredBookings.length / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const pageStartIndex = (safeCurrentPage - 1) * pageSize;
+  const paginatedBookings = useMemo(
+    () => filteredBookings.slice(pageStartIndex, pageStartIndex + pageSize),
+    [filteredBookings, pageStartIndex, pageSize]
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, searchQuery, pageSize]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
+
+  const handlePageChange = (page: number) => {
+    const nextPage = Math.min(Math.max(page, 1), totalPages);
+    setCurrentPage(nextPage);
+    window.requestAnimationFrame(() => {
+      document.querySelector('.mb-cards-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
+
+  const getPaginationItems = (): Array<number | string> => {
+    if (totalPages <= 5) {
+      return Array.from({ length: totalPages }, (_, index) => index + 1);
+    }
+    if (safeCurrentPage <= 3) return [1, 2, 3, 4, 'end-dots', totalPages];
+    if (safeCurrentPage >= totalPages - 2) {
+      return [1, 'start-dots', totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+    }
+    return [1, 'start-dots', safeCurrentPage - 1, safeCurrentPage, safeCurrentPage + 1, 'end-dots', totalPages];
+  };
 
   // Helper định dạng ngày tháng chuẩn dd/mm/yyyy
   const parseDateInfo = (isoString: string) => {
@@ -238,7 +284,7 @@ export const MyBookingsPage: React.FC = () => {
           </div>
           <div className="mb-metric-info">
             <span className="mb-metric-val">{metrics.total}</span>
-            <span className="mb-metric-label">Tất cả</span>
+            <span className="mb-metric-label">Tất cả lượt đặt</span>
           </div>
         </div>
 
@@ -291,8 +337,7 @@ export const MyBookingsPage: React.FC = () => {
             { key: 'PENDING', label: 'Chờ duyệt', count: metrics.pending },
             { key: 'CONFIRMED', label: 'Đã xác nhận', count: metrics.confirmed },
             { key: 'CHECKED_IN', label: 'Đã check-in', count: metrics.checkedIn },
-            { key: 'COMPLETED', label: 'Đã hoàn thành', count: metrics.completed },
-            { key: 'HISTORY', label: 'Lịch sử', count: metrics.history }
+            { key: 'COMPLETED', label: 'Đã hoàn thành', count: metrics.completed }
           ].map((tab) => (
             <button
               key={tab.key}
@@ -363,8 +408,9 @@ export const MyBookingsPage: React.FC = () => {
         </div>
       ) : (
         /* DẠNG THẺ TRỰC QUAN DUY NHẤT (CARDS VIEW) */
-        <div className="mb-cards-grid">
-          {filteredBookings.map((b) => {
+        <>
+          <div className="mb-cards-grid">
+          {paginatedBookings.map((b) => {
             const startInfo = parseDateInfo(b.startTime);
             const endInfo = parseDateInfo(b.endTime);
 
@@ -654,7 +700,66 @@ export const MyBookingsPage: React.FC = () => {
               </div>
             );
           })}
-        </div>
+          </div>
+
+          {totalPages > 1 && (
+            <nav className="mb-pagination" aria-label="Phân trang lịch đặt">
+              <div className="mb-pagination-summary">
+                <span>
+                  Hiển thị <strong>{pageStartIndex + 1}</strong>–<strong>{Math.min(pageStartIndex + pageSize, filteredBookings.length)}</strong>
+                  {' '}trong <strong>{filteredBookings.length}</strong> lượt đặt
+                </span>
+              </div>
+
+              <div className="mb-pagination-controls">
+                <button
+                  type="button"
+                  className="mb-pagination-arrow"
+                  onClick={() => handlePageChange(safeCurrentPage - 1)}
+                  disabled={safeCurrentPage === 1}
+                  aria-label="Trang trước"
+                  title="Trang trước"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="15 18 9 12 15 6" />
+                  </svg>
+                </button>
+
+                <div className="mb-pagination-pages">
+                  {getPaginationItems().map((item) =>
+                    typeof item === 'string' ? (
+                      <span key={item} className="mb-pagination-dots">…</span>
+                    ) : (
+                      <button
+                        key={item}
+                        type="button"
+                        className={`mb-pagination-page ${item === safeCurrentPage ? 'active' : ''}`}
+                        onClick={() => handlePageChange(item)}
+                        aria-label={`Trang ${item}`}
+                        aria-current={item === safeCurrentPage ? 'page' : undefined}
+                      >
+                        {item}
+                      </button>
+                    )
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  className="mb-pagination-arrow"
+                  onClick={() => handlePageChange(safeCurrentPage + 1)}
+                  disabled={safeCurrentPage === totalPages}
+                  aria-label="Trang sau"
+                  title="Trang sau"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                </button>
+              </div>
+            </nav>
+          )}
+        </>
       )}
 
       {/* 5. Modal Xác Nhận Hủy Đặt Phòng (Cancel Booking Modal) */}
