@@ -29,6 +29,24 @@ export interface SpaceTable {
   description?: string;
 }
 
+export interface SpaceImage {
+  id: number;
+  spaceId: number;
+  imageUrl: string;
+  isPrimary: boolean;
+  sortOrder: number;
+}
+
+export interface MaintenanceSchedule {
+  id: number;
+  spaceId: number;
+  spaceName?: string;
+  startTime: string;
+  endTime: string;
+  reason?: string;
+  status: string;
+}
+
 export interface Space {
   id: number;
   name: string;
@@ -41,12 +59,17 @@ export interface Space {
   capacity: number;
   status: 'AVAILABLE' | 'MAINTENANCE' | 'INACTIVE';
   imageUrl?: string;
+  primaryImageUrl?: string;
+  images?: SpaceImage[];
   description?: string;
   facilities: Facility[];
+  facilityIds?: number[];
   isAvailable?: boolean;
   allowSeatSelection?: boolean;
   allowTableSelection?: boolean;
   spaceType?: SpaceType;
+  nextMaintenance?: MaintenanceSchedule | null;
+  upcomingMaintenances?: MaintenanceSchedule[];
 }
 
 export interface ConflictDetail {

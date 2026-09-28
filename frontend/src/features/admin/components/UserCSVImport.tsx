@@ -9,8 +9,9 @@ export interface UserData {
     username?: string;
     password?: string;
     isActive?: boolean;
-    studentId?: string;
+    userCode?: string;
     department?: string;
+    className?: string; // Bổ sung trường Lớp
 }
 
 interface UserCSVImportProps {
@@ -52,24 +53,27 @@ export const UserCSVImport: React.FC<UserCSVImportProps> = ({
                 let parsedUser: UserData = { fullName: '', dob: '', email: '', role: importType };
 
                 if (importType === 'STUDENT') {
-                    const [studentId, fullName, dob, email] = cols;
+                    // Cập nhật để đọc thêm cột className
+                    const [userCode, fullName, dob, className, email] = cols;
                     if (email) parsedUser = {
                         ...parsedUser,
-                        studentId: studentId?.trim(),
+                        userCode: userCode?.trim(),
                         fullName: fullName?.trim(),
                         dob: dob?.trim(),
+                        className: className?.trim(),
                         email: email?.trim(),
-                        username: studentId?.trim() || email.trim().split('@')[0]
+                        username: userCode?.trim() || email.trim().split('@')[0]
                     };
                 } else {
-                    const [fullName, dob, email, department] = cols;
+                    const [userCode, fullName, dob, email, department] = cols;
                     if (email) parsedUser = {
                         ...parsedUser,
+                        userCode: userCode?.trim(),
                         fullName: fullName?.trim(),
                         dob: dob?.trim(),
                         email: email?.trim(),
                         department: department?.trim(),
-                        username: email.trim().split('@')[0]
+                        username: userCode?.trim() || email.trim().split('@')[0]
                     };
                 }
 
@@ -86,7 +90,6 @@ export const UserCSVImport: React.FC<UserCSVImportProps> = ({
 
     return (
         <div>
-            {/* THÔNG BÁO THÀNH CÔNG */}
             {successMessage && (
                 <div style={{ padding: '12px', marginBottom: '20px', borderRadius: '6px', background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
@@ -94,7 +97,6 @@ export const UserCSVImport: React.FC<UserCSVImportProps> = ({
                 </div>
             )}
 
-            {/* THÔNG BÁO LỖI */}
             {errorMessage && (
                 <div style={{ padding: '12px', marginBottom: '20px', borderRadius: '6px', background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
@@ -119,7 +121,7 @@ export const UserCSVImport: React.FC<UserCSVImportProps> = ({
                 <h4 style={{margin: '0 0 8px 0', color: '#0f172a'}}>Kéo thả file CSV vào đây hoặc click để chọn</h4>
                 <p style={{margin: 0, color: '#64748b', fontSize: '0.9rem'}}>
                     Định dạng:
-                    {importType === 'STUDENT' ? ' Mã SV, Họ Tên, Ngày Sinh (DD/MM/YYYY), Email' : ' Họ Tên, Ngày Sinh (DD/MM/YYYY), Email, Phòng ban'}
+                    {importType === 'STUDENT' ? ' Mã SV, Họ Tên, Ngày Sinh (DD/MM/YYYY), Lớp, Email' : ' Mã MNV, Họ Tên, Ngày Sinh (DD/MM/YYYY), Email, Phòng ban'}
                 </p>
             </label>
 
@@ -129,17 +131,21 @@ export const UserCSVImport: React.FC<UserCSVImportProps> = ({
                     <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', textAlign: 'left' }}>
                         <thead>
                         <tr style={{ background: '#f8fafc', color: '#64748b' }}>
-                            {importType === 'STUDENT' && <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Mã SV</th>}
+                            <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>{importType === 'STUDENT' ? 'Mã SV' : 'Mã NV'}</th>
                             <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Họ và Tên</th>
+                            {importType === 'STUDENT' && <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Lớp</th>}
                             <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Email</th>
+                            {importType === 'STAFF' && <th style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>Phòng ban</th>}
                         </tr>
                         </thead>
                         <tbody>
                         {csvData.slice(0, 5).map((user, idx) => (
                             <tr key={idx}>
-                                {importType === 'STUDENT' && <td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>{user.studentId}</td>}
+                                <td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>{user.userCode}</td>
                                 <td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>{user.fullName}</td>
+                                {importType === 'STUDENT' && <td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>{user.className}</td>}
                                 <td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>{user.email}</td>
+                                {importType === 'STAFF' && <td style={{ padding: '8px', borderBottom: '1px solid #e2e8f0' }}>{user.department}</td>}
                             </tr>
                         ))}
                         </tbody>

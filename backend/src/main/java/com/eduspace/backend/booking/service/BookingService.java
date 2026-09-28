@@ -14,7 +14,6 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import com.eduspace.backend.booking.dto.request.CreateBookingRequest;
-import com.eduspace.backend.booking.dto.response.BookingAuditLogResponse;
 import com.eduspace.backend.booking.dto.response.BookingResponse;
 import com.eduspace.backend.booking.dto.response.BulkBookingFailureItem;
 import com.eduspace.backend.booking.dto.response.BulkBookingOperationResponse;
@@ -694,26 +693,6 @@ public class BookingService {
                 .collect(Collectors.toList());
     }
 
-    @Transactional(readOnly = true)
-    public List<BookingAuditLogResponse> getBookingAuditLogs(Long bookingId) {
-        Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> BusinessException.notFound("BOOKING_NOT_FOUND", "Không tìm thấy booking."));
-        requireOwnerOrStaff(booking, SecurityUtils.getCurrentUserEmail());
-        return auditLogRepository.findByBookingIdOrderByPerformedAtDesc(bookingId).stream()
-                .map(log -> BookingAuditLogResponse.builder()
-                        .id(log.getId())
-                        .bookingId(log.getBookingId())
-                        .action(log.getAction())
-                        .actionDescription(log.getAction().getDescription())
-                        .performedByName(log.getPerformedByEmail() != null ? log.getPerformedByEmail() : "Hệ thống")
-                        .performedByEmail(log.getPerformedByEmail() != null ? log.getPerformedByEmail() : "system@eduspace.vn")
-                        .performedAt(log.getPerformedAt())
-                        .reason(log.getReason())
-                        .note(log.getNote())
-                        .build())
-                .collect(Collectors.toList());
-    }
-
     /**
      * Lấy danh sách booking của một phòng trong khoảng thời gian cụ thể (hỗ trợ hiển thị Space Timeline).
      */
@@ -789,7 +768,6 @@ public class BookingService {
                 .purpose(booking.getPurpose())
                 .status(booking.getStatus())
                 .statusDisplayName(booking.getStatus().getDisplayName())
-                .isOccupying(booking.getStatus().isOccupying())
                 .rejectReason(booking.getRejectReason())
                 .rejectedAt(booking.getRejectedAt())
                 .expireReason(booking.getExpireReason())

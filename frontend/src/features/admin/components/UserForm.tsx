@@ -7,8 +7,9 @@ interface UserFormProps {
         dob: string;
         email: string;
         role: string;
-        studentId?: string;
+        userCode?: string;
         department?: string;
+        className?: string; // Bổ sung trường className
     };
     isEditMode?: boolean;
     onSubmit: (formData: any) => void;
@@ -32,8 +33,9 @@ export const UserForm: React.FC<UserFormProps> = ({
         dob: '',
         email: '',
         role: 'STUDENT',
-        studentId: '',
-        department: ''
+        userCode: '',
+        department: '',
+        className: '' // Khởi tạo state className
     });
 
     const [localError, setLocalError] = useState<string | null>(null);
@@ -46,8 +48,9 @@ export const UserForm: React.FC<UserFormProps> = ({
                 dob: initialData.dob || '',
                 email: initialData.email || '',
                 role: initialData.role || 'STUDENT',
-                studentId: initialData.studentId || '',
-                department: initialData.department || ''
+                userCode: initialData.userCode || '',
+                department: initialData.department || '',
+                className: initialData.className || '' // Load dữ liệu cũ nếu có
             });
         }
     }, [initialData]);
@@ -80,8 +83,13 @@ export const UserForm: React.FC<UserFormProps> = ({
         if (!form.email.trim()) errors.email = 'Vui lòng nhập Địa chỉ Email';
         if (!form.dob) errors.dob = 'Vui lòng chọn Ngày sinh';
 
-        if (form.role === 'STUDENT' && !form.studentId?.trim()) {
-            errors.studentId = 'Vui lòng nhập Mã Sinh Viên';
+        if (!form.userCode?.trim()) {
+            errors.userCode = form.role === 'STUDENT' ? 'Vui lòng nhập Mã Sinh Viên' : 'Vui lòng nhập Mã Định Danh';
+        }
+
+        // Validation phân nhánh theo Role
+        if (form.role === 'STUDENT' && !form.className?.trim()) {
+            errors.className = 'Vui lòng nhập Lớp học';
         }
         if (form.role !== 'STUDENT' && !form.department?.trim()) {
             errors.department = 'Vui lòng nhập Phòng ban / Đơn vị';
@@ -96,7 +104,9 @@ export const UserForm: React.FC<UserFormProps> = ({
         const payload = {
             ...form,
             password: isEditMode ? undefined : formatPasswordFromDob(form.dob),
-            studentId: form.role === 'STUDENT' ? form.studentId : null,
+            userCode: form.userCode,
+            // Trả null cho các trường không thuộc Role đó để CSDL sạch sẽ
+            className: form.role === 'STUDENT' ? form.className : null,
             department: form.role !== 'STUDENT' ? form.department : null
         };
 
@@ -105,7 +115,6 @@ export const UserForm: React.FC<UserFormProps> = ({
 
     const displayError = localError || errorMessage;
 
-    // Bổ sung tham số isDisabled để đổi style (nền xám, con trỏ cấm)
     const getInputStyle = (fieldName: string, isDisabled: boolean = false) => ({
         padding: '10px 14px',
         border: fieldErrors[fieldName] ? '1px solid #ef4444' : '1px solid #cbd5e1',
@@ -149,35 +158,21 @@ export const UserForm: React.FC<UserFormProps> = ({
                     </select>
                 </div>
 
-                {form.role === 'STUDENT' ? (
-                    <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <label style={{ fontWeight: 500, color: '#334155' }}>Mã Sinh Viên *</label>
-                        <input
-                            type="text"
-                            name="studentId"
-                            value={form.studentId}
-                            onChange={handleChange}
-                            placeholder="VD: 2311063325"
-                            style={getInputStyle('studentId', isEditMode)}
-                            disabled={isEditMode}
-                        />
-                        {fieldErrors.studentId && <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>{fieldErrors.studentId}</span>}
-                    </div>
-                ) : (
-                    <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <label style={{ fontWeight: 500, color: '#334155' }}>Phòng ban / Đơn vị *</label>
-                        <input
-                            type="text"
-                            name="department"
-                            value={form.department}
-                            onChange={handleChange}
-                            placeholder="VD: Phòng Hành chính"
-                            style={getInputStyle('department', isEditMode)}
-                            disabled={isEditMode}
-                        />
-                        {fieldErrors.department && <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>{fieldErrors.department}</span>}
-                    </div>
-                )}
+                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontWeight: 500, color: '#334155' }}>
+                        {form.role === 'STUDENT' ? 'Mã Sinh Viên *' : 'Mã định danh (MNV) *'}
+                    </label>
+                    <input
+                        type="text"
+                        name="userCode"
+                        value={form.userCode}
+                        onChange={handleChange}
+                        placeholder={form.role === 'STUDENT' ? "VD: 2311063325" : "VD: NV0123"}
+                        style={getInputStyle('userCode', isEditMode)}
+                        disabled={isEditMode}
+                    />
+                    {fieldErrors.userCode && <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>{fieldErrors.userCode}</span>}
+                </div>
 
                 <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label style={{ fontWeight: 500, color: '#334155' }}>Họ và Tên *</label>
@@ -219,6 +214,37 @@ export const UserForm: React.FC<UserFormProps> = ({
                     />
                     {fieldErrors.dob && <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>{fieldErrors.dob}</span>}
                 </div>
+
+                {/* Phân nhánh render ô nhập Lớp hoặc Phòng ban tùy theo Role */}
+                {form.role === 'STUDENT' ? (
+                    <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <label style={{ fontWeight: 500, color: '#334155' }}>Lớp học *</label>
+                        <input
+                            type="text"
+                            name="className"
+                            value={form.className}
+                            onChange={handleChange}
+                            placeholder="VD: CNTT1"
+                            style={getInputStyle('className', isEditMode)}
+                            disabled={isEditMode} // Disable nếu không muốn cho sửa lớp khi Edit
+                        />
+                        {fieldErrors.className && <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>{fieldErrors.className}</span>}
+                    </div>
+                ) : (
+                    <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <label style={{ fontWeight: 500, color: '#334155' }}>Phòng ban / Đơn vị *</label>
+                        <input
+                            type="text"
+                            name="department"
+                            value={form.department}
+                            onChange={handleChange}
+                            placeholder="VD: Phòng Hành chính"
+                            style={getInputStyle('department', isEditMode)}
+                            disabled={isEditMode}
+                        />
+                        {fieldErrors.department && <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>{fieldErrors.department}</span>}
+                    </div>
+                )}
             </div>
 
             <div style={{ display: 'flex', gap: '12px' }}>

@@ -1,5 +1,5 @@
 import api from '../../../../services/api';
-import type { Booking, BookingStatus, BookingAuditLog, CreateBookingPayload, BulkBookingOperationResponse } from '../types/booking.types';
+import type { Booking, BookingStatus, CreateBookingPayload, BulkBookingOperationResponse } from '../types/booking.types';
 
 export * from '../types/booking.types';
 
@@ -20,12 +20,6 @@ export const bookingService = {
   // Chi tiết booking
   getBookingById: async (id: number): Promise<Booking> => {
     const res = await api.get<Booking>(`/api/bookings/${id}`);
-    return res.data;
-  },
-
-  // Xem lịch sử thao tác của booking
-  getAuditLogs: async (id: number): Promise<BookingAuditLog[]> => {
-    const res = await api.get<BookingAuditLog[]>(`/api/bookings/${id}/audit-logs`);
     return res.data;
   },
 
@@ -66,17 +60,44 @@ export const bookingService = {
     return res.data;
   },
 
+  // Phát hành mã token check-in (M09 - Liên kết 100% CSDL của bạn Vũ)
+  issueCheckInToken: async (id: number): Promise<{ bookingId: number; token: string; issuedAt: string; expiresAt: string }> => {
+    const res = await api.post<{ bookingId: number; token: string; issuedAt: string; expiresAt: string }>(
+      `/api/bookings/${id}/check-in-token`
+    );
+    return res.data;
+  },
+
+  // Xác thực token check-in (M09 - bạn Vũ)
+  verifyCheckInToken: async (id: number, token: string): Promise<Booking> => {
+    const res = await api.post<Booking>(`/api/bookings/${id}/check-in/verify`, { token });
+    return res.data;
+  },
+
   // Lấy danh sách booking chờ duyệt (Staff)
   getPendingBookings: async (): Promise<Booking[]> => {
     const res = await api.get<Booking[]>('/api/bookings/pending');
     return res.data;
   },
 
-  // Lấy danh sách ghế đang bận theo thời gian thực
+  // Lấy danh sách ghế/bàn đang bận theo thời gian thực (hỗ trợ cả PENDING_APPROVAL và CONFIRMED)
   getOccupiedSeats: async (spaceId: number, startTime: string, endTime: string): Promise<string[]> => {
-    const res = await api.get<string[]>(`/api/spaces/${spaceId}/occupied-seats`, {
-      params: { startTime, endTime }
-    });
-    return res.data;
+    try {
+      const res = await api.get<any>(`/api/spaces/${spaceId}/occupied-seats`, {
+        params: { startTime, endTime }
+      });
+      const data = res.data;
+      if (Array.isArray(data)) {
+        return data.map((s) => String(s).trim().toUpperCase()).filter(Boolean);
+      }
+      if (typeof data === 'string') {
+        const cleaned = data.replace(/[\[\]"']/g, '');
+        return cleaned.split(',').map((s) => s.trim().toUpperCase()).filter(Boolean);
+      }
+      return [];
+    } catch (err) {
+      console.error('Lỗi khi gọi API getOccupiedSeats:', err);
+      return [];
+    }
   }
 };

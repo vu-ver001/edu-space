@@ -22,6 +22,7 @@ public class UserCreateRequest {
 
     private String username;
     private String dob;
-    private String studentId;
+    private String userCode;
     private String department;
+    private String className;
 }

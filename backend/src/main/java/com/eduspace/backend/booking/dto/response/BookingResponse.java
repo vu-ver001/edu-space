@@ -35,7 +35,6 @@ public class BookingResponse {
     private String purpose;
     private BookingStatus status;
     private String statusDisplayName;
-    private boolean isOccupying;
     private String rejectReason;
     private LocalDateTime rejectedAt;
     private String expireReason;
@@ -43,7 +42,9 @@ public class BookingResponse {
     private LocalDateTime checkedInAt;
     private Long checkedInBy;
     private LocalDateTime createdAt;
+    @com.fasterxml.jackson.annotation.JsonProperty("canCancel")
     private boolean canCancel;
+    @com.fasterxml.jackson.annotation.JsonProperty("canCheckIn")
     private boolean canCheckIn;
     private java.util.List<String> selectedSeats;
     private Long tableId;
