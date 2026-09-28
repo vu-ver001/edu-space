@@ -16,7 +16,6 @@ export { RoomCard } from './components/RoomCard';
 export { FilterBar, getNextAvailableSlot } from './components/FilterBar';
 export { BookingModal } from './components/BookingModal';
 export { SeatSelectionModal } from './components/SeatSelectionModal';
-export { AuditLogModal } from './components/AuditLogModal';
 
 // Export Services
 export { bookingService } from './services/bookingService';

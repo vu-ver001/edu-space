@@ -1,5 +1,5 @@
 import api from '../../../../services/api';
-import type { Booking, BookingStatus, BookingAuditLog, CreateBookingPayload, BulkBookingOperationResponse } from '../types/booking.types';
+import type { Booking, BookingStatus, CreateBookingPayload, BulkBookingOperationResponse } from '../types/booking.types';
 
 export * from '../types/booking.types';
 
@@ -20,12 +20,6 @@ export const bookingService = {
   // Chi tiết booking
   getBookingById: async (id: number): Promise<Booking> => {
     const res = await api.get<Booking>(`/api/bookings/${id}`);
-    return res.data;
-  },
-
-  // Xem lịch sử thao tác của booking
-  getAuditLogs: async (id: number): Promise<BookingAuditLog[]> => {
-    const res = await api.get<BookingAuditLog[]>(`/api/bookings/${id}/audit-logs`);
     return res.data;
   },
 

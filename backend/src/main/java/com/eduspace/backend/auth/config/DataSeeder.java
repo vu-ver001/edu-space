@@ -79,6 +79,29 @@ public class DataSeeder implements CommandLineRunner {
             System.out.println("Đã khởi tạo thành công 3 tài khoản test!");
         }
 
+        // Đảm bảo các tài khoản sinh viên mẫu khác luôn khả dụng để test chuyển đổi người dùng
+        String defaultStudentPassword = passwordEncoder.encode("123456");
+        if (userRepository.findByEmail("sv.anh@eduspace.vn").isEmpty()) {
+            User svAnh = new User();
+            svAnh.setEmail("sv.anh@eduspace.vn");
+            svAnh.setPassword(defaultStudentPassword);
+            svAnh.setFullName("Nguyễn Minh Anh (Sinh viên)");
+            svAnh.setPhoneNumber("0987654321");
+            svAnh.setRole(Role.STUDENT);
+            svAnh.setActive(true);
+            userRepository.save(svAnh);
+        }
+        if (userRepository.findByEmail("sv.nam@eduspace.vn").isEmpty()) {
+            User svNam = new User();
+            svNam.setEmail("sv.nam@eduspace.vn");
+            svNam.setPassword(defaultStudentPassword);
+            svNam.setFullName("Trần Hoàng Nam (Sinh viên)");
+            svNam.setPhoneNumber("0987654322");
+            svNam.setRole(Role.STUDENT);
+            svNam.setActive(true);
+            userRepository.save(svNam);
+        }
+
         // 2. Khởi tạo 5 loại không gian chuẩn hệ thống
         if (spaceTypeRepository.count() == 0) {
             List<SpaceType> sampleTypes = List.of(

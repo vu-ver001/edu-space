@@ -14,7 +14,6 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import com.eduspace.backend.booking.dto.request.CreateBookingRequest;
-import com.eduspace.backend.booking.dto.response.BookingAuditLogResponse;
 import com.eduspace.backend.booking.dto.response.BookingResponse;
 import com.eduspace.backend.booking.dto.response.BulkBookingFailureItem;
 import com.eduspace.backend.booking.dto.response.BulkBookingOperationResponse;
@@ -691,26 +690,6 @@ public class BookingService {
         List<Booking> pendingBookings = bookingRepository.findActivePendingBookings(BookingStatus.PENDING_APPROVAL, now);
         return pendingBookings.stream()
                 .map(b -> toBookingResponse(b, now))
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<BookingAuditLogResponse> getBookingAuditLogs(Long bookingId) {
-        Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> BusinessException.notFound("BOOKING_NOT_FOUND", "Không tìm thấy booking."));
-        requireOwnerOrStaff(booking, SecurityUtils.getCurrentUserEmail());
-        return auditLogRepository.findByBookingIdOrderByPerformedAtDesc(bookingId).stream()
-                .map(log -> BookingAuditLogResponse.builder()
-                        .id(log.getId())
-                        .bookingId(log.getBookingId())
-                        .action(log.getAction())
-                        .actionDescription(log.getAction().getDescription())
-                        .performedByName(log.getPerformedByEmail() != null ? log.getPerformedByEmail() : "Hệ thống")
-                        .performedByEmail(log.getPerformedByEmail() != null ? log.getPerformedByEmail() : "system@eduspace.vn")
-                        .performedAt(log.getPerformedAt())
-                        .reason(log.getReason())
-                        .note(log.getNote())
-                        .build())
                 .collect(Collectors.toList());
     }
 

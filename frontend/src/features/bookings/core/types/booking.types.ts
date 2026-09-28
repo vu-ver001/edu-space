@@ -29,6 +29,7 @@ export interface Booking {
   status: BookingStatus;
   statusDisplayName: string;
   isOccupying: boolean;
+  occupying?: boolean;
   rejectReason?: string;
   rejectedAt?: string;
   expireReason?: string;
@@ -42,17 +43,6 @@ export interface Booking {
   selectedSeats?: string[];
 }
 
-export interface BookingAuditLog {
-  id: number;
-  bookingId: number;
-  action: string;
-  actionDescription: string;
-  performedByName: string;
-  performedByEmail: string;
-  performedAt: string;
-  reason?: string;
-  note?: string;
-}
 
 export interface CreateBookingPayload {
   spaceId: number;
