@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft,
   Pencil,
@@ -22,7 +22,6 @@ import {
   Wifi,
   Tv,
   SquareCheck,
-  ClipboardList,
   ShieldCheck,
   Clock,
   Snowflake,
@@ -64,7 +63,6 @@ const PLACEHOLDER_SPACE_IMAGE = 'https://images.unsplash.com/photo-1497366216548
 export const SpaceDetailPageKT: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const location = useLocation();
 
   const [space, setSpace] = useState<Space | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -891,38 +889,6 @@ export const SpaceDetailPageKT: React.FC = () => {
       )}
 
       <main className="detail-main-content">
-        {/* Sub Navigation Bar to toggle KT management pages */}
-        <div className="kt-subnav-bar">
-          <Link
-            to="/admin/space-types"
-            className={`kt-subnav-item ${location.pathname.includes('space-types') ? 'active' : ''}`}
-          >
-            <Layers size={16} />
-            <span>Loại không gian</span>
-          </Link>
-          <Link
-            to="/admin/spaces"
-            className={`kt-subnav-item active`}
-          >
-            <Building2 size={16} />
-            <span>Không gian</span>
-          </Link>
-          <Link
-            to="/admin/facilities"
-            className={`kt-subnav-item ${location.pathname.includes('facilities') ? 'active' : ''}`}
-          >
-            <Sparkles size={16} />
-            <span>Tiện ích</span>
-          </Link>
-          <Link
-            to="/staff"
-            className={`kt-subnav-item ${location.pathname.startsWith('/staff') ? 'active' : ''}`}
-          >
-            <ClipboardList size={16} />
-            <span>Vận hành Staff</span>
-          </Link>
-        </div>
-
         {/* Top Header Row */}
         <div className="detail-header-row">
           <div className="detail-header-left">

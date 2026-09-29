@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Layers, Building2, ClipboardList, Plus, Sparkles } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus } from 'lucide-react';
 import type {
   Space,
   Facility,
@@ -23,7 +23,6 @@ import { Pagination } from '../../../components/common/Pagination';
 import './SpaceListPageKT.css';
 
 export const SpaceListPageKT: React.FC = () => {
-  const location = useLocation();
   const navigate = useNavigate();
 
   const [spaces, setSpaces] = useState<Space[]>([]);
@@ -248,38 +247,6 @@ export const SpaceListPageKT: React.FC = () => {
   return (
     <div className="kt-page-wrapper">
       <main className="kt-main-content">
-        {/* Sub Navigation Bar to toggle KT management pages */}
-        <div className="kt-subnav-bar">
-          <Link
-            to="/admin/space-types"
-            className={`kt-subnav-item ${location.pathname.includes('space-types') ? 'active' : ''}`}
-          >
-            <Layers size={16} />
-            <span>Loại không gian</span>
-          </Link>
-          <Link
-            to="/admin/spaces"
-            className={`kt-subnav-item ${location.pathname.includes('spaces') ? 'active' : ''}`}
-          >
-            <Building2 size={16} />
-            <span>Không gian</span>
-          </Link>
-          <Link
-            to="/admin/facilities"
-            className={`kt-subnav-item ${location.pathname.includes('facilities') ? 'active' : ''}`}
-          >
-            <Sparkles size={16} />
-            <span>Tiện ích</span>
-          </Link>
-          <Link
-            to="/staff"
-            className={`kt-subnav-item ${location.pathname.startsWith('/staff') ? 'active' : ''}`}
-          >
-            <ClipboardList size={16} />
-            <span>Vận hành Staff</span>
-          </Link>
-        </div>
-
         {/* Page Header */}
         <div className="page-header-row">
           <div className="page-header-left">
