@@ -101,6 +101,13 @@ public class BookingService {
                     "Phòng hiện không thể đặt do trạng thái: " + space.getStatus());
         }
 
+        if (request.getParticipantCount() == null || request.getParticipantCount() < 1) {
+            throw BusinessException.badRequest(
+                    "INVALID_PARTICIPANT_COUNT",
+                    "Số người tham gia phải từ 1 người trở lên"
+            );
+        }
+
         if (request.getParticipantCount() > space.getCapacity()) {
             throw BusinessException.badRequest("CAPACITY_EXCEEDED", 
                     "Số người tham gia (" + request.getParticipantCount() + ") vượt quá sức chứa của phòng (" + space.getCapacity() + ")");
@@ -146,7 +153,7 @@ public class BookingService {
         // RÀNG BUỘC SỐ LƯỢNG NGƯỜI THAM GIA THEO TỪNG LOẠI KHÔNG GIAN:
         // 1. Nếu là không gian học nhóm (Bàn nhóm PER_TABLE hoặc Phòng trọn gói WHOLE_SPACE có sức chứa > 1 người):
         //    Yêu cầu tối thiểu từ 2 người trở lên. Nghiêm cấm 1 người đặt nguyên bàn nhóm hoặc phòng lớn.
-        boolean isGroupSpace = isPerTable || (isWholeSpace && space.getCapacity() > 1);
+        boolean isGroupSpace = isPerTable || isWholeSpace;
         if (isGroupSpace) {
             if (request.getParticipantCount() == null || request.getParticipantCount() < 2) {
                 throw BusinessException.badRequest("MIN_PARTICIPANTS_REQUIRED", 
@@ -160,6 +167,12 @@ public class BookingService {
 
         if (!isWholeSpace && !isPerTable) {
             // PER_SEAT mode: Khu tự học chung
+            if (request.getParticipantCount() != 1) {
+                throw BusinessException.badRequest(
+                        "INDIVIDUAL_SEAT_ONLY",
+                        "Khu tự học theo ghế chỉ dành cho 1 người. Nhóm từ 2 người trở lên vui lòng chọn phòng hoặc bàn nhóm."
+                );
+            }
             if (requestedSeats == null || requestedSeats.isEmpty()) {
                 throw BusinessException.badRequest("SEAT_REQUIRED", 
                         "Khu tự học yêu cầu chọn 1 vị trí chỗ ngồi cụ thể.");

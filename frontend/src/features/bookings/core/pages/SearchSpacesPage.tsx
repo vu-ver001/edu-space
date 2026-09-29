@@ -10,6 +10,17 @@ import '../components/MaintenanceModal.css';
 
 const SPACE_ROWS_PER_PAGE = 4;
 
+const matchesParticipantBookingMode = (space: Space, participantCount?: number): boolean => {
+  const count = Math.max(1, Number(participantCount) || 1);
+  const bookingMode = space.bookingMode || space.spaceType?.bookingMode;
+
+  if (count === 1) return bookingMode === 'PER_SEAT';
+  if (bookingMode === 'PER_SEAT') return false;
+
+  return (bookingMode === 'WHOLE_SPACE' || bookingMode === 'PER_TABLE')
+    && Number(space.capacity) >= count;
+};
+
 export const SearchSpacesPage: React.FC = () => {
   const initialSlot = getNextAvailableSlot();
   const [spaces, setSpaces] = useState<Space[]>([]);
@@ -139,7 +150,9 @@ export const SearchSpacesPage: React.FC = () => {
       .searchAvailableSpaces(filter)
       .then((data) => {
         // Ẩn hoàn toàn các phòng đang hoặc có lịch bảo trì trong khoảng thời gian tìm kiếm
-        let filtered = data.filter((s) => !isMaintenanceConflict(s));
+        let filtered = data.filter(
+          (s) => !isMaintenanceConflict(s) && matchesParticipantBookingMode(s, filter.participantCount)
+        );
 
         if (filter.facilityIds && filter.facilityIds.length > 0) {
           filtered = filtered.filter((s) => {
@@ -162,23 +175,10 @@ export const SearchSpacesPage: React.FC = () => {
           return;
         }
 
-        // Dự phòng tải toàn bộ phòng nếu máy chủ gặp trục trặc mạng tạm thời
-        spaceService
-          .getAllSpaces()
-          .then((allData) => {
-            // Lọc loại bỏ phòng bảo trì trong khoảng tìm kiếm
-            let res = allData.filter((s) => !isMaintenanceConflict(s));
-            if (filter.spaceTypeId) {
-              res = res.filter((s) => s.spaceTypeId === filter.spaceTypeId || s.spaceType?.id === filter.spaceTypeId);
-            }
-            if (filter.facilityIds && filter.facilityIds.length > 0) {
-              res = res.filter((s) => s.facilityIds && filter.facilityIds!.every((fid) => s.facilityIds!.includes(fid)));
-            }
-            setSpaces(res);
-          })
-          .catch(() => {
-            setError(serverMsg || 'Không thể kết nối đến máy chủ');
-          });
+        // Không dùng danh sách phòng chưa kiểm tra làm dữ liệu dự phòng vì có thể sai sức chứa,
+        // trạng thái ghế/bàn hoặc lịch đã đặt trong CSDL.
+        setSpaces([]);
+        setError(serverMsg || 'Không thể kết nối đến máy chủ để kiểm tra phòng phù hợp.');
       })
       .finally(() => setLoading(false));
   };

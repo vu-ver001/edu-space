@@ -96,6 +96,14 @@ public class AvailabilityService {
         this.facilityRepository = facilityRepository;
     }
 
+    public void setSpaceTableRepository(com.eduspace.backend.space.repository.SpaceTableRepository spaceTableRepository) {
+        this.spaceTableRepository = spaceTableRepository;
+    }
+
+    public void setSeatRepository(com.eduspace.backend.space.repository.SeatRepository seatRepository) {
+        this.seatRepository = seatRepository;
+    }
+
     public static final List<BookingStatus> OCCUPYING_STATUSES = List.of(
             BookingStatus.PENDING_APPROVAL,
             BookingStatus.CONFIRMED,
@@ -302,6 +310,37 @@ public class AvailabilityService {
     }
 
     /**
+     * Danh sách dùng cho tìm kiếm phải phản ánh đúng CSDL, không dùng catalog RAM dự phòng.
+     * Nếu CSDL không truy vấn được thì trả lỗi thay vì hiển thị các phòng có thể không còn tồn tại.
+     */
+    private List<SpaceCatalogItem> getDatabaseCatalogItemsForSearch() {
+        if (spaceRepository == null) {
+            throw new BusinessException(
+                    "SPACE_DATA_UNAVAILABLE",
+                    "Không thể truy vấn dữ liệu không gian lúc này. Vui lòng thử lại sau.",
+                    org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE
+            );
+        }
+
+        try {
+            List<Space> spaces = spaceRepository.findAllByDeletedAtIsNull();
+            if (spaces == null) return Collections.emptyList();
+            return spaces.stream()
+                    .map(this::mapSpaceToCatalogItem)
+                    .collect(Collectors.toList());
+        } catch (BusinessException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            log.error("Không thể truy vấn danh sách không gian từ CSDL", ex);
+            throw new BusinessException(
+                    "SPACE_DATA_UNAVAILABLE",
+                    "Không thể truy vấn dữ liệu không gian lúc này. Vui lòng thử lại sau.",
+                    org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE
+            );
+        }
+    }
+
+    /**
      * Quy tắc giao nhau thời gian chuẩn (02_Yeu_cau_logic §1.1):
      * A.startTime < B.endTime AND A.endTime > B.startTime
      */
@@ -446,11 +485,21 @@ public class AvailabilityService {
 
         final LocalDateTime effectiveStart = (rawStart != null && rawStart.isBefore(now)) ? now : rawStart;
         final LocalDateTime effectiveEnd = rawEnd;
+        final int requestedParticipants = filter.getParticipantCount() != null
+                ? filter.getParticipantCount()
+                : 1;
 
-        return getAllCatalogItems().stream()
+        if (requestedParticipants < 1) {
+            throw BusinessException.badRequest(
+                    "INVALID_PARTICIPANT_COUNT",
+                    "Số người tham gia phải từ 1 người trở lên"
+            );
+        }
+
+        return getDatabaseCatalogItemsForSearch().stream()
                 .filter(space -> "AVAILABLE".equalsIgnoreCase(space.getStatus()))
                 .filter(space -> {
-                    if (filter.getParticipantCount() != null && space.getCapacity() < filter.getParticipantCount()) {
+                    if (!supportsParticipantCount(space, requestedParticipants)) {
                         return false;
                     }
                     if (filter.getSpaceTypeId() != null && !space.getSpaceTypeId().equals(filter.getSpaceTypeId())) {
@@ -468,9 +517,11 @@ public class AvailabilityService {
 
                     // Kiểm tra khả dụng thực tế theo thời gian và mô hình đặt chỗ
                     if (effectiveStart != null && effectiveEnd != null) {
-                        if (!isSpaceAvailableInInterval(space, effectiveStart, effectiveEnd, filter.getParticipantCount())) {
+                        if (!isSpaceAvailableInInterval(space, effectiveStart, effectiveEnd, requestedParticipants)) {
                             return false;
                         }
+                    } else if (!hasBookableResourceConfigured(space, requestedParticipants)) {
+                        return false;
                     }
 
                     return true;
@@ -503,6 +554,42 @@ public class AvailabilityService {
                             .build();
                 })
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Quy tắc đối tượng sử dụng theo mô hình đặt lấy từ space_types.booking_mode trong CSDL:
+     * - 1 người: chỉ đặt ghế cá nhân PER_SEAT.
+     * - Từ 2 người: WHOLE_SPACE hoặc PER_TABLE đủ sức chứa; không dùng PER_SEAT.
+     */
+    public boolean supportsParticipantCount(SpaceCatalogItem space, int participantCount) {
+        if (space == null || participantCount < 1) return false;
+
+        if (participantCount == 1) {
+            return isPerSeat(space);
+        }
+
+        if (isPerSeat(space)) return false;
+        return space.getCapacity() >= participantCount && (isWholeSpace(space) || isPerTable(space));
+    }
+
+    private boolean hasBookableResourceConfigured(SpaceCatalogItem space, int participantCount) {
+        if (isWholeSpace(space)) return space.getCapacity() >= participantCount;
+
+        if (isPerSeat(space)) {
+            if (participantCount != 1 || seatRepository == null) return false;
+            return seatRepository.findBySpaceIdAndDeletedAtIsNull(space.getId()).stream()
+                    .anyMatch(seat -> seat.getStatus() == com.eduspace.backend.space.entity.SeatStatus.AVAILABLE);
+        }
+
+        if (isPerTable(space)) {
+            if (participantCount < 2 || spaceTableRepository == null) return false;
+            return spaceTableRepository.findBySpaceIdAndDeletedAtIsNull(space.getId()).stream()
+                    .anyMatch(table -> table.getStatus() == com.eduspace.backend.space.entity.SpaceTableStatus.AVAILABLE
+                            && table.getCapacity() != null
+                            && table.getCapacity() >= participantCount);
+        }
+
+        return false;
     }
 
     @Data
@@ -565,6 +652,88 @@ public class AvailabilityService {
     }
 
     /**
+     * Kiểm tra khả dụng đúng với toàn bộ khung giờ người dùng yêu cầu và cấu hình trong CSDL.
+     */
+    public boolean isSpaceAvailableInInterval(
+            SpaceCatalogItem space,
+            LocalDateTime searchStart,
+            LocalDateTime searchEnd,
+            Integer participantCount
+    ) {
+        if (space == null || searchStart == null || searchEnd == null || !searchStart.isBefore(searchEnd)) {
+            return false;
+        }
+
+        int requestedParticipants = participantCount != null ? participantCount : 1;
+        if (!supportsParticipantCount(space, requestedParticipants)) return false;
+
+        List<com.eduspace.backend.space.entity.MaintenanceBlock> maintenanceBlocks = Collections.emptyList();
+        if (bookingMaintenanceRepository != null) {
+            maintenanceBlocks = bookingMaintenanceRepository.findOverlappingBlocks(space.getId(), searchStart, searchEnd);
+        } else if (maintenanceBlockRepository != null) {
+            maintenanceBlocks = maintenanceBlockRepository.findOverlappingBlocks(space.getId(), searchStart, searchEnd);
+        }
+        if (!maintenanceBlocks.isEmpty()) return false;
+
+        List<Booking> overlappingBookings = bookingRepository.findOverlappingSpaceBookings(
+                space.getId(), searchStart, searchEnd, OCCUPYING_STATUSES
+        );
+
+        if (isWholeSpace(space)) {
+            return overlappingBookings.isEmpty();
+        }
+
+        boolean hasWholeRoomBooking = overlappingBookings.stream()
+                .anyMatch(booking -> booking.getTableId() == null && booking.getSelectedSeatsList().isEmpty());
+        if (hasWholeRoomBooking) return false;
+
+        if (isPerSeat(space)) {
+            if (seatRepository == null) return false;
+
+            Set<String> occupiedSeatCodes = overlappingBookings.stream()
+                    .flatMap(booking -> booking.getSelectedSeatsList().stream())
+                    .filter(Objects::nonNull)
+                    .map(code -> code.trim().toUpperCase())
+                    .collect(Collectors.toSet());
+
+            return seatRepository.findBySpaceIdAndDeletedAtIsNull(space.getId()).stream()
+                    .filter(seat -> seat.getStatus() == com.eduspace.backend.space.entity.SeatStatus.AVAILABLE)
+                    .map(com.eduspace.backend.space.entity.Seat::getSeatCode)
+                    .filter(Objects::nonNull)
+                    .map(code -> code.trim().toUpperCase())
+                    .anyMatch(code -> !occupiedSeatCodes.contains(code));
+        }
+
+        if (isPerTable(space)) {
+            if (spaceTableRepository == null) return false;
+
+            Set<Long> occupiedTableIds = overlappingBookings.stream()
+                    .map(Booking::getTableId)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
+            Set<String> occupiedTableCodes = overlappingBookings.stream()
+                    .flatMap(booking -> booking.getSelectedSeatsList().stream())
+                    .filter(Objects::nonNull)
+                    .map(code -> code.trim().toUpperCase())
+                    .collect(Collectors.toSet());
+
+            return spaceTableRepository.findBySpaceIdAndDeletedAtIsNull(space.getId()).stream()
+                    .filter(table -> table.getStatus() == com.eduspace.backend.space.entity.SpaceTableStatus.AVAILABLE)
+                    .filter(table -> table.getCapacity() != null && table.getCapacity() >= requestedParticipants)
+                    .filter(table -> table.getId() == null || !occupiedTableIds.contains(table.getId()))
+                    .filter(table -> table.getTableCode() == null
+                            || !occupiedTableCodes.contains(table.getTableCode().trim().toUpperCase()))
+                    .findAny()
+                    .isPresent();
+        }
+
+        return false;
+    }
+
+    /**
+     * Logic cũ được giữ riêng để đối chiếu trong quá trình chuyển đổi.
+     * Luồng tìm kiếm và đặt chỗ không gọi phương thức này.
+     *
      * Logic nghiệp vụ thực tế kiểm tra phòng khả dụng trong khoảng thời gian [searchStart, searchEnd]:
      * - Nếu tìm khung giờ vừa vặn (<= 180 phút, ví dụ 20:00 - 22:00):
      *   + WHOLE_SPACE: Ẩn nếu đã có người đặt hoặc phòng có lịch bảo trì trong khung giờ này.
@@ -575,7 +744,7 @@ public class AvailabilityService {
      *     vẫn còn trống >= 30 phút -> VẪN HIỂN THỊ để sinh viên chọn slot phù hợp!
      *   + Chỉ ẩn nếu toàn bộ khoảng thời gian bị phủ kín 100% không còn slot trống nào.
      */
-    public boolean isSpaceAvailableInInterval(SpaceCatalogItem space, LocalDateTime searchStart, LocalDateTime searchEnd, Integer participantCount) {
+    private boolean isSpaceAvailableInIntervalLegacy(SpaceCatalogItem space, LocalDateTime searchStart, LocalDateTime searchEnd, Integer participantCount) {
         if (space == null || searchStart == null || searchEnd == null || !searchStart.isBefore(searchEnd)) {
             return true;
         }
