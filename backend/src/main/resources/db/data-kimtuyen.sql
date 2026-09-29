@@ -94,23 +94,23 @@ INSERT INTO spaces
      description, deleted_at, created_at, updated_at)
 VALUES
     ('G-101', 'Phòng học nhóm G-101', @type_group, 'Tòa A', '1', 6, 'AVAILABLE',
-     'Phòng học nhóm gần sảnh chính.', NULL, DATE_SUB(NOW(), INTERVAL 7 DAY), NOW()),
+     'Phòng học nhóm tiêu chuẩn tầng 1 gần sảnh chờ. Trang bị bàn thảo luận nhóm, bảng từ trắng viết dạ cỡ lớn, ổ cắm sạc laptop và điều hòa không khí 2 chiều.', NULL, DATE_SUB(NOW(), INTERVAL 7 DAY), NOW()),
     ('G-102', 'Phòng học nhóm G-102', @type_group, 'Tòa A', '1', 8, 'AVAILABLE',
-     'Phòng học nhóm có màn hình trình chiếu.', NULL, DATE_SUB(NOW(), INTERVAL 6 DAY), NOW()),
+     'Phòng học nhóm thông minh tầng 1. Trang bị TV thông minh 65 inch kết nối không dây, bảng viết dạ, ổ cắm điện đa năng và điều hòa âm trần hiện đại.', NULL, DATE_SUB(NOW(), INTERVAL 6 DAY), NOW()),
     ('P-201', 'Phòng thuyết trình P-201', @type_presentation, 'Tòa A', '2', 30, 'AVAILABLE',
-     'Phòng thuyết trình có sân khấu nhỏ và hệ thống âm thanh.', NULL, DATE_SUB(NOW(), INTERVAL 5 DAY), NOW()),
+     'Phòng thuyết trình & Hội thảo chuyên dụng tầng 2. Trang bị máy chiếu Full HD và màn chiếu lớn, bục phát biểu, bảng viết dạ, âm thanh micro và điều hòa công suất cao.', NULL, DATE_SUB(NOW(), INTERVAL 5 DAY), NOW()),
     ('S-201', 'Khu tự học S-201', @type_seat, 'Tòa B', '2', 12, 'AVAILABLE',
-     'Khu tự học yên tĩnh gồm mười hai ghế cá nhân.', NULL, DATE_SUB(NOW(), INTERVAL 4 DAY), NOW()),
+     'Phòng học tập trung cá nhân (Khu tự học chung tầng 2). Bố trí các dãy bàn học cá nhân có vách ngăn cách âm, đèn học chống cận, ổ cắm điện riêng từng vị trí và hệ thống điều hòa làm mát liên tục.', NULL, DATE_SUB(NOW(), INTERVAL 4 DAY), NOW()),
     ('B-301', 'Study Booth B-301', @type_booth, 'Tòa B', '3', 2, 'AVAILABLE',
-     'Khoang học cá nhân có vách cách âm.', NULL, DATE_SUB(NOW(), INTERVAL 3 DAY), NOW()),
+     'Study Booth tự học cá nhân cách âm độc lập tầng 3. Không gian yên tĩnh tuyệt đối dành cho 1-2 sinh viên, có bàn ghế đôi, đèn học, ổ cắm điện và quạt thông gió làm mát.', NULL, DATE_SUB(NOW(), INTERVAL 3 DAY), NOW()),
     ('G-103', 'Phòng học nhóm G-103', @type_group, 'Tòa A', '1', 6, 'MAINTENANCE',
-     'Phòng đang bảo trì hệ thống điện.', NULL, DATE_SUB(NOW(), INTERVAL 2 DAY), NOW()),
+     'Phòng học nhóm G-103 (Bảo trì). Đang trong quá trình cải tạo, nâng cấp đường dây điện và bảo dưỡng thiết bị, tạm ngừng phục vụ.', NULL, DATE_SUB(NOW(), INTERVAL 2 DAY), NOW()),
     ('D-201', 'Phòng thảo luận D-201', @type_table, 'Tòa D', '2', 24, 'AVAILABLE',
-     'Phòng gồm bốn bàn thảo luận độc lập.', NULL, DATE_SUB(NOW(), INTERVAL 1 DAY), NOW()),
+     'Phòng thảo luận theo bàn tầng 2. Không gian mở rộng gồm 4 cụm bàn nhóm độc lập (T01 - T04), trang bị bảng trắng, ổ cắm điện và hệ thống điều hòa làm mát toàn diện.', NULL, DATE_SUB(NOW(), INTERVAL 1 DAY), NOW()),
     ('CLB-401', 'Phòng sinh hoạt CLB-401', @type_club, 'Tòa C', '4', 40, 'AVAILABLE',
-     'Không gian dành cho hoạt động câu lạc bộ và sự kiện nhỏ.', NULL, NOW(), NOW()),
+     'Phòng đa năng dành cho sinh hoạt câu lạc bộ và sự kiện nhỏ, trang bị máy chiếu, micro hội thảo và điều hòa nhiệt độ.', NULL, NOW(), NOW()),
     ('L-202', 'Không gian linh hoạt L-202', @type_flexible, 'Tòa E', '2', 20, 'INACTIVE',
-     'Không gian mới đang trong giai đoạn chuẩn bị đưa vào sử dụng.', NULL, NOW(), NOW())
+     'Không gian học tập linh hoạt mới đang trong giai đoạn chuẩn bị đưa vào sử dụng.', NULL, NOW(), NOW())
 ON DUPLICATE KEY UPDATE
     name = VALUES(name),
     space_type_id = VALUES(space_type_id),
@@ -199,46 +199,76 @@ INSERT IGNORE INTO space_facilities (space_id, facility_id) VALUES
     (@space_l202, @facility_power), (@space_l202, @facility_air);
 
 -- --------------------------------------------------------------------------
--- 7. Hình ảnh không gian
--- Chỉ thêm khi URL chưa tồn tại nên chạy lại không tạo ảnh trùng.
+-- 7. Hình ảnh không gian (Lưu trực tiếp vào cột image_url trong bảng space_images)
+-- Phản ánh môi trường trường học chuẩn: Mỗi phòng chỉ dùng đúng 1 kiểu bàn ghế đồng bộ chụp từ nhiều góc.
 -- --------------------------------------------------------------------------
-SET @image_g101 := 'https://images.unsplash.com/photo-1517502884422-41eaead166d4?auto=format&fit=crop&w=1200&q=80';
-SET @image_g102 := 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=80';
-SET @image_p201 := 'https://images.unsplash.com/photo-1577495508048-b635879837f1?auto=format&fit=crop&w=1200&q=80';
-SET @image_s201 := 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=1200&q=80';
-SET @image_b301 := 'https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=1200&q=80';
-SET @image_g103 := 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1200&q=80';
-SET @image_d201 := 'https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&w=1200&q=80';
-SET @image_clb401 := 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=1200&q=80';
-SET @image_l202 := 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1200&q=80';
+-- 1. S-201: Khu tự học chung / Phòng học cá nhân (2 góc chụp đồng bộ 10 khoang tự học cá nhân, sạch 100% không chữ)
+INSERT INTO space_images (space_id, image_url, is_primary, sort_order, created_at, updated_at)
+SELECT @space_s201, 'https://files.catbox.moe/mjnyav.jpg', TRUE, 0, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM space_images WHERE space_id = @space_s201 AND image_url LIKE '%mjnyav%');
 
 INSERT INTO space_images (space_id, image_url, is_primary, sort_order, created_at, updated_at)
-SELECT @space_g101, @image_g101, TRUE, 0, NOW(), NOW()
-WHERE NOT EXISTS (SELECT 1 FROM space_images WHERE space_id = @space_g101 AND image_url = @image_g101);
+SELECT @space_s201, 'https://files.catbox.moe/45lfh2.jpg', FALSE, 1, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM space_images WHERE space_id = @space_s201 AND image_url LIKE '%45lfh2%');
+
+-- 2. P-201: Phòng thuyết trình & Hội thảo (3 góc chụp đồng bộ giảng đường đại học với màn chiếu lớn, bàn ghế gỗ học sinh)
 INSERT INTO space_images (space_id, image_url, is_primary, sort_order, created_at, updated_at)
-SELECT @space_g102, @image_g102, TRUE, 0, NOW(), NOW()
-WHERE NOT EXISTS (SELECT 1 FROM space_images WHERE space_id = @space_g102 AND image_url = @image_g102);
+SELECT @space_p201, 'https://files.catbox.moe/o57opz.jpg', TRUE, 0, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM space_images WHERE space_id = @space_p201 AND image_url LIKE '%o57opz%');
+
 INSERT INTO space_images (space_id, image_url, is_primary, sort_order, created_at, updated_at)
-SELECT @space_p201, @image_p201, TRUE, 0, NOW(), NOW()
-WHERE NOT EXISTS (SELECT 1 FROM space_images WHERE space_id = @space_p201 AND image_url = @image_p201);
+SELECT @space_p201, 'https://files.catbox.moe/1ydvma.jpg', FALSE, 1, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM space_images WHERE space_id = @space_p201 AND image_url LIKE '%1ydvma%');
+
 INSERT INTO space_images (space_id, image_url, is_primary, sort_order, created_at, updated_at)
-SELECT @space_s201, @image_s201, TRUE, 0, NOW(), NOW()
-WHERE NOT EXISTS (SELECT 1 FROM space_images WHERE space_id = @space_s201 AND image_url = @image_s201);
+SELECT @space_p201, 'https://files.catbox.moe/3z5h0n.jpg', FALSE, 2, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM space_images WHERE space_id = @space_p201 AND image_url LIKE '%3z5h0n%');
+
+-- 3. G-101: Phòng học nhóm tiêu chuẩn (2 góc chụp đồng bộ phòng 6 người, bàn gỗ chữ nhật, 6 ghế tựa lưới, bảng trắng, điều hòa)
 INSERT INTO space_images (space_id, image_url, is_primary, sort_order, created_at, updated_at)
-SELECT @space_b301, @image_b301, TRUE, 0, NOW(), NOW()
-WHERE NOT EXISTS (SELECT 1 FROM space_images WHERE space_id = @space_b301 AND image_url = @image_b301);
+SELECT @space_g101, 'https://files.catbox.moe/4f1ye1.jpg', TRUE, 0, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM space_images WHERE space_id = @space_g101 AND image_url LIKE '%4f1ye1%');
+
 INSERT INTO space_images (space_id, image_url, is_primary, sort_order, created_at, updated_at)
-SELECT @space_g103, @image_g103, TRUE, 0, NOW(), NOW()
-WHERE NOT EXISTS (SELECT 1 FROM space_images WHERE space_id = @space_g103 AND image_url = @image_g103);
+SELECT @space_g101, 'https://files.catbox.moe/x0qgtu.jpg', FALSE, 1, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM space_images WHERE space_id = @space_g101 AND image_url LIKE '%x0qgtu%');
+
+-- 4. G-102: Phòng học nhóm thông minh (2 góc chụp đồng bộ phòng 8 chỗ, bàn họp nhóm, 8 ghế tựa, TV 65 inch)
 INSERT INTO space_images (space_id, image_url, is_primary, sort_order, created_at, updated_at)
-SELECT @space_d201, @image_d201, TRUE, 0, NOW(), NOW()
-WHERE NOT EXISTS (SELECT 1 FROM space_images WHERE space_id = @space_d201 AND image_url = @image_d201);
+SELECT @space_g102, 'https://files.catbox.moe/usyn31.jpg', TRUE, 0, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM space_images WHERE space_id = @space_g102 AND image_url LIKE '%usyn31%');
+
 INSERT INTO space_images (space_id, image_url, is_primary, sort_order, created_at, updated_at)
-SELECT @space_clb401, @image_clb401, TRUE, 0, NOW(), NOW()
-WHERE NOT EXISTS (SELECT 1 FROM space_images WHERE space_id = @space_clb401 AND image_url = @image_clb401);
+SELECT @space_g102, 'https://files.catbox.moe/6ljqtf.jpg', FALSE, 1, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM space_images WHERE space_id = @space_g102 AND image_url LIKE '%6ljqtf%');
+
+-- 5. B-301: Study Booth cá nhân (Khoang tự học cách âm độc lập, bàn học và 2 ghế)
 INSERT INTO space_images (space_id, image_url, is_primary, sort_order, created_at, updated_at)
-SELECT @space_l202, @image_l202, TRUE, 0, NOW(), NOW()
-WHERE NOT EXISTS (SELECT 1 FROM space_images WHERE space_id = @space_l202 AND image_url = @image_l202);
+SELECT @space_b301, 'https://files.catbox.moe/fysb5s.jpg', TRUE, 0, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM space_images WHERE space_id = @space_b301 AND image_url LIKE '%fysb5s%');
+
+-- 6. D-201: Phòng thảo luận theo bàn (2 góc chụp đồng bộ phòng học nhóm cụm bàn tròn, 4 ghế mỗi bàn, bảng trắng, điều hòa)
+INSERT INTO space_images (space_id, image_url, is_primary, sort_order, created_at, updated_at)
+SELECT @space_d201, 'https://files.catbox.moe/9l2bgz.jpg', TRUE, 0, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM space_images WHERE space_id = @space_d201 AND image_url LIKE '%9l2bgz%');
+
+INSERT INTO space_images (space_id, image_url, is_primary, sort_order, created_at, updated_at)
+SELECT @space_d201, 'https://files.catbox.moe/0i2pak.jpg', FALSE, 1, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM space_images WHERE space_id = @space_d201 AND image_url LIKE '%0i2pak%');
+
+-- 7. G-103: Phòng học nhóm G-103 (Phòng học nhóm tiêu chuẩn 6 chỗ)
+INSERT INTO space_images (space_id, image_url, is_primary, sort_order, created_at, updated_at)
+SELECT @space_g103, 'https://files.catbox.moe/25zkcl.jpg', TRUE, 0, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM space_images WHERE space_id = @space_g103 AND image_url LIKE '%25zkcl%');
+
+-- 8. CLB-401: Phòng sinh hoạt CLB
+INSERT INTO space_images (space_id, image_url, is_primary, sort_order, created_at, updated_at)
+SELECT @space_clb401, 'https://files.catbox.moe/o57opz.jpg', TRUE, 0, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM space_images WHERE space_id = @space_clb401 AND image_url LIKE '%o57opz%');
+
+INSERT INTO space_images (space_id, image_url, is_primary, sort_order, created_at, updated_at)
+SELECT @space_clb401, 'https://files.catbox.moe/1ydvma.jpg', FALSE, 1, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM space_images WHERE space_id = @space_clb401 AND image_url LIKE '%1ydvma%');
 
 COMMIT;
 

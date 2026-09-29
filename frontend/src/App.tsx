@@ -74,9 +74,9 @@ export default function App() {
                     <Route path="/admin/spaces" element={<SpaceListPageKT />} />
                     <Route path="/admin/spaces/:id" element={<SpaceDetailPageKT />} />
                     <Route path="/admin/facilities" element={<FacilityListPageKT />} />
-                    <Route path="/staff" element={<BookingManagementPageKT />} />
+                    {/* <Route path="/staff" element={<BookingManagementPageKT />} />
                     <Route path="/staff/bookings" element={<BookingManagementPageKT />} />
-                    <Route path="/staff/operations" element={<StaffOperationsPageKT />} />
+                    <Route path="/staff/operations" element={<StaffOperationsPageKT />} /> */}
                 </Route>
 
                 {/* 3. Đăng nhập */}
@@ -102,10 +102,12 @@ export default function App() {
 
                     {/* STAFF */}
                     <Route element={<ProtectedRoute allowedRoles={['STAFF', 'ADMIN']} />}>
-                        <Route path={STAFF_BASE} element={<StaffOperationsPageKT />} />
                         <Route path={`${STAFF_BASE}/checkin-demo`} element={<CheckInDemoPage />} />
                         <Route path={`${STAFF_BASE}/qr`} element={<Placeholder title="Check-in QR" owner="Vũ" />} />
                         <Route path={`${STAFF_BASE}/equipment`} element={<Placeholder title="Thiết bị" owner="Vũ" />} />
+                        <Route path={`${STAFF_BASE}`} element={<BookingManagementPageKT />} />
+                        <Route path={`${STAFF_BASE}/bookings`} element={<BookingManagementPageKT />} />
+                        <Route path={`${STAFF_BASE}/operations`} element={<StaffOperationsPageKT />} />
                     </Route>
 
                     {/* STUDENT */}

@@ -178,34 +178,78 @@ INSERT IGNORE INTO space_facilities (space_id, facility_id) VALUES
 INSERT INTO space_images
     (space_id, image_url, is_primary, sort_order, created_at, updated_at)
 SELECT @space_whole,
-       'https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=1200&q=80',
+       'https://files.catbox.moe/o57opz.jpg',
        1, 0, NOW(), NOW()
 WHERE NOT EXISTS (
     SELECT 1 FROM space_images
     WHERE space_id = @space_whole
-      AND image_url LIKE 'https://images.unsplash.com/photo-1497366811353-6870744d04b2%'
+      AND image_url LIKE '%o57opz%'
+);
+
+INSERT INTO space_images
+    (space_id, image_url, is_primary, sort_order, created_at, updated_at)
+SELECT @space_whole,
+       'https://files.catbox.moe/1ydvma.jpg',
+       0, 1, NOW(), NOW()
+WHERE NOT EXISTS (
+    SELECT 1 FROM space_images
+    WHERE space_id = @space_whole
+      AND image_url LIKE '%1ydvma%'
+);
+
+INSERT INTO space_images
+    (space_id, image_url, is_primary, sort_order, created_at, updated_at)
+SELECT @space_whole,
+       'https://files.catbox.moe/3z5h0n.jpg',
+       0, 2, NOW(), NOW()
+WHERE NOT EXISTS (
+    SELECT 1 FROM space_images
+    WHERE space_id = @space_whole
+      AND image_url LIKE '%3z5h0n%'
 );
 
 INSERT INTO space_images
     (space_id, image_url, is_primary, sort_order, created_at, updated_at)
 SELECT @space_seat,
-       'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&w=1200&q=80',
+       'https://files.catbox.moe/mjnyav.jpg',
        1, 0, NOW(), NOW()
 WHERE NOT EXISTS (
     SELECT 1 FROM space_images
     WHERE space_id = @space_seat
-      AND image_url LIKE 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f%'
+      AND image_url LIKE '%mjnyav%'
+);
+
+INSERT INTO space_images
+    (space_id, image_url, is_primary, sort_order, created_at, updated_at)
+SELECT @space_seat,
+       'https://files.catbox.moe/45lfh2.jpg',
+       0, 1, NOW(), NOW()
+WHERE NOT EXISTS (
+    SELECT 1 FROM space_images
+    WHERE space_id = @space_seat
+      AND image_url LIKE '%45lfh2%'
 );
 
 INSERT INTO space_images
     (space_id, image_url, is_primary, sort_order, created_at, updated_at)
 SELECT @space_table,
-       'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1200&q=80',
+       'https://files.catbox.moe/9l2bgz.jpg',
        1, 0, NOW(), NOW()
 WHERE NOT EXISTS (
     SELECT 1 FROM space_images
     WHERE space_id = @space_table
-      AND image_url LIKE 'https://images.unsplash.com/photo-1497366754035-f200968a6e72%'
+      AND image_url LIKE '%9l2bgz%'
+);
+
+INSERT INTO space_images
+    (space_id, image_url, is_primary, sort_order, created_at, updated_at)
+SELECT @space_table,
+       'https://files.catbox.moe/0i2pak.jpg',
+       0, 1, NOW(), NOW()
+WHERE NOT EXISTS (
+    SELECT 1 FROM space_images
+    WHERE space_id = @space_table
+      AND image_url LIKE '%0i2pak%'
 );
 
 -- --------------------------------------------------------------------------
