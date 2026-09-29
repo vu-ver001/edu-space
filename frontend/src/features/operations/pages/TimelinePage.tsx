@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, ReactNode } from 'react';
 import {
   Armchair,
-  Building2,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
@@ -18,7 +17,7 @@ import {
   UsersRound,
   X,
 } from 'lucide-react';
-import { hasTimelineConflict, timelineSpaces } from '../mockOperations';
+import { hasTimelineConflict } from '../mockOperations';
 import { staffApi } from '../../staff/api/staffApi';
 import { spaceApi } from '../../space/api/spaceApi';
 import type { StaffTimelineEvent } from '../../staff/types/staff';
@@ -56,11 +55,14 @@ const mapStaffEventToOperations = (event: StaffTimelineEvent): OperationsTimelin
 type ViewMode = 'day' | 'week' | 'list';
 type LoadMode = 'loading' | 'refreshing';
 
-const timelineStartHour = 6;
-const timelineEndHour = 24;
+// Khung giờ hiển thị neo theo chính sách vận hành:
+// OPENING_HOUR=07:00, CLOSING_HOUR=22:00 (DataSeeder.java:156,159).
+// Dùng 8h-22h để chừa 1h biên an toàn ở hai đầu.
+const timelineStartHour = 8;
+const timelineEndHour = 22;
 const timelineDurationMinutes = (timelineEndHour - timelineStartHour) * 60;
 const weekStartHour = 8;
-const weekEndHour = 24;
+const weekEndHour = 22;
 const weekDurationMinutes = (weekEndHour - weekStartHour) * 60;
 const weekDayLabels = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'];
 
@@ -153,6 +155,26 @@ const formatTime = (value: string) => new Intl.DateTimeFormat('vi-VN', {
   hour: '2-digit', minute: '2-digit', hour12: false,
 }).format(new Date(value));
 
+const getWeekNumber = (dateStr: string) => {
+  const d = new Date(`${dateStr}T00:00:00`);
+  d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+  const yearStart = new Date(d.getFullYear(), 0, 1);
+  return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+};
+
+const formatDayMonth = (dateStr: string) => {
+  const d = parseDateInput(dateStr);
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+};
+
+const spaceThumbnails: Record<number, string> = {
+  1: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=140&q=80',
+  2: 'https://images.unsplash.com/photo-1517502884422-41eaead166d4?auto=format&fit=crop&w=140&q=80',
+  3: 'https://images.unsplash.com/photo-1577495508048-b635879837f1?auto=format&fit=crop&w=140&q=80',
+  4: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=140&q=80',
+};
+const defaultSpaceThumbnail = 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=140&q=80';
+
 const eventDate = (event: OperationsTimelineEvent) => event.startTime.slice(0, 10);
 
 const eventMinutes = (value: string) => {
@@ -228,22 +250,30 @@ const TimelineEventCard = ({ event, conflict, compact = false, style, onSelect }
 interface DayViewProps {
   events: OperationsTimelineEvent[];
   allEvents: OperationsTimelineEvent[];
+  hasActiveFilters: boolean;
+  onResetFilters: () => void;
   onSelect: (event: OperationsTimelineEvent) => void;
 }
 
-const DayTimeline = ({ events, allEvents, onSelect }: DayViewProps) => {
+const DayTimeline = ({ events, allEvents, hasActiveFilters, onResetFilters, onSelect }: DayViewProps) => {
   const labels = Array.from({ length: (timelineEndHour - timelineStartHour) / 2 + 1 }, (_, index) => timelineStartHour + index * 2);
-  const axisLabels = labels.slice(1, -1);
   const visibleEvents = events.filter((event) => eventMinutes(event.endTime) > timelineStartHour * 60 && eventMinutes(event.startTime) < timelineEndHour * 60);
 
   return (
     <div className="timeline-day-view">
       <div className="timeline-day-time-column" aria-hidden="true">
-        {axisLabels.map((hour) => <span key={hour} style={{ top: `${((hour - timelineStartHour) / (timelineEndHour - timelineStartHour)) * 100}%` }}>{`${`${hour}`.padStart(2, '0')}:00`}</span>)}
+        {labels.map((hour) => <span key={hour} style={{ top: `${((hour - timelineStartHour) / (timelineEndHour - timelineStartHour)) * 100}%` }}>{`${`${hour}`.padStart(2, '0')}:00`}</span>)}
       </div>
       <div className="timeline-day-canvas">
         {labels.map((hour) => <div key={hour} className="timeline-day-grid-line" style={{ top: `${((hour - timelineStartHour) / (timelineEndHour - timelineStartHour)) * 100}%` }} />)}
-        {visibleEvents.length === 0 && <div className="timeline-empty-state"><CalendarDays size={28} /><strong>Không có sự kiện</strong><span>Không có lịch phù hợp trong ngày này.</span></div>}
+        {visibleEvents.length === 0 && (
+          <div className="timeline-empty-state">
+            <CalendarDays size={28} />
+            <strong>Không có sự kiện</strong>
+            <span>{hasActiveFilters ? 'Không có lịch phù hợp với bộ lọc hiện tại.' : 'Không có lịch trong ngày này.'}</span>
+            {hasActiveFilters && <button type="button" className="timeline-empty-action" onClick={onResetFilters}>Đặt lại bộ lọc</button>}
+          </div>
+        )}
         {visibleEvents.map((event) => {
           const start = Math.max(eventMinutes(event.startTime), timelineStartHour * 60);
           const end = Math.min(eventMinutes(event.endTime), timelineEndHour * 60);
@@ -267,6 +297,8 @@ interface WeekViewProps {
   dates: string[];
   events: OperationsTimelineEvent[];
   selectedDate: string;
+  hasActiveFilters: boolean;
+  onResetFilters: () => void;
   onSelect: (event: OperationsTimelineEvent) => void;
   onDateSelect: (date: string) => void;
 }
@@ -325,10 +357,24 @@ const layoutWeekDayEvents = (dayEvents: OperationsTimelineEvent[], date: string)
   return result;
 };
 
-const WeekTimeline = ({ dates, events, selectedDate, onSelect, onDateSelect }: WeekViewProps) => {
+const WeekTimeline = ({ dates, events, selectedDate, hasActiveFilters, onResetFilters, onSelect, onDateSelect }: WeekViewProps) => {
   const hours = Array.from({ length: weekEndHour - weekStartHour + 1 }, (_, index) => weekStartHour + index);
   const timeLabels = hours.filter((hour) => hour % 2 === 0);
   const today = toDateInput(new Date());
+
+  const getStatusBadge = (status: string, eventType: string) => {
+    let badgeClass = 'badge-confirmed';
+    if (eventType === 'MAINTENANCE' || status === 'IN_PROGRESS') {
+      badgeClass = 'badge-inprogress';
+    } else if (status === 'PENDING_APPROVAL') {
+      badgeClass = 'badge-pending';
+    } else if (status === 'CHECKED_IN') {
+      badgeClass = 'badge-checkedin';
+    } else if (status === 'SCHEDULED') {
+      badgeClass = 'badge-scheduled';
+    }
+    return <span className={`weekly-event-pill ${badgeClass}`}>{detailStatusLabels[status] ?? status}</span>;
+  };
 
   return (
     <div className="weekly-scheduler-scroll">
@@ -336,18 +382,18 @@ const WeekTimeline = ({ dates, events, selectedDate, onSelect, onDateSelect }: W
         <div className="weekly-scheduler-header">
           <div className="weekly-timezone">GMT+7</div>
           {dates.map((date, index) => {
-            const eventCount = events.filter((event) => eventDate(event) === date).length;
+            const isToday = date === today;
+            const isSelected = date === selectedDate;
             return (
               <button
                 type="button"
                 key={date}
-                className={`weekly-day-header ${date === selectedDate ? 'is-selected' : ''} ${date === today ? 'is-today' : ''}`}
+                className={`weekly-day-header ${isSelected ? 'is-selected' : ''} ${isToday ? 'is-today' : ''}`}
                 onClick={() => onDateSelect(date)}
                 aria-label={`Mở lịch ngày ${formatDateOnly(`${date}T00:00:00`)}`}
               >
-                <span>{weekDayLabels[index]}</span>
-                <strong>{parseDateInput(date).getDate()}</strong>
-                <small>{eventCount > 0 ? `${eventCount} sự kiện` : 'Không có lịch'}</small>
+                <span className="weekly-day-title">{weekDayLabels[index]}</span>
+                <span className="weekly-day-date">{formatDayMonth(date)}</span>
               </button>
             );
           })}
@@ -366,18 +412,32 @@ const WeekTimeline = ({ dates, events, selectedDate, onSelect, onDateSelect }: W
             {dates.map((date) => {
               const dayEvents = events.filter((event) => eventDate(event) === date);
               const layoutEvents = layoutWeekDayEvents(dayEvents, date);
+              const isToday = date === today;
               return (
-                <div className={`weekly-day-column ${date === today ? 'is-today' : ''}`} key={date}>
+                <div className={`weekly-day-column ${isToday ? 'is-today' : ''}`} key={date}>
                   {layoutEvents.map(({ event, start, end, lane, laneCount }) => {
                     const conflict = hasTimelineConflict(event, events);
                     const top = ((start - weekStartHour * 60) / weekDurationMinutes) * 100;
                     const height = ((end - start) / weekDurationMinutes) * 100;
                     const laneWidth = 100 / laneCount;
+                    const isPending = event.status === 'PENDING_APPROVAL';
+                    const isMaintenance = event.eventType === 'MAINTENANCE';
+                    const isCheckedIn = event.status === 'CHECKED_IN';
+                    const eventClass = conflict
+                      ? 'has-conflict'
+                      : isMaintenance
+                        ? 'weekly-event-maintenance'
+                        : isCheckedIn
+                          ? 'weekly-event-checkedin'
+                          : isPending
+                            ? 'weekly-event-pending'
+                            : 'weekly-event-booking';
+
                     return (
                       <button
                         type="button"
                         key={`${event.eventType}-${event.eventId}`}
-                        className={`weekly-scheduler-event weekly-event-${event.eventType.toLowerCase()} ${conflict ? 'has-conflict' : ''}`}
+                        className={`weekly-scheduler-event ${eventClass}`}
                         style={{
                           top: `${top}%`,
                           height: `${height}%`,
@@ -387,16 +447,45 @@ const WeekTimeline = ({ dates, events, selectedDate, onSelect, onDateSelect }: W
                         onClick={() => onSelect(event)}
                         aria-label={`${event.title}, ${formatTime(event.startTime)} - ${formatTime(event.endTime)}${conflict ? ', có khả năng xung đột' : ''}`}
                       >
-                        <span className="weekly-event-time">{formatTime(event.startTime)}–{formatTime(event.endTime)}</span>
-                        <strong>{event.title}</strong>
-                        <span className="weekly-event-status">{detailStatusLabels[event.status] ?? event.status}</span>
-                        {conflict && <span className="weekly-event-conflict" title="Có khả năng xung đột"><TriangleAlert size={11} /><span>Xung đột</span></span>}
+                        <span className="weekly-event-time">{formatTime(event.startTime)} - {formatTime(event.endTime)}</span>
+                        <strong className="weekly-event-title">{event.title}</strong>
+                        <span className="weekly-event-code">#{event.displayCode}</span>
+                        <div className="weekly-event-pill-row">
+                          {getStatusBadge(event.status, event.eventType)}
+                        </div>
+                        {event.eventType === 'BOOKING' && event.participantCount !== undefined && (
+                          <span className="weekly-event-participant-count"><UsersRound size={11} /> {event.participantCount} người</span>
+                        )}
+                        {conflict && (
+                          <span className="weekly-event-conflict-warn"><TriangleAlert size={11} /> Có khả năng xung đột</span>
+                        )}
                       </button>
                     );
                   })}
                 </div>
               );
             })}
+            {events.length === 0 && (
+              <div className="timeline-empty-state">
+                <CalendarDays size={28} />
+                <strong>Không có sự kiện</strong>
+                <span>{hasActiveFilters ? 'Không có lịch phù hợp với bộ lọc hiện tại.' : 'Không có lịch trong tuần này.'}</span>
+                {hasActiveFilters && <button type="button" className="timeline-empty-action" onClick={onResetFilters}>Đặt lại bộ lọc</button>}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* FOOTER LEGEND VÀ SỐ LƯỢNG SỰ KIỆN THEO ĐÚNG ẢNH MẪU */}
+        <div className="weekly-scheduler-footer">
+          <div className="timeline-legend">
+            <span className="legend-item"><span className="legend-dot dot-booking" /> Booking</span>
+            <span className="legend-item"><span className="legend-dot dot-maintenance" /> Bảo trì</span>
+            <span className="legend-item"><span className="legend-dot dot-pending" /> Chờ duyệt</span>
+            <span className="legend-item"><span className="legend-dot dot-conflict" /> Xung đột</span>
+          </div>
+          <div className="timeline-event-count">
+            Hiển thị {events.length} sự kiện trong tuần
           </div>
         </div>
       </div>
@@ -406,10 +495,12 @@ const WeekTimeline = ({ dates, events, selectedDate, onSelect, onDateSelect }: W
 
 interface ListViewProps {
   events: OperationsTimelineEvent[];
+  hasActiveFilters: boolean;
+  onResetFilters: () => void;
   onSelect: (event: OperationsTimelineEvent) => void;
 }
 
-const ListTimeline = ({ events, onSelect }: ListViewProps) => {
+const ListTimeline = ({ events, hasActiveFilters, onResetFilters, onSelect }: ListViewProps) => {
   const groups = Array.from(events.reduce((map, event) => {
     const date = eventDate(event);
     const current = map.get(date) ?? [];
@@ -420,7 +511,14 @@ const ListTimeline = ({ events, onSelect }: ListViewProps) => {
 
   return (
     <div className="timeline-list-view">
-      {groups.length === 0 ? <div className="timeline-empty-state"><CalendarDays size={28} /><strong>Không có sự kiện</strong><span>Không có lịch phù hợp với bộ lọc hiện tại.</span></div> : groups.map(([date, dayEvents]) => (
+      {groups.length === 0 ? (
+        <div className="timeline-empty-state">
+          <CalendarDays size={28} />
+          <strong>Không có sự kiện</strong>
+          <span>{hasActiveFilters ? 'Không có lịch phù hợp với bộ lọc hiện tại.' : 'Không có lịch trong khoảng thời gian đã chọn.'}</span>
+          {hasActiveFilters && <button type="button" className="timeline-empty-action" onClick={onResetFilters}>Đặt lại bộ lọc</button>}
+        </div>
+      ) : groups.map(([date, dayEvents]) => (
         <section className="timeline-list-group" key={date}>
           <header><h3>{formatDateHeading(date)}</h3><span>{dayEvents.length} sự kiện</span></header>
           <div>{dayEvents.map((event) => <TimelineEventCard key={`${event.eventType}-${event.eventId}`} event={event} conflict={hasTimelineConflict(event, events)} compact onSelect={onSelect} />)}</div>
@@ -456,8 +554,8 @@ const BookingDetailItem = ({ icon, label, value, secondary }: BookingDetailItemP
 
 const TimelineEventModal = ({ event, conflicts, onClose }: EventModalProps) => {
   const isBooking = event.eventType === 'BOOKING';
-  const selectedSpace = timelineSpaces.find((space) => space.id === event.spaceId)
-    ?? { id: event.spaceId, name: event.spaceName };
+  // spaceName do backend trả sẵn, không cần tra danh sách không gian local.
+  const selectedSpace = { id: event.spaceId, name: event.spaceName, location: event.spaceName };
   const detailStatus = detailStatusLabels[event.status] ?? event.status;
   const statusIcon = event.status === 'CONFIRMED'
     ? <CheckCircle2 size={17} />
@@ -529,11 +627,11 @@ const TimelineEventModal = ({ event, conflicts, onClose }: EventModalProps) => {
 };
 
 export const TimelinePage = () => {
-  const defaultSpaceId = timelineSpaces[1]?.id ?? timelineSpaces[0]?.id ?? 1;
   const initialToday = useMemo(() => toDateInput(new Date()), []);
   const initialNextWeek = useMemo(() => addDays(initialToday, 6), [initialToday]);
 
-  const [selectedSpaceId, setSelectedSpaceId] = useState(defaultSpaceId);
+  // spaceId rỗng cho tới khi danh sách không gian thật tải xong (không dùng ID mock).
+  const [selectedSpaceId, setSelectedSpaceId] = useState<number | ''>('');
   const [selectedDate, setSelectedDate] = useState(initialToday);
   const [calendarMonth, setCalendarMonth] = useState(() => startOfMonth(initialToday));
   const [fromDate, setFromDate] = useState(initialToday);
@@ -542,9 +640,9 @@ export const TimelinePage = () => {
   const [status, setStatus] = useState('');
   const [spaceSearch, setSpaceSearch] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('day');
-  const [appliedQuery, setAppliedQuery] = useState<TimelineQuery>({ spaceId: defaultSpaceId, from: initialToday, to: initialNextWeek });
+  const [appliedQuery, setAppliedQuery] = useState<TimelineQuery>({ from: initialToday, to: initialNextWeek });
   const [events, setEvents] = useState<OperationsTimelineEvent[]>([]);
-  const [spaces, setSpaces] = useState<OperationsSpace[]>(timelineSpaces);
+  const [spaces, setSpaces] = useState<OperationsSpace[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
@@ -553,7 +651,10 @@ export const TimelinePage = () => {
 
   const loadTimeline = useCallback(async (query: TimelineQuery, mode: LoadMode = 'loading') => {
     if (!query.spaceId) {
+      // Phải tắt loading ở nhánh sớm, nếu không màn hình kẹt vĩnh viễn ở "Đang tải...".
       setEvents([]);
+      if (mode === 'refreshing') setRefreshing(false);
+      else setLoading(false);
       return;
     }
     if (mode === 'refreshing') setRefreshing(true);
@@ -594,27 +695,22 @@ export const TimelinePage = () => {
     let cancelled = false;
     spaceApi.getAllSpaces()
       .then((realSpaces) => {
-        if (cancelled || !Array.isArray(realSpaces) || realSpaces.length === 0) return;
+        if (cancelled || !Array.isArray(realSpaces)) return;
         const mapped: OperationsSpace[] = realSpaces.map((space) => ({
           id: space.id,
           name: space.name,
           location: [space.building, space.floor].filter(Boolean).join(' · '),
         }));
         setSpaces(mapped);
-        // Nếu spaceId mặc định từ mock không tồn tại trong DB thật, chuyển sang space thật đầu tiên.
-        if (!mapped.some((space) => space.id === defaultSpaceId)) {
-          const firstId = mapped[0]?.id ?? defaultSpaceId;
-          setSelectedSpaceId(firstId);
-          setAppliedQuery((prev) => (prev.spaceId === defaultSpaceId ? { ...prev, spaceId: firstId } : prev));
-        }
+        // Chọn không gian thật đầu tiên; nếu DB rỗng thì để rỗng và hiện thông báo.
+        const firstId = mapped[0]?.id ?? '';
+        setSelectedSpaceId(firstId);
+        setAppliedQuery((prev) => ({ ...prev, spaceId: firstId }));
       })
-      .catch(() => {})
+      .catch(() => { if (!cancelled) setError('Không thể tải danh sách không gian. Vui lòng thử lại.'); });
     return () => { cancelled = true; };
-    // Chỉ chạy 1 lần khi mount để đồng bộ space thật; defaultSpaceId ổn định từ mock.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const selectedSpace = spaces.find((space) => space.id === selectedSpaceId) ?? spaces[0] ?? timelineSpaces[0];
   const visibleSpaces = useMemo(() => {
     const keyword = spaceSearch.trim().toLocaleLowerCase('vi-VN');
     return keyword
@@ -642,6 +738,9 @@ export const TimelinePage = () => {
 
   const conflictEvents = useMemo(() => selectedEvent ? events.filter((event) => overlaps(selectedEvent, event)) : [], [events, selectedEvent]);
 
+  // Bộ lọc đang "có hiệu lực" = khác mặc định (loại sự kiện / trạng thái đã chọn).
+  const hasActiveFilters = eventType !== '' || status !== '';
+
   const selectSpace = (spaceId: number) => {
     setSelectedSpaceId(spaceId);
     const nextQuery = { ...appliedQuery, spaceId };
@@ -653,42 +752,31 @@ export const TimelinePage = () => {
     setCalendarMonth(startOfMonth(date));
 
     const effectiveMode = targetMode ?? viewMode;
-    if (effectiveMode === 'week') {
-      const monday = startOfWeek(date);
-      const sunday = addDays(monday, 6);
-      if (appliedQuery.from !== monday || appliedQuery.to !== sunday) {
-        setFromDate(monday);
-        setToDate(sunday);
-        setAppliedQuery((prev) => ({ ...prev, from: monday, to: sunday }));
-      }
-    } else if (effectiveMode === 'day') {
-      if (date < appliedQuery.from || date > appliedQuery.to) {
-        setFromDate(date);
-        const nextWeek = addDays(date, 6);
-        setToDate(nextWeek);
-        setAppliedQuery((prev) => ({ ...prev, from: date, to: nextWeek }));
-      }
+    const next = syncRangeToViewMode(effectiveMode, date);
+    setFromDate(next.from);
+    setToDate(next.to);
+    setAppliedQuery((prev) => ({ ...prev, from: next.from, to: next.to }));
+  };
+
+  // Đổi chế độ xem thì khoảng ngày phải khớp chế độ mới, nếu không dữ liệu cũ
+  // (ví dụ: 1 ngày của chế độ Ngày) sẽ bị dùng lại cho chế độ Tuần/Danh sách.
+  const syncRangeToViewMode = (mode: ViewMode, anchorDate: string) => {
+    if (mode === 'week') {
+      const monday = startOfWeek(anchorDate);
+      return { from: monday, to: addDays(monday, 6) };
     }
+    if (mode === 'day') {
+      return { from: anchorDate, to: anchorDate };
+    }
+    return { from: anchorDate, to: addDays(anchorDate, 6) };
   };
 
   const handleViewModeChange = (nextMode: ViewMode) => {
     setViewMode(nextMode);
-    if (nextMode === 'week') {
-      const monday = startOfWeek(selectedDate);
-      const sunday = addDays(monday, 6);
-      if (appliedQuery.from !== monday || appliedQuery.to !== sunday) {
-        setFromDate(monday);
-        setToDate(sunday);
-        setAppliedQuery((prev) => ({ ...prev, from: monday, to: sunday }));
-      }
-    } else if (nextMode === 'day') {
-      if (selectedDate < appliedQuery.from || selectedDate > appliedQuery.to) {
-        setFromDate(selectedDate);
-        const nextWeek = addDays(selectedDate, 6);
-        setToDate(nextWeek);
-        setAppliedQuery((prev) => ({ ...prev, from: selectedDate, to: nextWeek }));
-      }
-    }
+    const next = syncRangeToViewMode(nextMode, selectedDate);
+    setFromDate(next.from);
+    setToDate(next.to);
+    setAppliedQuery((prev) => ({ ...prev, from: next.from, to: next.to }));
   };
 
   const openDay = (date: string) => {
@@ -706,7 +794,13 @@ export const TimelinePage = () => {
       return;
     }
     setValidationError('');
-    const query: TimelineQuery = { spaceId: selectedSpaceId, from: fromDate, to: toDate, eventType, status };
+    const query: TimelineQuery = {
+      spaceId: selectedSpaceId === '' ? undefined : selectedSpaceId,
+      from: fromDate,
+      to: toDate,
+      eventType,
+      status,
+    };
     setAppliedQuery(query);
     if (selectedDate < fromDate || selectedDate > toDate) {
       setSelectedDate(fromDate);
@@ -717,7 +811,7 @@ export const TimelinePage = () => {
   const resetFilters = () => {
     const today = toDateInput(new Date());
     const nextWeek = addDays(today, 6);
-    const firstSpaceId = spaces[0]?.id ?? timelineSpaces[0]?.id ?? 1;
+    const firstSpaceId = spaces[0]?.id ?? '';
     const query: TimelineQuery = { spaceId: firstSpaceId, from: today, to: nextWeek };
     setSelectedSpaceId(firstSpaceId);
     setFromDate(today);
@@ -748,41 +842,6 @@ export const TimelinePage = () => {
         </button>
       </header>
 
-      <section className="calendar-filter-panel" aria-label="Bộ lọc timeline">
-        <label className="calendar-filter-field calendar-space-filter">
-          <span>Không gian</span>
-          <select value={selectedSpaceId} onChange={(event) => selectSpace(Number(event.target.value))} disabled={loading || refreshing}>
-            {spaces.map((space) => <option key={space.id} value={space.id}>{space.name}</option>)}
-          </select>
-        </label>
-        <label className="calendar-filter-field">
-          <span>Từ ngày</span>
-          <div className="calendar-date-field"><input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} /><CalendarDays size={14} /></div>
-        </label>
-        <label className="calendar-filter-field">
-          <span>Đến ngày</span>
-          <div className="calendar-date-field"><input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} /><CalendarDays size={14} /></div>
-        </label>
-        <label className="calendar-filter-field">
-          <span>Loại sự kiện</span>
-          <select value={eventType} onChange={(event) => setEventType(event.target.value as TimelineEventType | '')}>
-            <option value="">Tất cả</option><option value="BOOKING">Booking</option><option value="MAINTENANCE">Bảo trì</option>
-          </select>
-        </label>
-        <label className="calendar-filter-field">
-          <span>Trạng thái</span>
-          <select value={status} onChange={(event) => setStatus(event.target.value)}>
-            <option value="">Tất cả</option>
-            {statusOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
-          </select>
-        </label>
-        <div className="calendar-filter-actions">
-          <button type="button" className="calendar-apply-button" onClick={applyFilters} disabled={loading || refreshing}>Áp dụng</button>
-          <button type="button" className="calendar-reset-button" onClick={resetFilters} disabled={loading || refreshing}>Đặt lại</button>
-        </div>
-      </section>
-      {validationError && <div className="calendar-filter-error" role="alert">{validationError}</div>}
-
       <div className="calendar-workspace">
         <aside className="calendar-sidebar-card">
           <section className="mini-calendar">
@@ -792,25 +851,85 @@ export const TimelinePage = () => {
             </div>
             <div className="mini-calendar-grid mini-calendar-weekdays">{['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map((weekday) => <span key={weekday}>{weekday}</span>)}</div>
             <div className="mini-calendar-grid mini-calendar-days">
-              {monthCells.map((date, index) => date ? <button type="button" key={date} className={selectedDate === date ? 'is-selected' : ''} onClick={() => selectDate(date)}>{parseDateInput(date).getDate()}</button> : <span key={`empty-${index}`} />)}
+              {monthCells.map((date, index) => {
+                if (!date) return <span key={`empty-${index}`} />;
+                const isSelected = selectedDate === date;
+                const isInWeek = viewMode === 'week' && weekDates.includes(date);
+                const dayNum = parseDateInput(date).getDate();
+                return (
+                  <button
+                    type="button"
+                    key={date}
+                    className={`mini-day-cell ${isSelected ? 'is-selected' : ''} ${isInWeek ? 'is-in-week' : ''}`}
+                    onClick={() => selectDate(date)}
+                  >
+                    <span>{dayNum}</span>
+                  </button>
+                );
+              })}
             </div>
+          </section>
+
+          <section className="timeline-filter-card" aria-label="Bộ lọc timeline">
+            <label className="timeline-filter-field">
+              <span>Loại sự kiện</span>
+              <select value={eventType} onChange={(event) => setEventType(event.target.value as TimelineEventType | '')} disabled={loading || refreshing}>
+                <option value="">Tất cả</option><option value="BOOKING">Booking</option><option value="MAINTENANCE">Bảo trì</option>
+              </select>
+            </label>
+            <label className="timeline-filter-field">
+              <span>Trạng thái</span>
+              <select value={status} onChange={(event) => setStatus(event.target.value)} disabled={loading || refreshing}>
+                <option value="">Tất cả</option>
+                {statusOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
+              </select>
+            </label>
+            <div className="timeline-filter-actions">
+              <button type="button" className="calendar-apply-button" onClick={applyFilters} disabled={loading || refreshing}>Áp dụng</button>
+              <button type="button" className="calendar-reset-button" onClick={resetFilters} disabled={loading || refreshing}>Đặt lại</button>
+            </div>
+            {validationError && <div className="calendar-filter-error" role="alert">{validationError}</div>}
           </section>
 
           <section className="space-picker">
             <h2>Danh sách không gian</h2>
             <label className="space-search-field"><Search size={15} /><input value={spaceSearch} onChange={(event) => setSpaceSearch(event.target.value)} placeholder="Tìm kiếm không gian..." /></label>
             <div className="space-list">
-              {visibleSpaces.map((space: OperationsSpace) => <button type="button" key={space.id} className={`space-list-item ${space.id === selectedSpaceId ? 'is-active' : ''}`} onClick={() => selectSpace(space.id)}>
-                <span className={`space-thumbnail ${space.tone ?? ''}`}><Building2 size={18} /></span>
-                <span><strong>{space.name}</strong><small>{space.location}</small></span>
-              </button>)}
+              {visibleSpaces.length === 0 && <div className="space-list-empty">{spaces.length === 0 ? 'Đang tải danh sách không gian...' : 'Không có không gian nào khớp với từ khoá tìm kiếm.'}</div>}
+              {visibleSpaces.map((space: OperationsSpace) => (
+                <button
+                  type="button"
+                  key={space.id}
+                  className={`space-list-item ${space.id === selectedSpaceId ? 'is-active' : ''}`}
+                  onClick={() => selectSpace(space.id)}
+                >
+                  <img
+                    src={spaceThumbnails[space.id] || defaultSpaceThumbnail}
+                    alt=""
+                    className="space-thumbnail-img"
+                    onError={(e) => {
+                      (e.target as HTMLElement).style.display = 'none';
+                    }}
+                  />
+                  <span>
+                    <strong>{space.name}</strong>
+                    <small>{space.location}</small>
+                  </span>
+                </button>
+              ))}
             </div>
           </section>
         </aside>
 
         <section className="schedule-card">
           <header className="schedule-card-header">
-            <div><h2>{viewMode === 'week' ? `Tuần ${formatDateOnly(`${weekDates[0]}T00:00:00`)} – ${formatDateOnly(`${weekDates[6]}T00:00:00`)}` : formatDateHeading(selectedDate)}</h2><span>{selectedSpace?.name}</span></div>
+            <div>
+              <h2>
+                {viewMode === 'week'
+                  ? `Tuần ${getWeekNumber(weekDates[0])} (${formatDayMonth(weekDates[0])} – ${formatDayMonth(weekDates[6])}/${parseDateInput(weekDates[6]).getFullYear()})`
+                  : formatDateHeading(selectedDate)}
+              </h2>
+            </div>
             <div className="schedule-view-switcher" role="group" aria-label="Chế độ xem">
               {([['day', 'Ngày'], ['week', 'Tuần'], ['list', 'Danh sách']] as const).map(([value, label]) => (
                 <button
@@ -827,9 +946,9 @@ export const TimelinePage = () => {
 
           {loading ? <div className="timeline-state-card"><div className="operation-spinner" /><strong>Đang tải timeline...</strong></div> : error ? <div className="timeline-state-card timeline-state-error"><strong>{error}</strong><button type="button" onClick={() => void loadTimeline(appliedQuery)}>Thử lại</button></div> : (
             <div className="timeline-view-content">
-              {viewMode === 'day' && <DayTimeline events={dayEvents} allEvents={events} onSelect={setSelectedEvent} />}
-              {viewMode === 'week' && <WeekTimeline dates={weekDates} events={events} selectedDate={selectedDate} onSelect={setSelectedEvent} onDateSelect={openDay} />}
-              {viewMode === 'list' && <ListTimeline events={events} onSelect={setSelectedEvent} />}
+              {viewMode === 'day' && <DayTimeline events={dayEvents} allEvents={events} hasActiveFilters={hasActiveFilters} onResetFilters={resetFilters} onSelect={setSelectedEvent} />}
+              {viewMode === 'week' && <WeekTimeline dates={weekDates} events={events} selectedDate={selectedDate} hasActiveFilters={hasActiveFilters} onResetFilters={resetFilters} onSelect={setSelectedEvent} onDateSelect={openDay} />}
+              {viewMode === 'list' && <ListTimeline events={events} hasActiveFilters={hasActiveFilters} onResetFilters={resetFilters} onSelect={setSelectedEvent} />}
             </div>
           )}
         </section>

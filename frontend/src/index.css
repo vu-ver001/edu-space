@@ -113,385 +113,148 @@ textarea {
 }
 
 /* ========================================================
-   1. BỐ CỤC HỆ THỐNG NỘI BỘ (Sidebar Dọc Theo Ảnh 2 + Top Bar Theo Ảnh 3)
+   2. FORM TÌM KIẾM NỘI BỘ (Internal Search Card)
+   Chuẩn hóa theo ảnh người dùng cung cấp
    ======================================================== */
-.portal-container {
-  display: flex;
-  min-height: 100vh;
-  background-color: var(--portal-bg);
-}
-
-/* 1.1. Sidebar Dọc 250px (Chuẩn theo Ảnh 2) */
-.portal-sidebar-wide {
-  width: 250px;
-  min-width: 250px;
+.internal-search-card {
   background: #FFFFFF;
-  border-right: 1px solid #E2E8F0;
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  position: sticky;
-  top: 0;
-  z-index: 90;
-  flex-shrink: 0;
-  box-sizing: border-box;
+  border: 1px solid var(--portal-border);
+  border-radius: var(--portal-radius-lg);
+  padding: 24px 28px;
+  margin-bottom: 24px;
+  box-shadow: var(--portal-shadow-card);
 }
 
-/* Operations screens use the same quiet, light-blue active state as the supplied
-   audit/timeline references. */
-.portal-sidebar-wide .sidebar-wide-item.active {
-  background: #e8f2ff;
-  color: #1269db;
-  box-shadow: none;
-}
-
-/* Brand / Logo Top (Ảnh 2) */
-.sidebar-brand-box {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 24px 20px 18px 20px;
-  text-decoration: none;
-}
-
-.sidebar-brand-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
-  background: #1D72FE;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #FFFFFF;
-  flex-shrink: 0;
-  box-shadow: 0 4px 14px rgba(29, 114, 254, 0.35);
-}
-
-.sidebar-brand-text {
-  display: flex;
-  flex-direction: column;
-}
-
-.brand-name {
-  font-size: 1.15rem;
-  font-weight: 800;
+.internal-search-title {
+  font-size: 1.2rem;
+  font-weight: 700;
   color: #0F172A;
-  line-height: 1.2;
+  margin-bottom: 18px;
   letter-spacing: -0.01em;
 }
 
-.brand-desc {
-  font-size: 0.775rem;
-  color: #64748B;
-  font-weight: 500;
-  margin-top: 2px;
-}
-
-/* Khối Vai Trò (Ảnh 2) */
-.sidebar-role-card {
-  margin: 4px 16px 18px 16px;
-  background: #F0F7FF;
-  border-radius: 14px;
-  padding: 12px 16px;
-  border: 1px solid #E0F0FE;
-  display: flex;
-  flex-direction: column;
-}
-
-.role-label-tiny {
-  font-size: 0.725rem;
-  font-weight: 800;
-  color: #2563EB;
-  letter-spacing: 0.05em;
-  margin-bottom: 2px;
-  text-transform: uppercase;
-}
-
-.role-badge-pill {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: #1D4ED8;
-}
-
-/* Danh mục Menu Điều Hướng (Ảnh 2) */
-.sidebar-wide-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 0 16px;
-  flex: 1;
-}
-
-.sidebar-wide-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 20px;
-  border-radius: 9999px;
-  /* Dạng capsule bo tròn toàn bộ theo Ảnh 2 */
-  text-decoration: none;
-  font-size: 0.925rem;
-  font-weight: 600;
-  color: #334155;
-  transition: all 0.15s ease;
-  cursor: pointer;
-  background: transparent;
-}
-
-.sidebar-wide-item:hover {
-  background: #F8FAFD;
-  color: #1D72FE;
-}
-
-/* Mục Active màu xanh dương nổi bật (Ảnh 2) */
-.sidebar-wide-item.active {
-  background: #1D72FE;
-  color: #FFFFFF;
-  font-weight: 700;
-  box-shadow: 0 4px 14px rgba(29, 114, 254, 0.35);
-}
-
-.sidebar-wide-item .nav-item-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: inherit;
-}
-
-.sidebar-wide-item .nav-item-text {
-  color: inherit;
-}
-
-/* User Profile Cố Định Dưới Cùng (Ảnh 2) */
-.sidebar-profile-bottom {
-  margin-top: auto;
-  border-top: 1px solid #F1F5F9;
-  padding: 16px 18px;
-  position: relative;
-}
-
-.user-profile-trigger {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.internal-form-row {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 18px;
   width: 100%;
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 10px;
-  transition: background 0.15s ease;
+  box-sizing: border-box;
 }
 
-.user-profile-trigger:hover {
-  background: #F8FAFD;
-}
-
-.profile-user-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.profile-avatar-circle {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  background: #1D72FE;
-  color: #FFFFFF;
-  font-weight: 800;
-  font-size: 0.85rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  box-shadow: 0 2px 6px rgba(29, 114, 254, 0.25);
-}
-
-.profile-info-col {
-  display: flex;
-  flex-direction: column;
-}
-
-.profile-fullname {
-  font-size: 0.875rem;
-  font-weight: 700;
-  color: #0F172A;
-  line-height: 1.2;
-  margin-bottom: 2px;
-}
-
-.profile-role-sub {
-  font-size: 0.775rem;
-  color: #64748B;
-  font-weight: 500;
-}
-
-.profile-chevron {
-  color: #94A3B8;
-  flex-shrink: 0;
-}
-
-/* Menu chuyển vai trò Demo */
-.sidebar-role-dropdown {
-  position: absolute;
-  bottom: 74px;
-  left: 12px;
-  right: 12px;
-  background: #FFFFFF;
-  border: 1px solid #E2E8F0;
-  border-radius: 14px;
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
-  padding: 10px;
-  z-index: 120;
-  animation: slideDown 0.18s ease;
-}
-
-.dropdown-title {
-  font-size: 0.75rem;
-  font-weight: 800;
-  color: #64748B;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  padding: 4px 8px 8px 8px;
-  border-bottom: 1px solid #F1F5F9;
-  margin-bottom: 6px;
-}
-
-.role-option-btn {
+.internal-form-row.four-cols {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
   width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: none;
-  background: transparent;
-  font-size: 0.825rem;
-  color: #334155;
-  cursor: pointer;
-  text-align: left;
-  transition: all 0.15s ease;
+  box-sizing: border-box;
 }
 
-.role-option-btn:hover {
-  background: #F0F7FF;
-  color: #1D72FE;
+.internal-form-row.two-cols {
+  grid-template-columns: minmax(220px, 1fr) minmax(320px, 2fr);
+  gap: 20px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.role-option-btn.selected {
-  background: #EFF6FF;
-  color: #1D72FE;
-  font-weight: 700;
+@media (max-width: 900px) {
+  .internal-form-row.four-cols {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .internal-form-row.two-cols {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
 }
 
-/* 1.2. Main Area & Top Bar (Chuẩn theo Ảnh 3) */
-.portal-main-area {
-  flex: 1;
+@media (max-width: 560px) {
+  .internal-form-row.four-cols {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+.internal-field {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.portal-top-bar {
-  height: 68px;
-  background: #FFFFFF;
-  border-bottom: 1px solid #F1F5F9;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 32px;
-  position: sticky;
-  top: 0;
-  z-index: 80;
+.internal-label {
+  font-size: 0.825rem;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 6px;
 }
 
-.top-bar-left {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-/* Nút Hamburger viền xanh dương pastel theo đúng Ảnh 3 */
-.top-bar-menu-btn {
-  width: 42px;
+.internal-input,
+.internal-select {
+  width: 100%;
   height: 42px;
-  border: 1.5px solid #93C5FD;
-  border-radius: 12px;
   background: #FFFFFF;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #64748B;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  padding: 0;
-}
-
-.top-bar-menu-btn:hover {
-  background: #F0F7FF;
-  border-color: #60A5FA;
-  color: #1D72FE;
-}
-
-.top-bar-title {
-  font-size: 1.125rem;
-  font-weight: 700;
+  border: 1.5px solid #CBD5E1;
+  border-radius: 8px;
+  padding: 0 14px;
+  font-size: 0.925rem;
   color: #0F172A;
-  letter-spacing: -0.01em;
-  margin: 0;
-}
-
-/* Top Bar Right: Chào, An [AN] (Chuẩn theo Ảnh 3) */
-.top-bar-right {
-  display: flex;
-  align-items: center;
-}
-
-.header-greeting-box {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.greeting-text {
-  font-size: 0.9rem;
-  color: #64748B;
-}
-
-.greeting-text strong {
-  color: #0F172A;
-  font-weight: 700;
-}
-
-.header-avatar-circle {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: #1D72FE;
-  color: #FFFFFF;
-  font-weight: 800;
-  font-size: 0.8rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 6px rgba(29, 114, 254, 0.3);
-}
-
-/* 1.3. Content Canvas - Tự động co giãn mượt mà */
-.portal-content-canvas {
-  padding: 16px 28px 32px;
-  max-width: 1600px;
-  width: 100%;
-  margin: 0 auto;
+  font-family: inherit;
+  outline: none;
   box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.search-spaces-page,
-.space-detail-page {
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
+.internal-input:focus,
+.internal-select:focus {
+  border-color: var(--portal-blue-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
+.input-with-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-with-icon .internal-input,
+.input-with-icon .internal-select {
+  padding-right: 36px;
+}
+
+.input-with-icon .field-icon {
+  position: absolute;
+  right: 12px;
+  pointer-events: none;
+  font-size: 13px;
+  opacity: 0.5;
+}
+
+.internal-input.input-error,
+.internal-select.input-error {
+  border-color: #EF4444 !important;
+  background-color: #FEF2F2 !important;
+  color: #B91C1C !important;
+}
+
+.internal-input.input-error:focus,
+.internal-select.input-error:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2) !important;
+}
+
+.internal-field-error-banner {
+  margin-bottom: 16px;
+  padding: 10px 16px;
+  background: #FEF2F2;
+  border: 1.5px solid #FCA5A5;
+  border-radius: var(--portal-radius-sm);
+  color: #DC2626;
+  font-size: 0.875rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 
 /* ========================================================
    LƯU Ý: Các module CSS của phân hệ Đặt chỗ & Tìm kiếm (M03 & M04)
@@ -1543,19 +1306,7 @@ textarea {
 }
 
 @media (max-width: 640px) {
-  .portal-sidebar {
-    width: 60px;
-  }
-
   .internal-form-row.four-cols {
     grid-template-columns: 1fr;
-  }
-
-  .portal-top-bar {
-    padding: 0 16px;
-  }
-
-  .portal-content-canvas {
-    padding: 16px;
   }
 }
