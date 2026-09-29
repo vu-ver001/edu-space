@@ -558,18 +558,16 @@ public class AvailabilityService {
 
     /**
      * Quy tắc đối tượng sử dụng theo mô hình đặt lấy từ space_types.booking_mode trong CSDL:
-     * - 1 người: đặt ghế cá nhân PER_SEAT hoặc phòng kín WHOLE_SPACE có sức chứa đúng 1.
-     * - Từ 2 người: WHOLE_SPACE hoặc PER_TABLE đủ sức chứa; không dùng PER_SEAT.
+     * - WHOLE_SPACE: từ 1 người đến đúng sức chứa; một booking giữ trọn không gian.
+     * - PER_SEAT: đúng 1 người và chọn một ghế cụ thể.
+     * - PER_TABLE: từ 1 người và phải còn bàn đủ sức chứa.
      */
     public boolean supportsParticipantCount(SpaceCatalogItem space, int participantCount) {
         if (space == null || participantCount < 1) return false;
 
-        if (participantCount == 1) {
-            return isPerSeat(space) || (isWholeSpace(space) && space.getCapacity() == 1);
-        }
-
-        if (isPerSeat(space)) return false;
-        return space.getCapacity() >= participantCount && (isWholeSpace(space) || isPerTable(space));
+        if (isWholeSpace(space)) return space.getCapacity() >= participantCount;
+        if (isPerSeat(space)) return participantCount == 1;
+        return isPerTable(space) && space.getCapacity() >= participantCount;
     }
 
     private boolean hasBookableResourceConfigured(SpaceCatalogItem space, int participantCount) {
@@ -582,7 +580,7 @@ public class AvailabilityService {
         }
 
         if (isPerTable(space)) {
-            if (participantCount < 2 || spaceTableRepository == null) return false;
+            if (spaceTableRepository == null) return false;
             return spaceTableRepository.findBySpaceIdAndDeletedAtIsNull(space.getId()).stream()
                     .anyMatch(table -> table.getStatus() == com.eduspace.backend.space.entity.SpaceTableStatus.AVAILABLE
                             && table.getCapacity() != null
@@ -927,12 +925,6 @@ public class AvailabilityService {
             throw BusinessException.notFound("SPACE_NOT_FOUND", "Không tìm thấy phòng với ID: " + id);
         }
         return mapToResponse(space);
-    }
-
-    public boolean isStudyBooth(String spaceTypeName) {
-        if (spaceTypeName == null) return false;
-        String lower = spaceTypeName.toLowerCase();
-        return lower.contains("booth") || lower.contains("cá nhân");
     }
 
     public boolean isPerSeat(SpaceCatalogItem space) {

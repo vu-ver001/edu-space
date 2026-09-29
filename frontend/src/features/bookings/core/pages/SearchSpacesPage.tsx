@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FilterBar, getNextAvailableSlot } from '../components/FilterBar';
+import { FilterBar } from '../components/FilterBar';
 import { RoomCard } from '../components/RoomCard';
 import { BookingModal } from '../components/BookingModal';
 import { formatMessageDatesVI } from '../components/DateInputVI';
@@ -14,27 +14,22 @@ const matchesParticipantBookingMode = (space: Space, participantCount?: number):
   const count = Math.max(1, Number(participantCount) || 1);
   const bookingMode = space.bookingMode || space.spaceType?.bookingMode;
 
-  if (count === 1) {
-    return bookingMode === 'PER_SEAT'
-      || (bookingMode === 'WHOLE_SPACE' && Number(space.capacity) === 1);
-  }
-  if (bookingMode === 'PER_SEAT') return false;
-
-  return (bookingMode === 'WHOLE_SPACE' || bookingMode === 'PER_TABLE')
-    && Number(space.capacity) >= count;
+  if (bookingMode === 'WHOLE_SPACE') return Number(space.capacity) >= count;
+  if (bookingMode === 'PER_SEAT') return count === 1;
+  return bookingMode === 'PER_TABLE' && Number(space.capacity) >= count;
 };
 
 export const SearchSpacesPage: React.FC = () => {
-  const initialSlot = getNextAvailableSlot();
   const [spaces, setSpaces] = useState<Space[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<SearchFilter>({
-    date: initialSlot.date,
-    startTime: initialSlot.startTime + ':00',
-    endTime: initialSlot.endTime + ':00',
-    participantCount: 4,
+    date: '',
+    startTime: '',
+    endTime: '',
+    participantCount: undefined,
   });
+  const [hasSearched, setHasSearched] = useState<boolean>(false);
   const [selectedSpaceForBooking, setSelectedSpaceForBooking] = useState<Space | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -43,6 +38,12 @@ export const SearchSpacesPage: React.FC = () => {
   );
 
   const fetchSpaces = (filter: SearchFilter = activeFilter) => {
+    if (!filter.date || !filter.startTime || !filter.endTime || !filter.participantCount) {
+      setSpaces([]);
+      setLoading(false);
+      return;
+    }
+
     setCurrentPage(1);
     setLoading(true);
     setError(null);
@@ -187,15 +188,15 @@ export const SearchSpacesPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchSpaces(activeFilter);
-
     // Lắng nghe sự kiện chuyển user hoặc cấp token tự động từ PortalLayout
     const handleUserSwitch = () => {
-      fetchSpaces(activeFilter);
+      if (activeFilter.date && activeFilter.startTime && activeFilter.endTime && activeFilter.participantCount) {
+        fetchSpaces(activeFilter);
+      }
     };
     window.addEventListener('user-switched', handleUserSwitch);
     return () => window.removeEventListener('user-switched', handleUserSwitch);
-  }, []);
+  }, [activeFilter]);
 
   useEffect(() => {
     const mobileLayout = window.matchMedia('(max-width: 768px)');
@@ -207,6 +208,7 @@ export const SearchSpacesPage: React.FC = () => {
   }, []);
 
   const handleSearch = (filter: SearchFilter) => {
+    setHasSearched(true);
     setActiveFilter(filter);
     fetchSpaces(filter);
   };
@@ -228,10 +230,9 @@ export const SearchSpacesPage: React.FC = () => {
   };
 
   const availableCount = spaces.filter((s) => s.isAvailable ?? (s.status === 'AVAILABLE')).length;
-  const rawDate = activeFilter.date || initialSlot.date;
-  const displayDate = formatDisplayDate(rawDate);
-  const displayStart = activeFilter.startTime ? activeFilter.startTime.substring(0, 5) : initialSlot.startTime;
-  const displayEnd = activeFilter.endTime ? activeFilter.endTime.substring(0, 5) : initialSlot.endTime;
+  const displayDate = formatDisplayDate(activeFilter.date);
+  const displayStart = activeFilter.startTime ? activeFilter.startTime.substring(0, 5) : '';
+  const displayEnd = activeFilter.endTime ? activeFilter.endTime.substring(0, 5) : '';
   const pageSize = SPACE_ROWS_PER_PAGE * cardsPerRow;
   const totalPages = Math.max(1, Math.ceil(spaces.length / pageSize));
   const safeCurrentPage = Math.min(currentPage, totalPages);
@@ -288,10 +289,14 @@ export const SearchSpacesPage: React.FC = () => {
       </div>
 
       {/* Bộ lọc tìm kiếm theo form nội bộ chuẩn ảnh mẫu */}
-      <FilterBar onSearch={handleSearch} isLoading={loading} availableCount={availableCount} />
+      <FilterBar
+        onSearch={handleSearch}
+        isLoading={loading}
+        availableCount={hasSearched ? availableCount : undefined}
+      />
 
       {/* Thanh trạng thái khả dụng theo Ảnh 1 (Đã bỏ nút Dạng bảng) */}
-      <div className="results-control-bar">
+      {hasSearched && <div className="results-control-bar">
         <div className="results-info-group">
           <span className="results-availability-text">
             Khả dụng trong khung giờ đã chọn — <strong>{displayDate}</strong> • <strong>{displayStart} - {displayEnd}</strong>
@@ -309,10 +314,16 @@ export const SearchSpacesPage: React.FC = () => {
             🔄 Tải lại
           </button>
         </div>
-      </div>
+      </div>}
 
       {/* Trạng thái Loading / Error / Empty / Content */}
-      {loading ? (
+      {!hasSearched ? (
+        <div className="portal-empty-card">
+          <span>🔎</span>
+          <h4>Chọn thông tin để tìm không gian</h4>
+          <p>Vui lòng chọn ngày, giờ bắt đầu, giờ kết thúc và nhập số người tham gia.</p>
+        </div>
+      ) : loading ? (
         <div className="portal-loading-card">
           <div className="portal-spinner" />
           <p>Đang kiểm tra khả dụng phòng học...</p>

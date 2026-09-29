@@ -147,8 +147,10 @@ export const SpaceDetailPage: React.FC = () => {
   const isPerSeat = bookingMode === 'PER_SEAT'; // Khu tự học chung (Mở) -> Chọn theo ghế
   const isPerTable = bookingMode === 'PER_TABLE'; // Phòng thảo luận theo bàn -> Chọn theo bàn
   const isWholeSpace = !isPerSeat && !isPerTable;
-  // Không gian nhóm: Bàn nhóm (PER_TABLE) hoặc Không gian trọn gói (WHOLE_SPACE) có sức chứa > 1 người
-  const isGroupSpace = isPerTable || (isWholeSpace && (space?.capacity ?? 1) > 1);
+  const isStudyBooth = `${space?.spaceTypeName || ''} ${space?.spaceType?.name || ''}`
+    .toLowerCase()
+    .includes('booth');
+  // WHOLE_SPACE và PER_TABLE đều nhận từ 1 người đến đúng sức chứa.
 
   // LOGIC LIÊN KẾT CSDL: Lấy trực tiếp từ space.requiresApproval (cột space_types.requires_approval của Kim Tuyến)
   const requiresApproval = space?.requiresApproval ?? (space?.spaceType?.requiresApproval ?? !isPerSeat);
@@ -161,6 +163,11 @@ export const SpaceDetailPage: React.FC = () => {
       return;
     }
 
+    if (isWholeSpace && !searchParams.get('participantCount')) {
+      setParticipantCount(1);
+      return;
+    }
+
     if (space?.capacity) {
       setParticipantCount((current) => {
         const count = Number(current);
@@ -168,7 +175,7 @@ export const SpaceDetailPage: React.FC = () => {
         return Math.min(Math.trunc(count), space.capacity);
       });
     }
-  }, [isPerSeat, space?.capacity]);
+  }, [isPerSeat, isWholeSpace, searchParams, space?.capacity]);
 
   // Quản lý danh sách hình ảnh (lấy từ bảng space_images) & Slider/Carousel
   const [spaceImages, setSpaceImages] = useState<string[]>([]);
@@ -386,12 +393,6 @@ export const SpaceDetailPage: React.FC = () => {
       return;
     }
 
-    // Kiểm tra ràng buộc số người tham gia:
-    // Không gian nhóm (bàn nhóm PER_TABLE hoặc phòng trọn gói WHOLE_SPACE có sức chứa > 1) yêu cầu tối thiểu 2 người
-    if (isGroupSpace && Number(participantCount) < 2) {
-      setBookingError('Không gian học nhóm / thảo luận yêu cầu tối thiểu từ 2 người trở lên. Nếu bạn đi 1 mình, vui lòng chọn đặt chỗ ngồi tại Khu tự học cá nhân.');
-      return;
-    }
     if (space?.capacity && Number(participantCount) > space.capacity) {
       setBookingError(`Số người tham gia (${participantCount}) vượt quá sức chứa tối đa (${space.capacity} người) của không gian này.`);
       return;
@@ -945,13 +946,17 @@ export const SpaceDetailPage: React.FC = () => {
                   <span className="participant-capacity-hint">
                     Khu tự học cá nhân: Cố định <strong>1 sinh viên / 1 chỗ ngồi</strong>
                   </span>
-                ) : isGroupSpace ? (
+                ) : isStudyBooth ? (
                   <span className="participant-capacity-hint">
-                    Không gian nhóm: Tối thiểu <strong>2 người</strong>, tối đa <strong>{space.capacity} người</strong>
+                    Study Booth: Từ <strong>1 người</strong> đến tối đa <strong>{space.capacity} người</strong>; một lượt đặt giữ trọn booth
+                  </span>
+                ) : isPerTable ? (
+                  <span className="participant-capacity-hint">
+                    Bàn thảo luận: Từ <strong>1 người</strong> đến tối đa <strong>{space.capacity} người</strong>; chọn bàn đủ chỗ
                   </span>
                 ) : (
                   <span className="participant-capacity-hint">
-                    Sức chứa tối đa: <strong>{space.capacity} người</strong>
+                    Đặt trọn không gian: Từ <strong>1 người</strong> đến tối đa <strong>{space.capacity} người</strong>
                   </span>
                 )}
               </div>
@@ -1028,9 +1033,11 @@ export const SpaceDetailPage: React.FC = () => {
                 {isPerSeat ? (
                   <>💡 Bấm <strong>Chọn chỗ ngồi & Đặt chỗ</strong> để mở sơ đồ chọn ghế cá nhân (S01 - S10). Chế độ đặt theo chỗ ngồi được duyệt tự động ngay lập tức, không bắt buộc điền mục đích sử dụng.</>
                 ) : isPerTable ? (
-                  <>💡 Bàn thảo luận nhóm yêu cầu tối thiểu 2 người trở lên (chỉ chọn bàn có sức chứa đủ cho nhóm). Bắt buộc điền mục đích sử dụng và chờ Staff xét duyệt.</>
+                  <>💡 Một sinh viên có thể đặt bàn cho từ 1 người đến sức chứa của bàn đã chọn. Bắt buộc điền mục đích sử dụng và chờ Staff xét duyệt.</>
+                ) : isStudyBooth ? (
+                  <>💡 Một sinh viên đại diện đặt <strong>toàn bộ Study Booth</strong> cho nhóm từ 1 đến {space?.capacity} người. Bắt buộc điền mục đích sử dụng và chờ Staff xét duyệt.</>
                 ) : (
-                  <>💡 <strong>{space?.name}</strong> là phòng nhóm trọn không gian (tối thiểu 2 người, tối đa {space?.capacity} người). Bắt buộc điền mục đích sử dụng và chờ Staff xét duyệt.</>
+                  <>💡 Một sinh viên đại diện đặt <strong>toàn bộ {space?.name}</strong> cho từ 1 đến {space?.capacity} người. Bắt buộc điền mục đích sử dụng và chờ Staff xét duyệt.</>
                 )}
               </p>
             </form>

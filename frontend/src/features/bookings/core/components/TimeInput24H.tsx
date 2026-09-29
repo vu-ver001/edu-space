@@ -42,16 +42,14 @@ export const TimeInput24H: React.FC<TimeInput24HProps> = ({
   style = {},
 }) => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
-  const [inputValue, setInputValue] = useState<string>(value || '08:00');
+  const [inputValue, setInputValue] = useState<string>(value || '');
   const containerRef = useRef<HTMLDivElement>(null);
   const hourListRef = useRef<HTMLDivElement>(null);
   const minuteListRef = useRef<HTMLDivElement>(null);
 
   // Đồng bộ khi value bên ngoài thay đổi
   useEffect(() => {
-    if (value) {
-      setInputValue(value.substring(0, 5));
-    }
+    setInputValue(value ? value.substring(0, 5) : '');
   }, [value]);
 
   // Đóng dropdown khi click ra ngoài
@@ -133,8 +131,8 @@ export const TimeInput24H: React.FC<TimeInput24HProps> = ({
       setInputValue(formatted);
       onChange(formatted);
     } else if (!val) {
-      setInputValue(min || '08:00');
-      onChange(min || '08:00');
+      setInputValue('');
+      onChange('');
     }
   };
 

@@ -13,7 +13,7 @@ export { MyBookingsPage } from './pages/MyBookingsPage';
 // Export Components
 export { StatusBadge } from './components/StatusBadge';
 export { RoomCard } from './components/RoomCard';
-export { FilterBar, getNextAvailableSlot } from './components/FilterBar';
+export { FilterBar } from './components/FilterBar';
 export { BookingModal } from './components/BookingModal';
 export { SeatSelectionModal } from './components/SeatSelectionModal';
 

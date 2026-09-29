@@ -164,10 +164,6 @@ export const SeatSelectionModal: React.FC<Props> = ({
       : null;
 
     if (isTableMode && selectedTable) {
-      if (Number(participantCount) < 2) {
-        setErrorMessage('Bàn học nhóm yêu cầu tối thiểu từ 2 người trở lên. Nếu bạn đi 1 mình, vui lòng chọn đặt chỗ ngồi tại Khu tự học cá nhân.');
-        return;
-      }
       if (Number(participantCount) > selectedTable.capacity) {
         setErrorMessage(
           `Bàn ${selectedTable.tableCode} chỉ có sức chứa tối đa ${selectedTable.capacity} chỗ, không đủ cho nhóm ${participantCount} người. Vui lòng chọn bàn lớn hơn.`
@@ -362,7 +358,7 @@ export const SeatSelectionModal: React.FC<Props> = ({
                   fontSize: '0.825rem',
                   fontWeight: 600
                 }}>
-                  💡 Nhóm của bạn có <strong>{participantCount} người</strong>. Vui lòng chọn bàn có sức chứa từ {participantCount} chỗ trở lên.
+                  💡 Lượt đặt của bạn có <strong>{participantCount} người</strong>. Vui lòng chọn bàn có sức chứa từ {participantCount} chỗ trở lên.
                 </span>
               </div>
 
