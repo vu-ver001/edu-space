@@ -22,7 +22,14 @@ import com.eduspace.backend.booking.service.AvailabilityService;
 import com.eduspace.backend.booking.service.BookingService;
 import com.eduspace.backend.common.exception.BusinessException;
 import com.eduspace.backend.space.entity.Space;
+import com.eduspace.backend.space.entity.BookingMode;
+import com.eduspace.backend.space.entity.Seat;
+import com.eduspace.backend.space.entity.SeatStatus;
 import com.eduspace.backend.space.entity.SpaceTable;
+import com.eduspace.backend.space.entity.SpaceTableStatus;
+import com.eduspace.backend.space.entity.SpaceType;
+import com.eduspace.backend.space.entity.SpaceStatus;
+import com.eduspace.backend.space.repository.SeatRepository;
 import com.eduspace.backend.space.repository.SpaceRepository;
 import com.eduspace.backend.space.repository.SpaceTableRepository;
 import com.eduspace.backend.policy.service.PolicyService;
@@ -64,6 +71,7 @@ class BookingCoreLogicTest {
     private StudentScheduleRepository studentScheduleRepository;
     private SpaceRepository spaceRepository;
     private SpaceTableRepository spaceTableRepository;
+    private SeatRepository seatRepository;
     private UserRepository userRepository;
     private PolicyService policyService;
     private MaintenanceBlockRepository maintenanceBlockRepository;
@@ -83,6 +91,7 @@ class BookingCoreLogicTest {
         studentScheduleRepository = mock(StudentScheduleRepository.class);
         spaceRepository = mock(SpaceRepository.class);
         spaceTableRepository = mock(SpaceTableRepository.class);
+        seatRepository = mock(SeatRepository.class);
         userRepository = mock(UserRepository.class);
         policyService = mock(PolicyService.class);
         maintenanceBlockRepository = mock(MaintenanceBlockRepository.class);
@@ -101,6 +110,8 @@ class BookingCoreLogicTest {
                 maintenanceBlockRepo
         );
         availabilityService.setClock(fixedClock);
+        availabilityService.setSpaceTableRepository(spaceTableRepository);
+        availabilityService.setSeatRepository(seatRepository);
 
         bookingService = new BookingService(
                 bookingRepository,
@@ -168,6 +179,35 @@ class BookingCoreLogicTest {
     @AfterEach
     void tearDown() {
         SecurityContextHolder.clearContext();
+    }
+
+    private Space createDatabaseSpace(Long id, String name, BookingMode bookingMode, int capacity) {
+        SpaceType type = SpaceType.builder()
+                .id(id)
+                .name(name + " type")
+                .bookingMode(bookingMode)
+                .requiresApproval(bookingMode != BookingMode.PER_SEAT)
+                .build();
+
+        return Space.builder()
+                .id(id)
+                .name(name)
+                .spaceCode("SPACE-" + id)
+                .spaceType(type)
+                .building("Tòa A")
+                .floor("1")
+                .capacity(capacity)
+                .status(SpaceStatus.AVAILABLE)
+                .build();
+    }
+
+    private SearchSpaceFilter createSearchFilter(int participantCount) {
+        return SearchSpaceFilter.builder()
+                .date(baseTime.toLocalDate())
+                .startTime(baseTime.toLocalTime())
+                .endTime(baseTime.plusHours(2).toLocalTime())
+                .participantCount(participantCount)
+                .build();
     }
 
     // =========================================================================
@@ -267,6 +307,107 @@ class BookingCoreLogicTest {
                     )
             );
         }
+
+        @Test
+        @DisplayName("1.6. Tìm cho 1 người trả PER_SEAT và Study Booth sức chứa 1")
+        void testSearch_OneParticipant_ReturnsIndividualSpaces() {
+            Space wholeSpace = createDatabaseSpace(1L, "Phòng nhóm", BookingMode.WHOLE_SPACE, 6);
+            Space perSeatSpace = createDatabaseSpace(4L, "Khu tự học", BookingMode.PER_SEAT, 10);
+            Space studyBooth = createDatabaseSpace(5L, "Study Booth", BookingMode.WHOLE_SPACE, 1);
+            Space perTableSpace = createDatabaseSpace(7L, "Phòng theo bàn", BookingMode.PER_TABLE, 24);
+            when(spaceRepository.findAllByDeletedAtIsNull())
+                    .thenReturn(List.of(wholeSpace, perSeatSpace, studyBooth, perTableSpace));
+            when(seatRepository.findBySpaceIdAndDeletedAtIsNull(4L)).thenReturn(List.of(
+                    Seat.builder().id(401L).space(perSeatSpace).seatCode("S01").status(SeatStatus.AVAILABLE).build()
+            ));
+
+            List<SpaceResponse> result = availabilityService.searchAvailableSpaces(createSearchFilter(1));
+
+            assertEquals(List.of(4L, 5L), result.stream().map(SpaceResponse::getId).toList());
+        }
+
+        @Test
+        @DisplayName("1.7. Tìm nhóm từ 2 người loại PER_SEAT và chỉ nhận phòng hoặc bàn đủ sức chứa")
+        void testSearch_GroupParticipants_ReturnsSuitableGroupSpaces() {
+            Space wholeSpace = createDatabaseSpace(1L, "Phòng nhóm", BookingMode.WHOLE_SPACE, 6);
+            Space smallWholeSpace = createDatabaseSpace(2L, "Phòng nhỏ", BookingMode.WHOLE_SPACE, 3);
+            Space perSeatSpace = createDatabaseSpace(4L, "Khu tự học", BookingMode.PER_SEAT, 10);
+            Space perTableSpace = createDatabaseSpace(7L, "Phòng theo bàn", BookingMode.PER_TABLE, 24);
+            when(spaceRepository.findAllByDeletedAtIsNull())
+                    .thenReturn(List.of(wholeSpace, smallWholeSpace, perSeatSpace, perTableSpace));
+            when(spaceTableRepository.findBySpaceIdAndDeletedAtIsNull(7L)).thenReturn(List.of(
+                    SpaceTable.builder()
+                            .id(701L)
+                            .space(perTableSpace)
+                            .tableCode("T01")
+                            .capacity(4)
+                            .status(SpaceTableStatus.AVAILABLE)
+                            .build()
+            ));
+
+            List<SpaceResponse> result = availabilityService.searchAvailableSpaces(createSearchFilter(4));
+
+            assertEquals(List.of(1L, 7L), result.stream().map(SpaceResponse::getId).toList());
+        }
+
+        @Test
+        @DisplayName("1.8. PER_TABLE dùng sức chứa từng bàn trong CSDL, không dùng tổng sức chứa phòng")
+        void testSearch_PerTable_UsesActualTableCapacity() {
+            Space wholeSpace = createDatabaseSpace(1L, "Phòng nhóm", BookingMode.WHOLE_SPACE, 8);
+            Space perTableSpace = createDatabaseSpace(7L, "Phòng theo bàn", BookingMode.PER_TABLE, 24);
+            when(spaceRepository.findAllByDeletedAtIsNull()).thenReturn(List.of(wholeSpace, perTableSpace));
+            when(spaceTableRepository.findBySpaceIdAndDeletedAtIsNull(7L)).thenReturn(List.of(
+                    SpaceTable.builder()
+                            .id(701L)
+                            .space(perTableSpace)
+                            .tableCode("T01")
+                            .capacity(4)
+                            .status(SpaceTableStatus.AVAILABLE)
+                            .build()
+            ));
+
+            List<SpaceResponse> result = availabilityService.searchAvailableSpaces(createSearchFilter(6));
+
+            assertEquals(List.of(1L), result.stream().map(SpaceResponse::getId).toList());
+        }
+
+        @Test
+        @DisplayName("1.9. PER_TABLE chỉ hiển thị khi còn bàn đủ chỗ và chưa bị đặt trong khung giờ")
+        void testSearch_PerTable_RequiresAvailableUnoccupiedTable() {
+            Space perTableSpace = createDatabaseSpace(7L, "Phòng theo bàn", BookingMode.PER_TABLE, 24);
+            when(spaceRepository.findAllByDeletedAtIsNull()).thenReturn(List.of(perTableSpace));
+            when(spaceTableRepository.findBySpaceIdAndDeletedAtIsNull(7L)).thenReturn(List.of(
+                    SpaceTable.builder()
+                            .id(701L)
+                            .space(perTableSpace)
+                            .tableCode("T01")
+                            .capacity(6)
+                            .status(SpaceTableStatus.AVAILABLE)
+                            .build(),
+                    SpaceTable.builder()
+                            .id(702L)
+                            .space(perTableSpace)
+                            .tableCode("T02")
+                            .capacity(4)
+                            .status(SpaceTableStatus.AVAILABLE)
+                            .build()
+            ));
+            Booking occupiedLargeTable = Booking.builder()
+                    .id(801L)
+                    .spaceId(7L)
+                    .tableId(701L)
+                    .selectedSeats("T01")
+                    .status(BookingStatus.CONFIRMED)
+                    .startTime(baseTime)
+                    .endTime(baseTime.plusHours(2))
+                    .build();
+            when(bookingRepository.findOverlappingSpaceBookings(eq(7L), any(), any(), any()))
+                    .thenReturn(List.of(occupiedLargeTable));
+
+            List<SpaceResponse> result = availabilityService.searchAvailableSpaces(createSearchFilter(5));
+
+            assertTrue(result.isEmpty());
+        }
     }
 
     // =========================================================================
@@ -298,6 +439,24 @@ class BookingCoreLogicTest {
             assertEquals(BookingStatus.CONFIRMED, response.getStatus());
             assertFalse(response.isRequiresApproval());
             assertEquals("Tự học cá nhân", response.getPurpose());
+        }
+
+        @Test
+        @DisplayName("2.1a. [PER_SEAT] Chặn yêu cầu nhóm từ 2 người trở lên")
+        void testCreateBooking_PerSeat_RejectsGroupParticipants() {
+            CreateBookingRequest request = CreateBookingRequest.builder()
+                    .spaceId(4L)
+                    .startTime(baseTime)
+                    .endTime(baseTime.plusHours(2))
+                    .participantCount(2)
+                    .selectedSeats(List.of("S01"))
+                    .build();
+
+            BusinessException ex = assertThrows(BusinessException.class, () ->
+                    bookingService.createBooking(request, student.getEmail())
+            );
+
+            assertEquals("INDIVIDUAL_SEAT_ONLY", ex.getCode());
         }
 
         @Test
@@ -527,6 +686,7 @@ class BookingCoreLogicTest {
                     bookingService.createBooking(request, student.getEmail())
             );
             assertEquals("QUOTA_EXCEEDED", ex.getCode());
+            assertTrue(ex.getMessage().contains("20-09-2026"));
         }
     }
 

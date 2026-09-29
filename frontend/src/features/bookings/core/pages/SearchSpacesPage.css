@@ -7,6 +7,10 @@
    2. FORM TÌM KIẾM NỘI BỘ (Internal Search Card)
    Chuẩn hóa theo ảnh người dùng cung cấp
    ======================================================== */
+.search-spaces-page {
+  margin-top: -26px;
+}
+
 .internal-search-card {
   background: #FFFFFF;
   border: 1px solid var(--portal-border);
@@ -94,6 +98,11 @@
   outline: none;
   box-sizing: border-box;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Đồng bộ chiều cao hai ô giờ với ô ngày sử dụng trong bộ lọc. */
+.internal-field .time-input-24h-input-box {
+  height: 42px;
 }
 
 .internal-input:focus,
@@ -715,19 +724,31 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
    ======================================================== */
 .portal-page-intro {
   margin-bottom: 20px;
+  padding-top: 18px;
 }
 
 .portal-page-main-heading {
-  font-size: 1.6rem;
+  font-size: 1.65rem;
   font-weight: 800;
   color: #0F172A;
   letter-spacing: -0.02em;
-  margin-bottom: 4px;
+  margin: 0 0 6px;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.portal-page-main-heading svg {
+  flex-shrink: 0;
+  color: #1D72FE;
 }
 
 .portal-page-sub-heading {
-  font-size: 0.9rem;
+  font-size: 0.925rem;
   color: #64748B;
+  margin: 0;
+  line-height: 1.5;
 }
 
 .results-availability-text {
@@ -771,6 +792,110 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   .rooms-grid-v1 {
     grid-template-columns: 1fr;
     gap: 16px;
+  }
+}
+
+/* Phân trang danh sách không gian, đồng bộ với trang Lịch đặt của tôi */
+.spaces-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 22px;
+  padding: 14px 18px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+}
+
+.spaces-pagination-summary {
+  color: #64748B;
+  font-size: 0.82rem;
+}
+
+.spaces-pagination-summary strong {
+  color: #0F172A;
+  font-weight: 700;
+}
+
+.spaces-pagination-controls,
+.spaces-pagination-pages {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.spaces-pagination-arrow,
+.spaces-pagination-page {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 9px;
+  color: #475569;
+  background: #FFFFFF;
+  border: 1px solid #D8E1EC;
+  border-radius: 9px;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: border-color 0.16s ease, background 0.16s ease, color 0.16s ease, transform 0.16s ease;
+}
+
+.spaces-pagination-arrow:hover:not(:disabled),
+.spaces-pagination-page:hover:not(.active) {
+  color: #1D4ED8;
+  background: #EFF6FF;
+  border-color: #93C5FD;
+  transform: translateY(-1px);
+}
+
+.spaces-pagination-page.active {
+  color: #FFFFFF;
+  background: linear-gradient(135deg, #1D72FE 0%, #2563EB 100%);
+  border-color: #2563EB;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.24);
+}
+
+.spaces-pagination-arrow:disabled {
+  color: #CBD5E1;
+  background: #F8FAFC;
+  border-color: #E2E8F0;
+  cursor: not-allowed;
+}
+
+.spaces-pagination-dots {
+  min-width: 24px;
+  color: #94A3B8;
+  text-align: center;
+  user-select: none;
+}
+
+@media (max-width: 700px) {
+  .spaces-pagination {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 14px;
+  }
+
+  .spaces-pagination-summary {
+    text-align: center;
+  }
+
+  .spaces-pagination-controls {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 420px) {
+  .spaces-pagination-arrow,
+  .spaces-pagination-page {
+    min-width: 32px;
+    height: 32px;
+    padding: 0 7px;
   }
 }
 

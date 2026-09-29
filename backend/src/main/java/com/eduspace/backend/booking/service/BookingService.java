@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -47,6 +48,8 @@ import com.eduspace.backend.space.repository.SpaceTableRepository;
 @RequiredArgsConstructor
 @Slf4j
 public class BookingService {
+
+    private static final DateTimeFormatter DISPLAY_DATE_FORMATTER = DateTimeFormatter.ofPattern("dd-MM-yyyy");
 
     private final BookingRepository bookingRepository;
     private final BookingAuditLogRepository auditLogRepository;
@@ -96,6 +99,13 @@ public class BookingService {
         if (!"AVAILABLE".equalsIgnoreCase(space.getStatus())) {
             throw BusinessException.conflict("SPACE_NOT_AVAILABLE", 
                     "Phòng hiện không thể đặt do trạng thái: " + space.getStatus());
+        }
+
+        if (request.getParticipantCount() == null || request.getParticipantCount() < 1) {
+            throw BusinessException.badRequest(
+                    "INVALID_PARTICIPANT_COUNT",
+                    "Số người tham gia phải từ 1 người trở lên"
+            );
         }
 
         if (request.getParticipantCount() > space.getCapacity()) {
@@ -157,6 +167,12 @@ public class BookingService {
 
         if (!isWholeSpace && !isPerTable) {
             // PER_SEAT mode: Khu tự học chung
+            if (request.getParticipantCount() != 1) {
+                throw BusinessException.badRequest(
+                        "INDIVIDUAL_SEAT_ONLY",
+                        "Khu tự học theo ghế chỉ dành cho 1 người. Nhóm từ 2 người trở lên vui lòng chọn phòng hoặc bàn nhóm."
+                );
+            }
             if (requestedSeats == null || requestedSeats.isEmpty()) {
                 throw BusinessException.badRequest("SEAT_REQUIRED", 
                         "Khu tự học yêu cầu chọn 1 vị trí chỗ ngồi cụ thể.");
@@ -351,7 +367,8 @@ public class BookingService {
         );
         if (currentOccupyingCount >= dailyQuotaLimit) {
             throw BusinessException.badRequest("QUOTA_EXCEEDED", 
-                    "Bạn đã đạt hạn mức tối đa " + dailyQuotaLimit + " lượt đặt phòng trong ngày " + bookingDate);
+                    "Bạn đã đạt hạn mức tối đa " + dailyQuotaLimit + " lượt đặt phòng trong ngày "
+                            + bookingDate.format(DISPLAY_DATE_FORMATTER));
         }
 
         long hourlyRateLimit = availabilityService.getPolicyLong("RATE_LIMIT_HOURLY", 10L);
@@ -474,7 +491,7 @@ public class BookingService {
             Long idB = b.getId() != null ? b.getId() : 0L;
             return idA.compareTo(idB);
         } else {
-            // Lịch sử / đã kết thúc: mới nhất gần đây lên trước (startTime DESC)
+            // Booking đã kết thúc: mới nhất gần đây lên trước (startTime DESC)
             LocalDateTime timeA = a.getStartTime() != null ? a.getStartTime() : LocalDateTime.MIN;
             LocalDateTime timeB = b.getStartTime() != null ? b.getStartTime() : LocalDateTime.MIN;
             int timeCompare = timeB.compareTo(timeA);
