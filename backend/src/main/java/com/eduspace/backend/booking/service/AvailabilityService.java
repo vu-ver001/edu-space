@@ -558,14 +558,14 @@ public class AvailabilityService {
 
     /**
      * Quy tắc đối tượng sử dụng theo mô hình đặt lấy từ space_types.booking_mode trong CSDL:
-     * - 1 người: chỉ đặt ghế cá nhân PER_SEAT.
+     * - 1 người: đặt ghế cá nhân PER_SEAT hoặc phòng kín WHOLE_SPACE có sức chứa đúng 1.
      * - Từ 2 người: WHOLE_SPACE hoặc PER_TABLE đủ sức chứa; không dùng PER_SEAT.
      */
     public boolean supportsParticipantCount(SpaceCatalogItem space, int participantCount) {
         if (space == null || participantCount < 1) return false;
 
         if (participantCount == 1) {
-            return isPerSeat(space);
+            return isPerSeat(space) || (isWholeSpace(space) && space.getCapacity() == 1);
         }
 
         if (isPerSeat(space)) return false;

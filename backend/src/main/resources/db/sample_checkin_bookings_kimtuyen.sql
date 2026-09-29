@@ -21,21 +21,23 @@ SET @demo_password := COALESCE(
 
 INSERT INTO users
     (username, email, password, full_name, phone_number, role, is_active,
-     user_code, class_name)
+     dob, user_code, department, class_name)
 VALUES
     ('kt.checkin01', 'sv.checkin01@eduspace.vn', @demo_password,
-     'Nguyễn Minh Anh', '0987654311', 'STUDENT', TRUE, 'SV-CI001', 'CNTT-K18A'),
+     'Nguyễn Minh Anh', '0987654311', 'STUDENT', TRUE, '12/02/2005', 'SV-CI001', 'Khoa Công nghệ thông tin', 'CNTT-K18A'),
     ('kt.checkin02', 'sv.checkin02@eduspace.vn', @demo_password,
-     'Trần Hoàng Nam', '0987654312', 'STUDENT', TRUE, 'SV-CI002', 'CNTT-K18B'),
+     'Trần Hoàng Nam', '0987654312', 'STUDENT', TRUE, '21/06/2005', 'SV-CI002', 'Khoa Công nghệ thông tin', 'CNTT-K18B'),
     ('kt.checkin03', 'sv.checkin03@eduspace.vn', @demo_password,
-     'Lê Thu Hà', '0987654313', 'STUDENT', TRUE, 'SV-CI003', 'HTTT-K18A')
+     'Lê Thu Hà', '0987654313', 'STUDENT', TRUE, '03/10/2005', 'SV-CI003', 'Khoa Hệ thống thông tin', 'HTTT-K18A')
 ON DUPLICATE KEY UPDATE
     username = VALUES(username),
     full_name = VALUES(full_name),
     phone_number = VALUES(phone_number),
     role = 'STUDENT',
     is_active = TRUE,
+    dob = VALUES(dob),
     user_code = VALUES(user_code),
+    department = VALUES(department),
     class_name = VALUES(class_name);
 
 SET @student_checkin_01 := (

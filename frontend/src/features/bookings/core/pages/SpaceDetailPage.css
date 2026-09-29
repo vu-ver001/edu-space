@@ -755,6 +755,45 @@
   height: 42px;
 }
 
+.building-hours-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: -4px;
+  margin-bottom: -6px;
+  color: #64748B;
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.building-hours-icon {
+  color: #2563EB;
+  flex: 0 0 auto;
+}
+
+.participant-count-field {
+  gap: 5px;
+}
+
+.participant-capacity-hint {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 1px;
+  padding: 4px 9px;
+  border: 1px solid #DBEAFE;
+  border-radius: 7px;
+  background: #EFF6FF;
+  color: #1D4ED8;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  box-sizing: border-box;
+}
+
+.participant-capacity-hint strong {
+  font-weight: 700;
+}
+
 .form-control-input,
 .form-control-select {
   width: 100%;

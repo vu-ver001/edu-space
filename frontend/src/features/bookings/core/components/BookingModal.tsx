@@ -200,7 +200,16 @@ export const BookingModal: React.FC<Props> = ({
                 value={participantCount}
                 onChange={(e) => {
                   const val = e.target.value;
-                  setParticipantCount(val === '' ? '' : parseInt(val) || 1);
+                  if (val === '') {
+                    setParticipantCount('');
+                    return;
+                  }
+
+                  const parsedCount = Number.parseInt(val, 10);
+                  if (!Number.isFinite(parsedCount)) return;
+
+                  setParticipantCount(Math.min(Math.max(parsedCount, 1), space.capacity));
+                  setErrorInfo(null);
                 }}
                 onBlur={() => {
                   if (!participantCount || Number(participantCount) < 1) {

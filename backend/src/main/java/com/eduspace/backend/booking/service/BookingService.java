@@ -153,7 +153,7 @@ public class BookingService {
         // RÀNG BUỘC SỐ LƯỢNG NGƯỜI THAM GIA THEO TỪNG LOẠI KHÔNG GIAN:
         // 1. Nếu là không gian học nhóm (Bàn nhóm PER_TABLE hoặc Phòng trọn gói WHOLE_SPACE có sức chứa > 1 người):
         //    Yêu cầu tối thiểu từ 2 người trở lên. Nghiêm cấm 1 người đặt nguyên bàn nhóm hoặc phòng lớn.
-        boolean isGroupSpace = isPerTable || isWholeSpace;
+        boolean isGroupSpace = isPerTable || (isWholeSpace && space.getCapacity() > 1);
         if (isGroupSpace) {
             if (request.getParticipantCount() == null || request.getParticipantCount() < 2) {
                 throw BusinessException.badRequest("MIN_PARTICIPANTS_REQUIRED", 

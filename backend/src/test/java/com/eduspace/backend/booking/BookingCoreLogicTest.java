@@ -309,20 +309,21 @@ class BookingCoreLogicTest {
         }
 
         @Test
-        @DisplayName("1.6. Tìm cho 1 người chỉ trả khu PER_SEAT còn ghế hoạt động trong CSDL")
-        void testSearch_OneParticipant_OnlyPerSeat() {
+        @DisplayName("1.6. Tìm cho 1 người trả PER_SEAT và Study Booth sức chứa 1")
+        void testSearch_OneParticipant_ReturnsIndividualSpaces() {
             Space wholeSpace = createDatabaseSpace(1L, "Phòng nhóm", BookingMode.WHOLE_SPACE, 6);
             Space perSeatSpace = createDatabaseSpace(4L, "Khu tự học", BookingMode.PER_SEAT, 10);
+            Space studyBooth = createDatabaseSpace(5L, "Study Booth", BookingMode.WHOLE_SPACE, 1);
             Space perTableSpace = createDatabaseSpace(7L, "Phòng theo bàn", BookingMode.PER_TABLE, 24);
             when(spaceRepository.findAllByDeletedAtIsNull())
-                    .thenReturn(List.of(wholeSpace, perSeatSpace, perTableSpace));
+                    .thenReturn(List.of(wholeSpace, perSeatSpace, studyBooth, perTableSpace));
             when(seatRepository.findBySpaceIdAndDeletedAtIsNull(4L)).thenReturn(List.of(
                     Seat.builder().id(401L).space(perSeatSpace).seatCode("S01").status(SeatStatus.AVAILABLE).build()
             ));
 
             List<SpaceResponse> result = availabilityService.searchAvailableSpaces(createSearchFilter(1));
 
-            assertEquals(List.of(4L), result.stream().map(SpaceResponse::getId).toList());
+            assertEquals(List.of(4L, 5L), result.stream().map(SpaceResponse::getId).toList());
         }
 
         @Test
