@@ -45,12 +45,12 @@ export const formatMaintenanceTime = (startStr: string, endStr: string): string 
 
     const isSameDay = start.toDateString() === end.toDateString();
     if (isSameDay) {
-      return `${startHours}:${startMinutes} - ${endHours}:${endMinutes}, ${day}/${month}/${year}`;
+      return `${startHours}:${startMinutes} - ${endHours}:${endMinutes}, ${day}-${month}-${year}`;
     } else {
       const endDay = pad(end.getDate());
       const endMonth = pad(end.getMonth() + 1);
       const endYear = end.getFullYear();
-      return `${startHours}:${startMinutes} ${day}/${month}/${year} - ${endHours}:${endMinutes} ${endDay}/${endMonth}/${endYear}`;
+      return `${startHours}:${startMinutes} ${day}-${month}-${year} - ${endHours}:${endMinutes} ${endDay}-${endMonth}-${endYear}`;
     }
   } catch {
     return '';

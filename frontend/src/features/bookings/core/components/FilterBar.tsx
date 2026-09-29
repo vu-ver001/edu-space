@@ -11,6 +11,13 @@ interface Props {
   availableCount?: number;
 }
 
+const toLocalDateString = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 // Tự động tính toán khung giờ khả dụng tiếp theo (không bao giờ bị quá khứ)
 export const getNextAvailableSlot = () => {
   const now = new Date();
@@ -21,7 +28,7 @@ export const getNextAvailableSlot = () => {
     const tomorrow = new Date(now);
     tomorrow.setDate(tomorrow.getDate() + 1);
     return {
-      date: tomorrow.toISOString().split('T')[0],
+      date: toLocalDateString(tomorrow),
       startTime: '08:00',
       endTime: '10:00',
     };
@@ -32,7 +39,7 @@ export const getNextAvailableSlot = () => {
   const pad = (n: number) => n.toString().padStart(2, '0');
   
   return {
-    date: now.toISOString().split('T')[0],
+    date: toLocalDateString(now),
     startTime: `${pad(startH)}:00`,
     endTime: `${pad(endH)}:00`,
   };
@@ -40,7 +47,7 @@ export const getNextAvailableSlot = () => {
 
 export const FilterBar: React.FC<Props> = ({ onSearch, isLoading, availableCount }) => {
   const defaultSlot = getNextAvailableSlot();
-  const today = new Date().toISOString().split('T')[0];
+  const today = toLocalDateString(new Date());
   const [date, setDate] = useState<string>(defaultSlot.date);
   const [startTime, setStartTime] = useState<string>(defaultSlot.startTime);
   const [endTime, setEndTime] = useState<string>(defaultSlot.endTime);
@@ -227,7 +234,7 @@ export const FilterBar: React.FC<Props> = ({ onSearch, isLoading, availableCount
 
   const handleApplyFilter = () => {
     const now = new Date();
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const todayStr = toLocalDateString(now);
 
     if (!date) {
       setDateError('Vui lòng chọn ngày sử dụng.');

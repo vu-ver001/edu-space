@@ -4,7 +4,7 @@ import { TableMeetingIcon } from './RoomCard';
 import type { Space, SpaceTable, SpaceSeat } from '../services/spaceService';
 import { spaceService } from '../services/spaceService';
 import { bookingService } from '../services/bookingService';
-import { formatDateVI } from './DateInputVI';
+import { formatDateVI, formatMessageDatesVI } from './DateInputVI';
 import './SeatSelectionModal.css';
 
 interface Props {
@@ -193,7 +193,7 @@ export const SeatSelectionModal: React.FC<Props> = ({
       onSuccess(newBooking.id, sortedItems);
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Có lỗi xảy ra khi tạo đặt chỗ. Vui lòng kiểm tra lại.';
-      setErrorMessage(msg);
+      setErrorMessage(formatMessageDatesVI(msg));
       await loadData();
     } finally {
       setSubmitting(false);
