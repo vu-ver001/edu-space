@@ -153,13 +153,22 @@ export const SpaceDetailPage: React.FC = () => {
   // LOGIC LIÊN KẾT CSDL: Lấy trực tiếp từ space.requiresApproval (cột space_types.requires_approval của Kim Tuyến)
   const requiresApproval = space?.requiresApproval ?? (space?.spaceType?.requiresApproval ?? !isPerSeat);
 
-  // Đối với PER_SEAT (khu tự học cá nhân): luôn cố định 1 sinh viên = 1 chỗ ngồi
-  // Không tự động sửa số người tham gia - để user nhập và validate khi submit
+  // Đồng bộ số người với sức chứa thực tế ngay khi tải chi tiết không gian.
+  // Tránh trường hợp participantCount trên URL lớn hơn sức chứa rồi chỉ báo lỗi khi đặt.
   useEffect(() => {
     if (isPerSeat) {
       setParticipantCount(1);
+      return;
     }
-  }, [isPerSeat]);
+
+    if (space?.capacity) {
+      setParticipantCount((current) => {
+        const count = Number(current);
+        if (!Number.isFinite(count) || count < 1) return current;
+        return Math.min(Math.trunc(count), space.capacity);
+      });
+    }
+  }, [isPerSeat, space?.capacity]);
 
   // Quản lý danh sách hình ảnh (lấy từ bảng space_images) & Slider/Carousel
   const [spaceImages, setSpaceImages] = useState<string[]>([]);
@@ -884,22 +893,15 @@ export const SpaceDetailPage: React.FC = () => {
               </div>
 
               {/* Gợi ý giờ hoạt động cả tòa */}
-              <div style={{ marginTop: '-4px', marginBottom: '14px', fontSize: '12px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ color: '#2563EB' }}>⏰</span>
+              <div className="building-hours-hint">
+                <span className="building-hours-icon">⏰</span>
                 <span><strong>Giờ mở cửa toàn tòa:</strong> {operatingHours.openingHour} – {operatingHours.closingHour} (Tối đa {Math.floor(operatingHours.maxDurationMinutes / 60)} giờ/lượt đặt)</span>
               </div>
 
 
               {/* Số người tham gia */}
-              <div className="form-field-group">
-                <label className="form-label">
-                  Số người tham gia{' '}
-                  {isPerSeat
-                    ? '(Khu tự học cá nhân: Cố định 1 sinh viên / 1 chỗ ngồi)'
-                    : isGroupSpace
-                    ? `(Không gian nhóm: Tối thiểu 2 người, tối đa ${space.capacity} người)`
-                    : `(Tối đa ${space.capacity} người)`}
-                </label>
+              <div className="form-field-group participant-count-field">
+                <label className="form-label">Số người tham gia</label>
                 <input
                   type="number"
                   className="form-control-input"
@@ -912,7 +914,18 @@ export const SpaceDetailPage: React.FC = () => {
                   onChange={(e) => {
                     if (isPerSeat) return;
                     const val = e.target.value;
-                    setParticipantCount(val === '' ? '' : parseInt(val) || 1);
+                    if (val === '') {
+                      setParticipantCount('');
+                      return;
+                    }
+
+                    const parsedCount = Number.parseInt(val, 10);
+                    if (!Number.isFinite(parsedCount)) return;
+
+                    // Thuộc tính max của input number vẫn cho phép gõ/paste số lớn hơn.
+                    // Clamp ngay tại đây để người dùng không phải đợi tới lúc bấm đặt mới biết lỗi.
+                    setParticipantCount(Math.min(Math.max(parsedCount, 1), space.capacity));
+                    setBookingError(null);
                   }}
                   onBlur={() => {
                     if (isPerSeat) {
@@ -929,14 +942,18 @@ export const SpaceDetailPage: React.FC = () => {
                   required
                 />
                 {isPerSeat ? (
-                  <span style={{ fontSize: '12px', color: '#64748B', marginTop: '4px', display: 'block' }}>
-                    ℹ️ Khu tự học áp dụng quy tắc 1 sinh viên = 1 chỗ ngồi. Nếu học nhóm, bạn vui lòng chọn phòng họp nhóm hoặc bàn thảo luận.
+                  <span className="participant-capacity-hint">
+                    Khu tự học cá nhân: Cố định <strong>1 sinh viên / 1 chỗ ngồi</strong>
                   </span>
                 ) : isGroupSpace ? (
-                  <span style={{ fontSize: '12px', color: '#0369A1', marginTop: '4px', display: 'block' }}>
-                    ℹ️ Không gian nhóm (bàn học nhóm / phòng thuyết trình) yêu cầu tối thiểu từ 2 người trở lên. Nếu đi 1 mình, bạn vui lòng đặt tại Khu tự học cá nhân.
+                  <span className="participant-capacity-hint">
+                    Không gian nhóm: Tối thiểu <strong>2 người</strong>, tối đa <strong>{space.capacity} người</strong>
                   </span>
-                ) : null}
+                ) : (
+                  <span className="participant-capacity-hint">
+                    Sức chứa tối đa: <strong>{space.capacity} người</strong>
+                  </span>
+                )}
               </div>
 
               {/* Mục đích sử dụng */}

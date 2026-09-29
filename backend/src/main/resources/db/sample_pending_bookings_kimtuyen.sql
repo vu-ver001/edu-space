@@ -17,17 +17,24 @@ SET @demo_password := COALESCE(
 );
 
 -- Sinh viên mẫu để danh sách chờ duyệt có nhiều người khác nhau.
-INSERT INTO users (email, password, full_name, phone_number, role, is_active)
+INSERT INTO users
+    (username, email, password, full_name, phone_number, role, is_active,
+     dob, user_code, department, class_name)
 VALUES
-    ('sv.anh@eduspace.vn', @demo_password, 'Nguyễn Minh Anh', '0987654321', 'STUDENT', TRUE),
-    ('sv.nam@eduspace.vn', @demo_password, 'Trần Hoàng Nam', '0987654322', 'STUDENT', TRUE),
-    ('sv.ha@eduspace.vn', @demo_password, 'Lê Thu Hà', '0987654323', 'STUDENT', TRUE),
-    ('sv.bao@eduspace.vn', @demo_password, 'Phạm Gia Bảo', '0987654324', 'STUDENT', TRUE),
-    ('sv.chi@eduspace.vn', @demo_password, 'Ngô Quỳnh Chi', '0987654325', 'STUDENT', TRUE)
+    ('sv.anh', 'sv.anh@eduspace.vn', @demo_password, 'Nguyễn Minh Anh', '0987654321', 'STUDENT', TRUE, '15/03/2005', 'SV005', 'Khoa Công nghệ thông tin', 'CNTT2'),
+    ('sv.nam', 'sv.nam@eduspace.vn', @demo_password, 'Trần Hoàng Nam', '0987654322', 'STUDENT', TRUE, '22/07/2005', 'SV006', 'Khoa Kỹ thuật phần mềm', 'KTPM1'),
+    ('sv.ha', 'sv.ha@eduspace.vn', @demo_password, 'Lê Thu Hà', '0987654323', 'STUDENT', TRUE, '09/11/2005', 'SV007', 'Khoa Hệ thống thông tin', 'HTTT1'),
+    ('sv.bao', 'sv.bao@eduspace.vn', @demo_password, 'Phạm Gia Bảo', '0987654324', 'STUDENT', TRUE, '02/01/2005', 'SV008', 'Khoa Công nghệ thông tin', 'CNTT3'),
+    ('sv.chi', 'sv.chi@eduspace.vn', @demo_password, 'Ngô Quỳnh Chi', '0987654325', 'STUDENT', TRUE, '18/08/2005', 'SV009', 'Khoa Kỹ thuật phần mềm', 'KTPM2')
 ON DUPLICATE KEY UPDATE
+    username = VALUES(username),
     full_name = VALUES(full_name),
     phone_number = VALUES(phone_number),
     role = 'STUDENT',
+    dob = VALUES(dob),
+    user_code = VALUES(user_code),
+    department = VALUES(department),
+    class_name = VALUES(class_name),
     is_active = TRUE;
 
 SET @student_anh := (SELECT id FROM users WHERE email = 'sv.anh@eduspace.vn' LIMIT 1);

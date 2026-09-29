@@ -14,7 +14,10 @@ const matchesParticipantBookingMode = (space: Space, participantCount?: number):
   const count = Math.max(1, Number(participantCount) || 1);
   const bookingMode = space.bookingMode || space.spaceType?.bookingMode;
 
-  if (count === 1) return bookingMode === 'PER_SEAT';
+  if (count === 1) {
+    return bookingMode === 'PER_SEAT'
+      || (bookingMode === 'WHOLE_SPACE' && Number(space.capacity) === 1);
+  }
   if (bookingMode === 'PER_SEAT') return false;
 
   return (bookingMode === 'WHOLE_SPACE' || bookingMode === 'PER_TABLE')
