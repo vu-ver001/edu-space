@@ -1,53 +1,58 @@
 /* ========================================================
    M03 & M04 - SEAT & TABLE SELECTION MODAL STYLES
    EduSpace Booking Core Module - Nguyen Thi Khanh Van
+   Light Educational Classroom Edition (Zero Page Scroll)
    ======================================================== */
 
-/* ========================================================
-   9. GIAO DIỆN THEO ẢNH 3: SƠ ĐỒ CHỌN GHẾ RẠP CHIẾU PHIM MOMO
-   ======================================================== */
-/* ========================================================
-   MODAL SƠ ĐỒ CHỖ NGỒI PHÒNG HỌC (White & Royal Blue Theme)
-   ======================================================== */
 .cinema-modal-overlay {
   position: fixed;
   inset: 0;
   z-index: 9999;
-  background: rgba(15, 23, 42, 0.45);
+  background: rgba(15, 23, 42, 0.5);
   backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: 16px;
   animation: fadeIn 0.2s ease;
 }
 
+/* Modal container mặc định */
 .cinema-modal-container {
   background: #FFFFFF;
   color: #0F172A;
   border: 1px solid #E2E8F0;
   border-radius: 20px;
   width: 100%;
-  max-width: 660px;
+  max-width: 680px;
   max-height: 92vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.2);
-  animation: scaleUp 0.22s ease;
+  box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.25);
+  animation: scaleUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Chế độ Sơ đồ phòng học tương tác (Áp dụng cho cả PER_SEAT & PER_TABLE: Zero Page Scroll) */
+.cinema-modal-container.cinema-modal-interactive-mode {
+  max-width: 900px;
+  width: 95vw;
+  height: 86vh;
+  max-height: 720px;
 }
 
 .cinema-modal-header {
-  padding: 20px 24px;
+  padding: 16px 22px;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   border-bottom: 1px solid #F1F5F9;
   background: #FFFFFF;
+  flex-shrink: 0;
 }
 
 .cinema-title {
-  font-size: 1.2rem;
+  font-size: 1.15rem;
   font-weight: 800;
   color: #0F172A;
   margin-bottom: 4px;
@@ -57,12 +62,24 @@
 }
 
 .cinema-subtitle {
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   color: #64748B;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+.badge-room-mode {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 5px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: #EFF6FF;
+  color: #1D72FE;
+  border: 1px solid #BFDBFE;
 }
 
 .cinema-btn-close {
@@ -79,6 +96,7 @@
   font-size: 14px;
   font-weight: 700;
   transition: all 0.15s ease;
+  flex-shrink: 0;
 }
 
 .cinema-btn-close:hover {
@@ -90,519 +108,940 @@
   background: #FEF2F2;
   border: 1px solid #FCA5A5;
   color: #B91C1C;
-  padding: 10px 16px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  margin: 12px 24px 0;
-  border-radius: 8px;
-}
-
-/* Khu vực Bảng giảng / Màn hình / Bàn học nhóm */
-.cinema-screen-section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin: 20px 24px 12px;
-}
-
-.cinema-screen-bar {
-  width: 82%;
   padding: 8px 16px;
-  background: #EFF6FF;
-  border: 1.5px dashed #93C5FD;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 8px rgba(29, 114, 254, 0.08);
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin: 10px 20px 0;
+  border-radius: 8px;
+  flex-shrink: 0;
 }
 
-.cinema-screen-bar span {
-  font-size: 0.775rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  color: #1D72FE;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.cinema-screen-glow {
-  width: 70%;
-  height: 10px;
-  background: radial-gradient(ellipse at top, rgba(29, 114, 254, 0.12) 0%, transparent 80%);
-  margin-top: 2px;
-}
-
-/* Layout Bàn Học Nhóm Trung Tâm (Meeting Table Layout) */
-.meeting-table-layout {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  width: 100%;
-  margin: 10px 0 16px;
-}
-
-.meeting-table-block {
-  width: 88%;
-  background: linear-gradient(180deg, #F0F7FF 0%, #E0E7FF 100%);
-  border: 1.5px solid #BFDBFE;
-  border-radius: 16px;
-  padding: 18px 16px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 14px rgba(29, 114, 254, 0.08);
-}
-
-.meeting-table-label {
-  font-size: 0.8rem;
-  font-weight: 800;
-  color: #1D72FE;
-  letter-spacing: 0.04em;
-  margin-bottom: 2px;
-}
-
-.meeting-table-sub {
-  font-size: 0.725rem;
-  color: #64748B;
-  font-weight: 500;
-}
-
-.seats-meeting-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  flex-wrap: wrap;
-}
-
-/* Khu vực ghế ngồi */
-.cinema-seats-area {
+/* ========================================================
+   CLASSROOM INTERACTIVE WORKSPACE (SÁNG SỦA, KHÔNG CUỘN)
+   ======================================================== */
+.classroom-interactive-workspace {
   flex: 1;
-  overflow-y: auto;
-  padding: 8px 24px 16px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-}
-
-.cinema-seat-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 20px;
-  width: 100%;
-  align-items: center;
-}
-
-.cinema-seat-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.row-label {
-  font-size: 0.775rem;
-  font-weight: 800;
-  color: #64748B;
-  width: 20px;
-  text-align: center;
-  background: #F1F5F9;
-  padding: 2px 0;
-  border-radius: 4px;
-}
-
-.seats-in-row {
-  display: flex;
-  align-items: center;
+  min-height: 0;
+  overflow: hidden;
+  background: #FFFFFF;
+  padding: 10px 18px 14px;
   gap: 10px;
 }
 
-/* Kiểu dáng từng Ghế ngồi (Edu Seat) */
-.cinema-seat {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  font-size: 0.85rem;
-  font-weight: 700;
+/* Thanh điều hướng & Chú thích kiểu cũ phía trên Canvas */
+.classroom-top-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  flex-shrink: 0;
+  padding: 2px 4px;
+}
+
+/* Chú thích kiểu cũ quen thuộc */
+.classroom-legend-strip {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.legend-strip-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.78rem;
+  color: #475569;
+  font-weight: 600;
+}
+
+.legend-strip-box {
+  width: 15px;
+  height: 15px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.legend-strip-box.available {
+  background: #FFFFFF;
+  border: 1.5px solid #94A3B8;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.legend-strip-box.occupied {
+  background: #475569;
+}
+
+.legend-strip-box.inactive {
+  background: #EF4444;
+}
+
+.legend-strip-box.selected {
+  background: #2563EB;
+  box-shadow: 0 0 6px rgba(37, 99, 235, 0.4);
+}
+
+.classroom-helper-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.74rem;
+  color: #64748B;
+  background: #F8FAFC;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid #E2E8F0;
+}
+
+/* Vùng Canvas Viewport - Tương tác Pan & Zoom (Sáng sủa, không cuộn thanh cuộn trang) */
+.classroom-canvas-viewport {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background-color: #F8FAFC;
+  background-image: radial-gradient(#CBD5E1 1.2px, transparent 1.2px);
+  background-size: 22px 22px;
+  border-radius: 16px;
+  border: 1.5px solid #E2E8F0;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.03);
+  cursor: grab;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.classroom-canvas-viewport.is-panning {
+  cursor: grabbing;
+}
+
+/* Khối Stage trung tâm chứa sơ đồ phòng học */
+.classroom-canvas-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 30px 24px;
+  transition: transform 0.12s cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: transform;
+}
+
+/* ========================================================
+   1. SƠ ĐỒ GHẾ CÁ NHÂN (PER_SEAT) - SÁNG SỦA, KHÔNG NHÃN A, B, C
+   ======================================================== */
+.classroom-seats-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: center;
+}
+
+.classroom-desk-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.desk-seats-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 6px 12px;
+  border-radius: 14px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+}
+
+/* Kiểu dáng từng Ghế học cá nhân */
+.classroom-seat-item {
+  width: 48px;
+  height: 52px;
+  border-radius: 11px;
+  border: 1.5px solid #CBD5E1;
+  background: #FFFFFF;
+  color: #1E293B;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  transition: all 0.18s ease;
-  border: 1.5px solid #CBD5E1;
-  background: #FFFFFF;
-  color: #1E293B;
-  position: relative;
-}
-
-/* 1. Ghế trống (Available) */
-.cinema-seat.seat-available {
-  background: #FFFFFF;
-  color: #1E293B;
-  border-color: #CBD5E1;
+  gap: 2px;
+  padding: 0;
+  transition: all 0.16s ease;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+  outline: none;
 }
 
-.cinema-seat.seat-available:hover {
-  background: #EFF6FF;
-  border-color: #1D72FE;
-  color: #1D72FE;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(29, 114, 254, 0.2);
-}
-
-/* 2. Ghế đã đặt (Occupied / Disabled trong khung giờ) */
-.cinema-seat.seat-occupied {
-  background: #F1F5F9;
-  color: #94A3B8;
-  border-color: #E2E8F0;
-  cursor: not-allowed;
-  opacity: 0.75;
-}
-
-.cinema-seat.seat-occupied::after {
-  content: '✕';
-  position: absolute;
-  font-size: 10px;
-  color: #94A3B8;
-  top: 2px;
-  right: 4px;
-}
-
-/* 2b. Ghế tạm khóa bảo trì thiết bị từ ban quản lý (Inactive) */
-.cinema-seat.seat-inactive {
-  background: #FFFBEB;
-  color: #D97706;
-  border-color: #FDE68A;
-  cursor: not-allowed;
-  opacity: 0.85;
-}
-
-.cinema-seat.seat-inactive::after {
-  content: '🔒';
-  position: absolute;
-  font-size: 9px;
-  top: 2px;
-  right: 3px;
-}
-
-/* 3. Ghế đang chọn (Selected - Xanh Dương Hoàng Gia #1D72FE) */
-.cinema-seat.seat-selected {
-  background: linear-gradient(135deg, #1D72FE 0%, #2563EB 100%);
-  color: #FFFFFF;
-  border-color: #1D72FE;
-  box-shadow: 0 4px 14px rgba(29, 114, 254, 0.4);
-  transform: scale(1.06);
-}
-
-/* Chú thích trạng thái ghế (Legend) */
-.cinema-legend {
+.classroom-seat-item .seat-icon-box {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 20px;
-  padding: 10px 18px;
-  background: #F8FAFC;
-  border: 1px solid #E2E8F0;
-  border-radius: 12px;
-  flex-wrap: wrap;
+  color: #2563EB;
 }
 
-.legend-item {
+.classroom-seat-item .seat-code-label {
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+/* 1. Ghế còn trống (Available - Sáng sủa) */
+.classroom-seat-item.seat-available:hover:not(:disabled) {
+  border-color: #2563EB;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.18);
+}
+
+/* 2. Ghế đang chọn (Selected - Xanh Royal Blue nổi bật) */
+.classroom-seat-item.seat-selected {
+  background: #2563EB;
+  border-color: #1D4ED8;
+  color: #FFFFFF;
+  transform: translateY(-2px);
+  box-shadow: 0 0 0 2px #DBEAFE, 0 6px 16px rgba(37, 99, 235, 0.35);
+}
+
+.classroom-seat-item.seat-selected .seat-icon-box {
+  color: #FFFFFF;
+}
+
+/* 3. Ghế đã có người đặt (Occupied) */
+.classroom-seat-item.seat-occupied {
+  background: #E2E8F0;
+  border-color: #CBD5E1;
+  color: #64748B;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.classroom-seat-item.seat-occupied .seat-icon-box {
+  color: #64748B;
+}
+
+/* 4. Ghế tạm khóa (Inactive) */
+.classroom-seat-item.seat-inactive {
+  background: #FEF2F2;
+  border-color: #FCA5A5;
+  color: #DC2626;
+  cursor: not-allowed;
+}
+
+.classroom-seat-item.seat-inactive .seat-icon-box {
+  color: #DC2626;
+}
+
+/* ========================================================
+   2. SƠ ĐỒ BÀN THẢO LUẬN NHÓM (PER_TABLE) - DẠNG PHÒNG HỌC TRỰC QUAN
+   ======================================================== */
+.classroom-tables-layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  justify-content: center;
+  align-items: center;
+  max-width: 680px;
+  width: 100%;
+}
+
+.classroom-table-unit {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 7px;
-  font-size: 0.8rem;
-  color: #475569;
-  font-weight: 600;
+  justify-content: center;
+  cursor: pointer;
+  outline: none;
+  transition: transform 0.18s ease;
 }
 
-.legend-box {
-  width: 15px;
-  height: 15px;
-  border-radius: 4px;
+.classroom-table-unit:hover:not(.tbl-occupied):not(.tbl-inactive) {
+  transform: translateY(-3px);
 }
 
-.legend-box.available {
+/* Mặt bàn học nhóm */
+.table-top-surface {
+  width: 100%;
+  min-width: 190px;
+  padding: 16px 18px;
+  border-radius: 16px;
   background: #FFFFFF;
   border: 1.5px solid #CBD5E1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+  transition: all 0.18s ease;
 }
 
-.legend-box.occupied {
-  background: #F1F5F9;
-  border: 1.5px solid #CBD5E1;
+.table-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.legend-box.inactive {
-  background: #FFFBEB;
-  border: 1.5px solid #FDE68A;
+.table-icon-wrap {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #EFF6FF;
+  color: #2563EB;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-.legend-box.selected {
-  background: #1D72FE;
-  border: 1.5px solid #1D72FE;
+.table-name-bold {
+  font-size: 0.96rem;
+  font-weight: 800;
+  color: #0F172A;
 }
 
-/* Footer Modal */
-.cinema-modal-footer {
+.table-capacity-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #2563EB;
+  background: #EFF6FF;
+  padding: 3px 8px;
+  border-radius: 6px;
+  width: fit-content;
+}
+
+.table-status-caption {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #059669;
+}
+
+/* Trạng thái Bàn thảo luận */
+.classroom-table-unit.tbl-available:hover .table-top-surface {
+  border-color: #2563EB;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.15);
+}
+
+.classroom-table-unit.tbl-selected .table-top-surface {
+  background: #EFF6FF;
+  border-color: #2563EB;
+  box-shadow: 0 0 0 2px #2563EB, 0 8px 20px rgba(37, 99, 235, 0.18);
+}
+
+.classroom-table-unit.tbl-selected .table-status-caption {
+  color: #2563EB;
+}
+
+.classroom-table-unit.tbl-occupied {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.classroom-table-unit.tbl-occupied .table-top-surface {
   background: #F8FAFC;
-  border-top: 1px solid #E2E8F0;
-  padding: 16px 24px;
+  border-color: #CBD5E1;
+}
+
+.classroom-table-unit.tbl-occupied .table-icon-wrap {
+  background: #E2E8F0;
+  color: #64748B;
+}
+
+.classroom-table-unit.tbl-occupied .table-status-caption {
+  color: #64748B;
+}
+
+.classroom-table-unit.tbl-inactive {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.classroom-table-unit.tbl-inactive .table-top-surface {
+  background: #FEF2F2;
+  border-color: #FCA5A5;
+}
+
+.classroom-table-unit.tbl-inactive .table-status-caption {
+  color: #DC2626;
+}
+
+/* ========================================================
+   FLOATING ZOOM CONTROLS (PHONG CÁCH SÁNG SỦA, CAO CẤP)
+   ======================================================== */
+.classroom-floating-zoom {
+  position: absolute;
+  bottom: 14px;
+  right: 14px;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1.5px solid #CBD5E1;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+}
+
+.btn-zoom-circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid #E2E8F0;
+  background: #F8FAFC;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-zoom-circle:hover:not(:disabled) {
+  background: #2563EB;
+  border-color: #2563EB;
+  color: #FFFFFF;
+}
+
+.btn-zoom-circle:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.zoom-indicator {
+  font-size: 0.75rem;
+  font-weight: 750;
+  color: #1E293B;
+  min-width: 42px;
+  text-align: center;
+}
+
+.zoom-bar-divider {
+  width: 1px;
+  height: 16px;
+  background: #E2E8F0;
+  margin: 0 2px;
+}
+
+.btn-zoom-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 20px;
+  border: 1px solid #E2E8F0;
+  background: #F8FAFC;
+  color: #334155;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-zoom-reset:hover {
+  background: #2563EB;
+  border-color: #2563EB;
+  color: #FFFFFF;
+}
+
+/* ========================================================
+   FOOTER (FIXED BOTTOM SHEET - ALWAYS VISIBLE, NO SCROLL)
+   ======================================================== */
+.cinema-modal-footer {
+  padding: 14px 22px;
+  border-top: 1px solid #F1F5F9;
+  background: #FFFFFF;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
+  flex-shrink: 0;
 }
 
 .footer-booking-info {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.footer-selected-pill-box {
+  display: flex;
+  align-items: center;
+}
+
+.pill-selected-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+  border: 1.5px solid #93C5FD;
+  color: #1D4ED8;
+}
+
+.pill-selected-badge strong {
+  font-size: 0.95rem;
+  font-weight: 850;
+  color: #1E40AF;
+}
+
+.pill-selected-badge .pill-sub {
+  font-size: 0.72rem;
+  color: #3B82F6;
+  font-weight: 600;
+}
+
+.pill-unselected-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #64748B;
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #3B82F6;
+  animation: pulseDot 1.6s infinite ease-in-out;
+}
+
+@keyframes pulseDot {
+  0%, 100% {
+    transform: scale(0.9);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.4);
+    opacity: 1;
+  }
 }
 
 .footer-meta-time {
-  font-size: 0.825rem;
-  color: #475569;
-}
-
-.footer-seats-selected {
-  font-size: 0.825rem;
-  color: #64748B;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.selected-seats-badge {
-  background: #EFF6FF;
-  border: 1px solid #BFDBFE;
-  color: #1D72FE;
-  font-weight: 800;
-  padding: 2px 10px;
-  border-radius: 9999px;
-  font-size: 0.825rem;
-  letter-spacing: 0.02em;
-}
-
-.no-seats-text {
-  color: #94A3B8;
-  font-style: italic;
+  gap: 5px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #64748B;
 }
 
 .footer-actions {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-shrink: 0;
 }
 
 .btn-cinema-cancel {
-  background: #FFFFFF;
-  border: 1px solid #CBD5E1;
-  color: #475569;
-  border-radius: 8px;
   padding: 10px 18px;
-  font-size: 0.875rem;
-  font-weight: 600;
+  border-radius: 11px;
+  border: 1px solid #CBD5E1;
+  background: #FFFFFF;
+  color: #475569;
+  font-weight: 700;
+  font-size: 0.86rem;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .btn-cinema-cancel:hover {
-  background: #F1F5F9;
+  background: #F8FAFC;
   color: #0F172A;
 }
 
 .btn-cinema-confirm {
-  background: #1D72FE;
-  color: #FFFFFF;
-  border: none;
-  border-radius: 8px;
   padding: 10px 22px;
-  font-size: 0.9rem;
-  font-weight: 700;
+  border-radius: 11px;
+  border: none;
+  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+  color: #FFFFFF;
+  font-weight: 750;
+  font-size: 0.88rem;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(29, 114, 254, 0.3);
-  transition: all 0.15s ease;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+  transition: all 0.18s ease;
 }
 
 .btn-cinema-confirm:hover:not(:disabled) {
-  background: #1558C9;
   transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(29, 114, 254, 0.38);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.4);
 }
 
 .btn-cinema-confirm:disabled {
-  background: #CBD5E1;
-  color: #94A3B8;
+  opacity: 0.45;
   cursor: not-allowed;
   box-shadow: none;
+  background: #94A3B8;
 }
 
-/* ====================================================================
-   MÔ HÌNH BÀN THẢO LUẬN (PER_TABLE - PHÒNG D-201)
-   Mô hình to hơn ghế một chút, hình khối bàn họp nhóm sang trọng
-   ==================================================================== */
-.cinema-tables-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 18px;
-  max-width: 680px;
-  margin: 0 auto;
-  padding: 16px 0;
+/* ========================================================
+   STEP 2: BOOKING DETAILS FORM
+   ======================================================== */
+.cinema-modal-container.cinema-modal-details {
+  max-width: 660px;
+  width: 95vw;
+  max-height: 92vh;
 }
 
-.cinema-table-card {
-  min-height: 96px;
-  border-radius: 14px;
-  padding: 12px 14px;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  border: 2px solid #CBD5E1;
-  background: #FFFFFF;
-  position: relative;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
+.booking-details-step {
+  flex: 1;
+  padding: 16px 24px 20px;
+  overflow-y: auto;
 }
 
-.cinema-table-card.table-available {
-  background: #FFFFFF;
-  border-color: #CBD5E1;
-}
-
-.cinema-table-card.table-available:hover {
-  background: #F0F7FF;
-  border-color: #1D72FE;
-  transform: translateY(-3px);
-  box-shadow: 0 8px 20px rgba(29, 114, 254, 0.18);
-}
-
-.cinema-table-card.table-selected {
-  background: linear-gradient(135deg, #1D72FE 0%, #1E40AF 100%);
-  border-color: #1D72FE;
-  color: #FFFFFF;
-  transform: translateY(-3px) scale(1.02);
-  box-shadow: 0 8px 24px rgba(29, 114, 254, 0.35);
-}
-
-.cinema-table-card.table-occupied {
-  background: #F8FAFC;
-  border-color: #E2E8F0;
-  color: #94A3B8;
-  cursor: not-allowed;
-  opacity: 0.65;
-}
-
-.cinema-table-card.table-insufficient {
-  background: #FFF1F2;
-  border-color: #FECDD3;
-  color: #9F1239;
-  cursor: not-allowed;
-  opacity: 0.85;
-}
-
-.cinema-table-card.table-insufficient:hover {
-  background: #FFE4E6;
-  border-color: #FDA4AF;
-  transform: none;
-  box-shadow: none;
-}
-
-.cinema-table-card.table-insufficient .table-card-capacity {
-  background: #FEE2E2;
-  color: #DC2626;
-  font-weight: 800;
-}
-
-.cinema-table-card.table-inactive {
-  background: #FEF2F2;
-  border-color: #FECACA;
-  color: #DC2626;
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.table-card-top {
+/* Thẻ tóm tắt vị trí đã chọn (Default: Dành cho ghế - to hơn một chút theo yêu cầu) */
+.selected-resource-summary {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 13px;
+  padding: 10px 16px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 55%, #EFF6FF 100%);
+  border: 1.5px solid #DBEAFE;
+  box-shadow: 0 4px 14px -3px rgba(37, 99, 235, 0.08);
+  margin-bottom: 12px;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
 }
 
-.table-card-code {
-  font-size: 1.05rem;
+.selected-resource-summary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #3B82F6 0%, #60A5FA 50%, #93C5FD 100%);
+}
+
+.selected-resource-icon {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(140deg, #60A5FA 0%, #2563EB 55%, #1D4ED8 100%);
+  border: 1.5px solid rgba(255, 255, 255, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 8px 16px -3px rgba(37, 99, 235, 0.38), inset 0 1.5px 2px rgba(255, 255, 255, 0.7);
+  transition: transform 0.2s ease;
+}
+
+.selected-resource-icon svg {
+  color: #FFFFFF !important;
+  stroke: #FFFFFF !important;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
+}
+
+.selected-resource-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.selected-resource-info .resource-tag {
+  font-size: 0.65rem;
   font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #2563EB;
+}
+
+.selected-resource-info .resource-name {
+  font-size: 1.06rem;
+  font-weight: 850;
+  color: #0F172A;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+}
+
+.selected-resource-info .resource-sub {
+  font-size: 0.73rem;
+  color: #64748B;
+  font-weight: 600;
+}
+
+.btn-change-resource {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 13px;
+  border-radius: 9px;
+  border: 1.5px solid #BFDBFE;
+  background: #FFFFFF;
+  color: #1D4ED8;
+  font-size: 0.77rem;
+  font-weight: 750;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.08);
+}
+
+.btn-change-resource:hover {
+  background: #2563EB;
+  color: #FFFFFF;
+  border-color: #2563EB;
+  transform: translateY(-1px);
+}
+
+/* Thẻ tóm tắt vị trí Bàn (giữ kích thước nhỏ gọn 36px để vừa vặn 1 trang) */
+.selected-resource-summary.summary-compact-table {
+  padding: 8px 14px;
+  margin-bottom: 10px;
+  border-radius: 12px;
+  gap: 12px;
+}
+
+.selected-resource-summary.summary-compact-table .selected-resource-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  box-shadow: 0 6px 12px -2px rgba(37, 99, 235, 0.35);
+}
+
+.selected-resource-summary.summary-compact-table .resource-tag {
+  font-size: 0.62rem;
+}
+
+.selected-resource-summary.summary-compact-table .resource-name {
+  font-size: 0.98rem;
+}
+
+.selected-resource-summary.summary-compact-table .resource-sub {
+  font-size: 0.71rem;
+}
+
+.selected-resource-summary.summary-compact-table .btn-change-resource {
+  padding: 4px 11px;
+  font-size: 0.75rem;
+}
+
+/* Form đặt chỗ nguyên bản theo chiều dọc */
+.selection-booking-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.selection-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.selection-form-field label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #1E293B;
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-.cinema-table-card.table-selected .table-card-code {
-  color: #FFFFFF;
+.selection-form-field label em {
+  color: #EF4444;
+  font-style: normal;
 }
 
-.table-card-capacity {
+.selection-capacity-hint {
   font-size: 0.75rem;
-  font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 6px;
-  background: #EFF6FF;
-  color: #1D72FE;
-}
-
-.cinema-table-card.table-selected .table-card-capacity {
-  background: rgba(255, 255, 255, 0.25);
-  color: #FFFFFF;
-}
-
-.cinema-table-card.table-occupied .table-card-capacity {
-  background: #E2E8F0;
+  font-weight: 500;
   color: #64748B;
+  margin-left: 4px;
 }
 
-.table-card-desc {
-  font-size: 0.775rem;
-  margin-top: 6px;
-  color: #64748B;
-  line-height: 1.3;
+.selection-time-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }
 
-.cinema-table-card.table-selected .table-card-desc {
-  color: #E0E7FF;
+.selection-form-control {
+  width: 100%;
+  border: 1.5px solid #CBD5E1;
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 0.88rem;
+  color: #0F172A;
+  outline: none;
+  background: #FFFFFF;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease;
 }
 
-.table-card-status {
-  font-size: 0.725rem;
-  font-weight: 600;
-  margin-top: 8px;
+.selection-form-control:focus {
+  border-color: #2563EB;
+}
+
+.selection-form-textarea {
+  width: 100%;
+  min-height: 64px;
+  height: 64px;
+  border: 1.5px solid #CBD5E1;
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 0.86rem;
+  color: #0F172A;
+  outline: none;
+  background: #FFFFFF;
+  box-sizing: border-box;
+  resize: vertical;
+  transition: border-color 0.15s ease;
+}
+
+.selection-form-textarea:focus {
+  border-color: #2563EB;
+}
+
+.selection-hours-note {
+  font-size: 0.75rem;
+  color: #2563EB;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
+  margin-top: -2px;
 }
 
-/* Global Floating Toast Notifications */
-.astp-toast-float {
-  position: fixed !important;
-  bottom: 24px !important;
-  right: 24px !important;
-  z-index: 99999 !important;
-  box-shadow: 0 12px 30px -4px rgba(0, 0, 0, 0.25) !important;
-  animation: astpToastSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+.selection-form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 6px;
 }
 
-@keyframes astpToastSlideUp {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
+.selection-back-button {
+  padding: 9px 16px;
+  border-radius: 10px;
+  border: 1px solid #CBD5E1;
+  background: #FFFFFF;
+  color: #475569;
+  font-size: 0.84rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.selection-back-button:hover {
+  background: #F8FAFC;
+  color: #0F172A;
+}
+
+.selection-submit-button {
+  padding: 9px 22px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+  color: #FFFFFF;
+  font-size: 0.88rem;
+  font-weight: 750;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.28);
+  transition: all 0.15s ease;
+}
+
+.selection-submit-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
+}
+
+.booking-flow-steps {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.flow-step {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #94A3B8;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.flow-step b {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #E2E8F0;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+}
+
+.flow-step.active {
+  color: #2563EB;
+}
+
+.flow-step.active b {
+  background: #2563EB;
+  color: #FFFFFF;
+}
+
+.flow-line {
+  width: 20px;
+  height: 1px;
+  background: #CBD5E1;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleUp {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Mobile responsive */
+@media (max-width: 640px) {
+  .cinema-modal-overlay {
+    padding: 0;
   }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
+  .cinema-modal-container.cinema-modal-interactive-mode {
+    width: 100vw;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+  .cinema-modal-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .footer-actions {
+    width: 100%;
+  }
+  .footer-actions button {
+    flex: 1;
   }
 }
