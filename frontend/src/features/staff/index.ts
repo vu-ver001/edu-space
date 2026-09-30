@@ -9,3 +9,4 @@ export * from './api/auditLogApi';
 
 export * from './pages/BookingManagementPageKT';
 export * from './pages/MaintenanceManagementPageKT';
+export { MaintenanceManagementPageKT as StaffOperationsPageKT } from './pages/MaintenanceManagementPageKT';

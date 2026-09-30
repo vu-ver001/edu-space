@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import {
   BarChart3,
   Download,
+  RotateCw,
   TrendingUp,
   AlertTriangle,
   Clock,
@@ -13,10 +14,13 @@ import {
   Info,
   CalendarClock,
   Sparkles,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { statisticsService } from '../services/statisticsService';
 import type { DashboardStatisticsResponse, TimeFilterPreset } from '../types/statistics';
 import { CustomDateRangePicker, toLocalIsoDate } from '../components/CustomDateRangePicker';
+import { ExportReportModal } from '../components/ExportReportModal';
 import '../statistics.css';
 
 export default function StatisticsDashboardPage() {
@@ -31,6 +35,33 @@ export default function StatisticsDashboardPage() {
   });
   const [toDate, setToDate] = useState<string>(() => toLocalIsoDate(new Date()));
   const [isExporting, setIsExporting] = useState<boolean>(false);
+  const [showExportModal, setShowExportModal] = useState<boolean>(false);
+  const [expandedTypes, setExpandedTypes] = useState<Record<string, boolean>>({});
+
+  const toggleExpand = (type: string) => {
+    setExpandedTypes(prev => ({
+      ...prev,
+      [type]: !prev[type],
+    }));
+  };
+
+  const maintenanceRooms = useMemo(() => {
+    return stats?.maintenanceDetails?.filter(item =>
+      item.resourceType?.toLowerCase().includes('phòng')
+    ) || [];
+  }, [stats?.maintenanceDetails]);
+
+  const maintenanceTables = useMemo(() => {
+    return stats?.maintenanceDetails?.filter(item =>
+      item.resourceType?.toLowerCase().includes('bàn')
+    ) || [];
+  }, [stats?.maintenanceDetails]);
+
+  const maintenanceSeats = useMemo(() => {
+    return stats?.maintenanceDetails?.filter(item =>
+      item.resourceType?.toLowerCase().includes('ghế')
+    ) || [];
+  }, [stats?.maintenanceDetails]);
 
   const loadData = async (from?: string, to?: string) => {
     setIsLoading(true);
@@ -88,24 +119,42 @@ export default function StatisticsDashboardPage() {
     loadData(from || undefined, to || undefined);
   };
 
-  // Xuất báo cáo chuyên nghiệp định dạng Excel (.xlsx)
-  const handleExportExcel = async () => {
-    if (!stats || isExporting) return;
+  // Xuất báo cáo chuyên nghiệp định dạng Excel (.xlsx) với tùy chọn chọn tháng hoặc khoảng ngày
+  const handleConfirmExport = async (
+    exportFrom: string,
+    exportTo: string,
+    isMonth: boolean,
+    monthLabel: string,
+    applyToDashboard: boolean
+  ) => {
+    if (isExporting) return;
     setIsExporting(true);
     try {
-      const blob = await statisticsService.exportExcel(fromDate || undefined, toDate || undefined);
+      const blob = await statisticsService.exportExcel(exportFrom || undefined, exportTo || undefined);
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      const todayStr = toLocalIsoDate(new Date()).replace(/-/g, '');
-      link.setAttribute('download', `Thong_Ke_EduSpace_${todayStr}.xlsx`);
+      let filename = `Thong_Ke_EduSpace_${toLocalIsoDate(new Date()).replace(/-/g, '')}.xlsx`;
+      if (isMonth && monthLabel) {
+        filename = `Bao_Cao_Thong_Ke_Thang_${monthLabel.replace('/', '_')}.xlsx`;
+      }
+      link.setAttribute('download', filename);
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-    } catch (err) {
+
+      if (applyToDashboard) {
+        setFromDate(exportFrom);
+        setToDate(exportTo);
+        setPreset('custom');
+        loadData(exportFrom || undefined, exportTo || undefined);
+      }
+
+      setShowExportModal(false);
+    } catch (err: any) {
       console.error('Lỗi khi xuất file Excel:', err);
-      alert('Không thể xuất file Excel báo cáo. Vui lòng thử lại!');
+      throw err;
     } finally {
       setIsExporting(false);
     }
@@ -175,8 +224,8 @@ export default function StatisticsDashboardPage() {
               <p>
                 Tổng hợp chỉ số vận hành không gian học tập, tỷ lệ sử dụng thực tế và phân bổ lượt đặt chỗ.
                 {stats?.calculatedAt && (
-                  <span style={{ display: 'inline-block', marginLeft: '6px', color: '#2563eb', fontWeight: 600 }}>
-                    • Dữ liệu tính toán lúc: {new Date(stats.calculatedAt).toLocaleString('vi-VN')}
+                  <span style={{ display: 'inline-block', marginLeft: '3px', marginTop: '2px', color: '#2563eb', fontWeight: 600 }}>
+                    Dữ liệu tính toán lúc: {new Date(stats.calculatedAt).toLocaleString('vi-VN')}
                   </span>
                 )}
               </p>
@@ -185,10 +234,22 @@ export default function StatisticsDashboardPage() {
 
           <div className="stats-header-actions">
             <button
+              type="button"
+              className="stats-action-btn icon-only"
+              onClick={() => loadData(fromDate, toDate)}
+              disabled={isLoading || isExporting}
+              title="Làm mới dữ liệu"
+              aria-label="Làm mới dữ liệu"
+            >
+              <RotateCw size={16} className={isLoading ? 'spin-icon' : ''} />
+            </button>
+
+            <button
+              type="button"
               className="stats-action-btn primary"
-              onClick={handleExportExcel}
-              disabled={!stats || isExporting || isLoading}
-              title="Xuất báo cáo chi tiết định dạng Excel (.xlsx)"
+              onClick={() => setShowExportModal(true)}
+              disabled={isExporting}
+              title="Chọn tháng hoặc khoảng thời gian để xuất file Excel (.xlsx)"
             >
               <Download size={15} className={isExporting ? 'spin-icon' : ''} />
               <span>{isExporting ? 'Đang xuất...' : 'Xuất Báo Cáo'}</span>
@@ -624,7 +685,7 @@ export default function StatisticsDashboardPage() {
                 <td><code>PENDING_APPROVAL</code></td>
                 <td><strong>{stats?.pendingApprovalCount ?? 0}</strong> lượt</td>
                 <td>{stats?.totalBookings ? Math.round(((stats.pendingApprovalCount || 0) / stats.totalBookings) * 1000) / 10 : 0}%</td>
-                <td style={{ color: '#a16207' }}>Cần Staff/Admin xử lý</td>
+                <td style={{ color: '#a16207' }}>Cần Staff xử lý</td>
               </tr>
               <tr>
                 <td>
@@ -633,7 +694,7 @@ export default function StatisticsDashboardPage() {
                 <td><code>NO_SHOW</code></td>
                 <td><strong>{stats?.noShowCount ?? 0}</strong> lượt</td>
                 <td>{stats?.totalBookings ? Math.round(((stats.noShowCount || 0) / stats.totalBookings) * 1000) / 10 : 0}%</td>
-                <td style={{ color: '#c2410c' }}>Cần nhắc nhở / trừ điểm uy tín</td>
+                <td style={{ color: '#c2410c' }}>Cần nhắc nhở</td>
               </tr>
               <tr>
                 <td>
@@ -666,94 +727,260 @@ export default function StatisticsDashboardPage() {
               {/* Phân hệ Bảo trì đa tài nguyên: Phòng, Bàn, Ghế */}
               <tr style={{ background: '#f8fafc' }}>
                 <td colSpan={5} style={{ fontWeight: 700, color: '#0f172a', padding: '14px 16px', fontSize: '13px' }}>
-                  TỔNG HỢP SỐ LƯỢNG BẢO TRÌ THEO LOẠI TÀI NGUYÊN
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                    <span>TỔNG HỢP SỐ LƯỢNG BẢO TRÌ THEO LOẠI TÀI NGUYÊN</span>
+                    <span style={{ fontSize: '12px', fontWeight: 500, color: '#64748b' }}>
+                      💡 Click vào từng dòng để mở/đóng danh sách chi tiết
+                    </span>
+                  </div>
                 </td>
               </tr>
-              <tr>
+
+              {/* 1. Hàng Phòng học */}
+              <tr
+                className={maintenanceRooms.length > 0 ? (expandedTypes['room'] ? 'row-expandable row-expanded-active' : 'row-expandable') : ''}
+                onClick={() => maintenanceRooms.length > 0 && toggleExpand('room')}
+              >
                 <td>
                   <span className="status-badge-pill" style={{ background: '#fee2e2', color: '#b91c1c' }}>🏢 Phòng học</span>
                 </td>
                 <td><code>spaces & maintenance_blocks</code></td>
-                <td><strong>{stats?.maintenanceSpacesCount ?? 0}</strong> phòng</td>
-                <td>-</td>
-                <td style={{ color: stats?.maintenanceSpacesCount ? '#b91c1c' : '#16a34a' }}>
-                  {stats?.maintenanceSpacesCount ? 'Đang bảo trì / chặn lịch' : 'Hoạt động bình thường'}
+                <td><strong>{stats?.maintenanceSpacesCount ?? maintenanceRooms.length}</strong> phòng</td>
+                <td>
+                  {maintenanceRooms.length > 0 ? (
+                    <button
+                      type="button"
+                      className={`maintenance-expand-btn ${expandedTypes['room'] ? 'active' : ''}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleExpand('room');
+                      }}
+                    >
+                      {expandedTypes['room'] ? (
+                        <>
+                          <ChevronUp size={13} /> Thu gọn
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown size={13} /> Chi tiết ({maintenanceRooms.length})
+                        </>
+                      )}
+                    </button>
+                  ) : (
+                    <span style={{ color: '#94a3b8', fontSize: '12px' }}>Không có bảo trì</span>
+                  )}
+                </td>
+                <td style={{ color: (stats?.maintenanceSpacesCount ?? maintenanceRooms.length) > 0 ? '#b91c1c' : '#16a34a' }}>
+                  {(stats?.maintenanceSpacesCount ?? maintenanceRooms.length) > 0 ? 'Đang bảo trì / chặn lịch' : 'Hoạt động bình thường'}
                 </td>
               </tr>
-              <tr>
+
+              {/* Chi tiết Phòng học dropdown */}
+              {expandedTypes['room'] && maintenanceRooms.length > 0 && (
+                <tr>
+                  <td colSpan={5} style={{ padding: '12px 18px', background: '#fdf2f2', borderBottom: '1px solid #fecaca' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ fontSize: '12px', fontWeight: 700, color: '#991b1b', marginBottom: '2px' }}>
+                        🏢 Danh sách cụ thể {maintenanceRooms.length} phòng học đang bảo trì:
+                      </div>
+                      {maintenanceRooms.map((item, idx) => (
+                        <div
+                          key={`room-${item.resourceCode}-${idx}`}
+                          className="maintenance-detail-card"
+                          style={{ borderLeftColor: '#ef4444' }}
+                        >
+                          <div className="maintenance-card-code">
+                            <code style={{ background: '#fee2e2', color: '#b91c1c' }}>{item.resourceCode}</code>
+                          </div>
+                          <div className="maintenance-card-info">
+                            <strong>{item.resourceName}</strong>
+                            <div className="maintenance-card-sub">
+                              Thuộc: <span>{item.spaceName}</span> ({item.location})
+                            </div>
+                          </div>
+                          <div className="maintenance-card-time">
+                            <Clock size={13} />
+                            <span>
+                              {item.startTime && item.endTime
+                                ? `${new Date(item.startTime).toLocaleDateString('vi-VN')} - ${new Date(item.endTime).toLocaleDateString('vi-VN')}`
+                                : 'Toàn thời gian'}
+                            </span>
+                          </div>
+                          <div className="maintenance-card-status">
+                            <span className="status-text-red">{item.statusText || 'Đang bảo trì'}</span>
+                            <div className="maintenance-card-reason">
+                              Lý do: {item.reason || 'Bảo trì kỹ thuật'}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </td>
+                </tr>
+              )}
+
+              {/* 2. Hàng Cụm bàn nhóm */}
+              <tr
+                className={maintenanceTables.length > 0 ? (expandedTypes['table'] ? 'row-expandable row-expanded-active' : 'row-expandable') : ''}
+                onClick={() => maintenanceTables.length > 0 && toggleExpand('table')}
+              >
                 <td>
                   <span className="status-badge-pill" style={{ background: '#fef3c7', color: '#92400e' }}>🪑 Cụm bàn nhóm</span>
                 </td>
                 <td><code>space_tables (INACTIVE)</code></td>
-                <td><strong>{stats?.maintenanceTablesCount ?? 0}</strong> bàn</td>
-                <td>-</td>
-                <td style={{ color: stats?.maintenanceTablesCount ? '#b91c1c' : '#16a34a' }}>
-                  {stats?.maintenanceTablesCount ? 'Tạm ngừng đón khách' : 'Sẵn sàng sử dụng'}
+                <td><strong>{stats?.maintenanceTablesCount ?? maintenanceTables.length}</strong> bàn</td>
+                <td>
+                  {maintenanceTables.length > 0 ? (
+                    <button
+                      type="button"
+                      className={`maintenance-expand-btn ${expandedTypes['table'] ? 'active' : ''}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleExpand('table');
+                      }}
+                    >
+                      {expandedTypes['table'] ? (
+                        <>
+                          <ChevronUp size={13} /> Thu gọn
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown size={13} /> Chi tiết ({maintenanceTables.length})
+                        </>
+                      )}
+                    </button>
+                  ) : (
+                    <span style={{ color: '#94a3b8', fontSize: '12px' }}>Không có bảo trì</span>
+                  )}
+                </td>
+                <td style={{ color: (stats?.maintenanceTablesCount ?? maintenanceTables.length) > 0 ? '#b91c1c' : '#16a34a' }}>
+                  {(stats?.maintenanceTablesCount ?? maintenanceTables.length) > 0 ? 'Tạm ngừng đón khách' : 'Sẵn sàng sử dụng'}
                 </td>
               </tr>
-              <tr>
+
+              {/* Chi tiết Cụm bàn nhóm dropdown */}
+              {expandedTypes['table'] && maintenanceTables.length > 0 && (
+                <tr>
+                  <td colSpan={5} style={{ padding: '12px 18px', background: '#fffbeb', borderBottom: '1px solid #fde68a' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ fontSize: '12px', fontWeight: 700, color: '#92400e', marginBottom: '2px' }}>
+                        🪑 Danh sách cụ thể {maintenanceTables.length} cụm bàn nhóm đang tạm khóa:
+                      </div>
+                      {maintenanceTables.map((item, idx) => (
+                        <div
+                          key={`table-${item.resourceCode}-${idx}`}
+                          className="maintenance-detail-card"
+                          style={{ borderLeftColor: '#f59e0b' }}
+                        >
+                          <div className="maintenance-card-code">
+                            <code style={{ background: '#fef3c7', color: '#92400e' }}>{item.resourceCode}</code>
+                          </div>
+                          <div className="maintenance-card-info">
+                            <strong>{item.resourceName}</strong>
+                            <div className="maintenance-card-sub">
+                              Thuộc: <span>{item.spaceName}</span> ({item.location})
+                            </div>
+                          </div>
+                          <div className="maintenance-card-time">
+                            <Clock size={13} />
+                            <span>
+                              {item.startTime && item.endTime
+                                ? `${new Date(item.startTime).toLocaleDateString('vi-VN')} - ${new Date(item.endTime).toLocaleDateString('vi-VN')}`
+                                : 'Toàn thời gian'}
+                            </span>
+                          </div>
+                          <div className="maintenance-card-status">
+                            <span className="status-text-red">{item.statusText || 'Tạm ngừng'}</span>
+                            <div className="maintenance-card-reason">
+                              Lý do: {item.reason || 'Bảo trì kỹ thuật'}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </td>
+                </tr>
+              )}
+
+              {/* 3. Hàng Vị trí ghế ngồi */}
+              <tr
+                className={maintenanceSeats.length > 0 ? (expandedTypes['seat'] ? 'row-expandable row-expanded-active' : 'row-expandable') : ''}
+                onClick={() => maintenanceSeats.length > 0 && toggleExpand('seat')}
+              >
                 <td>
                   <span className="status-badge-pill" style={{ background: '#f1f5f9', color: '#475569' }}>💺 Vị trí ghế ngồi</span>
                 </td>
                 <td><code>seats (INACTIVE)</code></td>
-                <td><strong>{stats?.maintenanceSeatsCount ?? 0}</strong> chỗ</td>
-                <td>-</td>
-                <td style={{ color: stats?.maintenanceSeatsCount ? '#b91c1c' : '#16a34a' }}>
-                  {stats?.maintenanceSeatsCount ? 'Hỏng hóc / chờ thay thế' : 'Sẵn sàng sử dụng'}
+                <td><strong>{stats?.maintenanceSeatsCount ?? maintenanceSeats.length}</strong> chỗ</td>
+                <td>
+                  {maintenanceSeats.length > 0 ? (
+                    <button
+                      type="button"
+                      className={`maintenance-expand-btn ${expandedTypes['seat'] ? 'active' : ''}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleExpand('seat');
+                      }}
+                    >
+                      {expandedTypes['seat'] ? (
+                        <>
+                          <ChevronUp size={13} /> Thu gọn
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown size={13} /> Chi tiết ({maintenanceSeats.length})
+                        </>
+                      )}
+                    </button>
+                  ) : (
+                    <span style={{ color: '#94a3b8', fontSize: '12px' }}>Không có bảo trì</span>
+                  )}
+                </td>
+                <td style={{ color: (stats?.maintenanceSeatsCount ?? maintenanceSeats.length) > 0 ? '#b91c1c' : '#16a34a' }}>
+                  {(stats?.maintenanceSeatsCount ?? maintenanceSeats.length) > 0 ? 'Hỏng hóc / chờ thay thế' : 'Sẵn sàng sử dụng'}
                 </td>
               </tr>
 
-              {/* Bảng Kê Chi Tiết Từng Phòng, Bàn, Ghế Đang Bảo Trì */}
-              <tr style={{ background: '#f1f5f9' }}>
-                <td colSpan={5} style={{ fontWeight: 700, color: '#1e3a8a', padding: '14px 16px', fontSize: '13px' }}>
-                  DANH SÁCH CHI TIẾT CỤ THỂ TÀI NGUYÊN ĐANG BẢO TRÌ
-                </td>
-              </tr>
-
-              {stats?.maintenanceDetails && stats.maintenanceDetails.length > 0 ? (
-                stats.maintenanceDetails.map((item, idx) => (
-                  <tr key={`${item.resourceType}-${item.resourceCode}-${idx}`}>
-                    <td>
-                      <span
-                        className="status-badge-pill"
-                        style={{
-                          background: item.resourceType.includes('Phòng') ? '#fee2e2' : item.resourceType.includes('Bàn') ? '#fef3c7' : '#e0e7ff',
-                          color: item.resourceType.includes('Phòng') ? '#b91c1c' : item.resourceType.includes('Bàn') ? '#92400e' : '#3730a3',
-                          fontWeight: 700,
-                        }}
-                      >
-                        {item.resourceType.includes('Phòng') ? '🏢 ' : item.resourceType.includes('Bàn') ? '🪑 ' : '💺 '}
-                        {item.resourceType}
-                      </span>
-                    </td>
-                    <td>
-                      <code style={{ fontWeight: 700, color: '#0f172a' }}>{item.resourceCode}</code>
-                    </td>
-                    <td>
-                      <strong>{item.resourceName}</strong>
-                      <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px' }}>
-                        Thuộc: <strong>{item.spaceName}</strong> ({item.location})
-                      </div>
-                    </td>
-                    <td>
-                      <span style={{ fontSize: '12px', color: '#475569' }}>
-                        {item.startTime && item.endTime
-                          ? `${new Date(item.startTime).toLocaleDateString('vi-VN')} - ${new Date(item.endTime).toLocaleDateString('vi-VN')}`
-                          : 'Toàn thời gian'}
-                      </span>
-                    </td>
-                    <td style={{ color: '#b91c1c', fontSize: '12.5px' }}>
-                      <strong>{item.statusText || 'Đang bảo trì'}</strong>
-                      <div style={{ fontSize: '11px', color: '#64748b', marginTop: '1px' }}>
-                        Lý do: {item.reason || 'Bảo trì kỹ thuật'}
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              ) : (
+              {/* Chi tiết Vị trí ghế ngồi dropdown */}
+              {expandedTypes['seat'] && maintenanceSeats.length > 0 && (
                 <tr>
-                  <td colSpan={5} style={{ textAlign: 'center', padding: '16px', color: '#16a34a', fontWeight: 600 }}>
-                    ✅ Hiện tại toàn bộ phòng học, bàn nhóm và ghế ngồi đều đang hoạt động bình thường, không có tài nguyên nào bảo trì.
+                  <td colSpan={5} style={{ padding: '12px 18px', background: '#f5f7ff', borderBottom: '1px solid #c7d2fe' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ fontSize: '12px', fontWeight: 700, color: '#3730a3', marginBottom: '2px' }}>
+                        💺 Danh sách cụ thể {maintenanceSeats.length} vị trí ghế ngồi đang bảo trì / chờ thay thế:
+                      </div>
+                      {maintenanceSeats.map((item, idx) => (
+                        <div
+                          key={`seat-${item.resourceCode}-${idx}`}
+                          className="maintenance-detail-card"
+                          style={{ borderLeftColor: '#6366f1' }}
+                        >
+                          <div className="maintenance-card-code">
+                            <code style={{ background: '#e0e7ff', color: '#3730a3' }}>{item.resourceCode}</code>
+                          </div>
+                          <div className="maintenance-card-info">
+                            <strong>{item.resourceName}</strong>
+                            <div className="maintenance-card-sub">
+                              Thuộc: <span>{item.spaceName}</span> ({item.location})
+                            </div>
+                          </div>
+                          <div className="maintenance-card-time">
+                            <Clock size={13} />
+                            <span>
+                              {item.startTime && item.endTime
+                                ? `${new Date(item.startTime).toLocaleDateString('vi-VN')} - ${new Date(item.endTime).toLocaleDateString('vi-VN')}`
+                                : 'Toàn thời gian'}
+                            </span>
+                          </div>
+                          <div className="maintenance-card-status">
+                            <span className="status-text-red">{item.statusText || 'Hỏng hóc'}</span>
+                            <div className="maintenance-card-reason">
+                              Lý do: {item.reason || 'Bảo trì / Thay mới'}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </td>
                 </tr>
               )}
@@ -761,6 +988,16 @@ export default function StatisticsDashboardPage() {
           </table>
         </section>
       </div>
+
+      {/* Modal chọn tháng & cấu hình xuất báo cáo Excel */}
+      <ExportReportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        currentFromDate={fromDate}
+        currentToDate={toDate}
+        onExport={handleConfirmExport}
+        isExporting={isExporting}
+      />
     </div>
   );
 }
