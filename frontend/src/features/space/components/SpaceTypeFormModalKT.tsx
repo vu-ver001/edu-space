@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import type { SpaceType, SpaceTypeCreateRequest, SpaceTypeUpdateRequest, BookingMode } from '../types/spaceType';
+import { readSpaceApiError } from '../api/spaceApiError';
 import './SpaceTypeFormModalKT.css';
 
 interface SpaceTypeFormModalKTProps {
@@ -26,6 +27,7 @@ export const SpaceTypeFormModalKT: React.FC<SpaceTypeFormModalKTProps> = ({
   const [requiresApproval, setRequiresApproval] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [bookingModeError, setBookingModeError] = useState<string | null>(null);
+  const [rejectedBookingMode, setRejectedBookingMode] = useState<BookingMode | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
@@ -43,6 +45,7 @@ export const SpaceTypeFormModalKT: React.FC<SpaceTypeFormModalKTProps> = ({
       }
       setValidationError(null);
       setBookingModeError(null);
+      setRejectedBookingMode(null);
     }
   }, [isOpen, mode, spaceType]);
 
@@ -60,6 +63,7 @@ export const SpaceTypeFormModalKT: React.FC<SpaceTypeFormModalKTProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setRejectedBookingMode(null);
     const trimmedName = name.trim();
     const nameRequiredError = trimmedName ? null : 'Vui lòng nhập tên loại không gian.';
     const modeRequiredError = bookingMode ? null : 'Vui lòng chọn một hình thức đặt chỗ.';
@@ -78,9 +82,22 @@ export const SpaceTypeFormModalKT: React.FC<SpaceTypeFormModalKTProps> = ({
         bookingMode,
         requiresApproval,
       });
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || 'Không thể lưu thông tin. Vui lòng thử lại.';
-      setValidationError(msg);
+    } catch (error: unknown) {
+      const apiError = readSpaceApiError(error, 'Không thể lưu thông tin. Vui lòng thử lại.');
+      const bookingModeErrorCodes = new Set([
+        'SPACE_TYPE_HAS_ACTIVE_SEATS',
+        'SPACE_TYPE_HAS_ACTIVE_TABLES',
+      ]);
+
+      if (bookingModeErrorCodes.has(apiError.code)) {
+        setValidationError(null);
+        setRejectedBookingMode(bookingMode);
+        setBookingModeError(apiError.message);
+      } else {
+        setRejectedBookingMode(null);
+        setBookingModeError(null);
+        setValidationError(apiError.message);
+      }
     }
   };
 
@@ -145,12 +162,12 @@ export const SpaceTypeFormModalKT: React.FC<SpaceTypeFormModalKTProps> = ({
               Hình thức đặt chỗ <span className="astp-required">*</span>
             </label>
             <div
-              className={`astp-mode-options ${bookingModeError ? 'input-error' : ''}`}
+              className={`astp-mode-options ${bookingModeError && !rejectedBookingMode ? 'input-error' : ''}`}
               tabIndex={-1}
               aria-invalid={Boolean(bookingModeError)}
               aria-describedby={bookingModeError ? 'booking-mode-error' : undefined}
             >
-              <label className={`astp-mode-card ${bookingMode === 'WHOLE_SPACE' ? 'selected' : ''}`}>
+              <label className={`astp-mode-card ${bookingMode === 'WHOLE_SPACE' ? 'selected' : ''} ${rejectedBookingMode === 'WHOLE_SPACE' ? 'rejected' : ''}`}>
                 <input
                   type="radio"
                   name="bookingMode"
@@ -159,6 +176,7 @@ export const SpaceTypeFormModalKT: React.FC<SpaceTypeFormModalKTProps> = ({
                   onChange={() => {
                     setBookingMode('WHOLE_SPACE');
                     setBookingModeError(null);
+                    setRejectedBookingMode(null);
                   }}
                   disabled={isLoading}
                 />
@@ -170,7 +188,7 @@ export const SpaceTypeFormModalKT: React.FC<SpaceTypeFormModalKTProps> = ({
                 </div>
               </label>
 
-              <label className={`astp-mode-card ${bookingMode === 'PER_SEAT' ? 'selected' : ''}`}>
+              <label className={`astp-mode-card ${bookingMode === 'PER_SEAT' ? 'selected' : ''} ${rejectedBookingMode === 'PER_SEAT' ? 'rejected' : ''}`}>
                 <input
                   type="radio"
                   name="bookingMode"
@@ -179,6 +197,7 @@ export const SpaceTypeFormModalKT: React.FC<SpaceTypeFormModalKTProps> = ({
                   onChange={() => {
                     setBookingMode('PER_SEAT');
                     setBookingModeError(null);
+                    setRejectedBookingMode(null);
                   }}
                   disabled={isLoading}
                 />
@@ -190,7 +209,7 @@ export const SpaceTypeFormModalKT: React.FC<SpaceTypeFormModalKTProps> = ({
                 </div>
               </label>
 
-              <label className={`astp-mode-card ${bookingMode === 'PER_TABLE' ? 'selected' : ''}`}>
+              <label className={`astp-mode-card ${bookingMode === 'PER_TABLE' ? 'selected' : ''} ${rejectedBookingMode === 'PER_TABLE' ? 'rejected' : ''}`}>
                 <input
                   type="radio"
                   name="bookingMode"
@@ -199,6 +218,7 @@ export const SpaceTypeFormModalKT: React.FC<SpaceTypeFormModalKTProps> = ({
                   onChange={() => {
                     setBookingMode('PER_TABLE');
                     setBookingModeError(null);
+                    setRejectedBookingMode(null);
                   }}
                   disabled={isLoading}
                 />

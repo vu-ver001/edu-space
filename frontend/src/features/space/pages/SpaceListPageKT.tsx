@@ -11,7 +11,7 @@ import type {
 import type { SpaceType } from '../types/spaceType';
 import { spaceApi } from '../api/spaceApi';
 import { spaceTypeApi } from '../api/spaceTypeApi';
-import { readSpaceApiError } from '../api/spaceApiError';
+import { formatSpaceDeleteError, readSpaceApiError } from '../api/spaceApiError';
 import { SpaceStatsCardsKT } from '../components/SpaceStatsCardsKT';
 import { SpaceFilterBarKT } from '../components/SpaceFilterBarKT';
 import { SpaceTableKT } from '../components/SpaceTableKT';
@@ -237,8 +237,7 @@ export const SpaceListPageKT: React.FC = () => {
         return;
       }
 
-      setDeleteError(apiError.message);
-      showToast(apiError.message, 'error');
+      setDeleteError(formatSpaceDeleteError(apiError));
     } finally {
       setDeleteLoading(false);
     }

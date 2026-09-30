@@ -46,7 +46,7 @@ import type { MaintenanceBlock } from '../../staff/types/staff';
 import { spaceApi } from '../api/spaceApi';
 import { spaceTypeApi } from '../api/spaceTypeApi';
 import { spaceImageApi } from '../api/spaceImageApi';
-import { readSpaceApiError } from '../api/spaceApiError';
+import { formatSpaceDeleteError, readSpaceApiError } from '../api/spaceApiError';
 import { maintenanceApi } from '../../staff/api/maintenanceApi';
 import { SpaceFormModalKT } from '../components/SpaceFormModalKT';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
@@ -822,8 +822,7 @@ export const SpaceDetailPageKT: React.FC = () => {
         navigate('/admin/spaces');
         return;
       }
-      setDeleteError(apiError.message);
-      showToast(apiError.message, 'error');
+      setDeleteError(formatSpaceDeleteError(apiError));
     } finally {
       setIsDeleting(false);
     }

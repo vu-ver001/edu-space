@@ -215,7 +215,8 @@
 }
 
 .astp-mode-options.input-error .astp-mode-card {
-  border-color: #fecaca;
+  border-color: #ef4444;
+  background-color: #fffaf0;
 }
 
 .astp-mode-card {
@@ -240,6 +241,13 @@
   border-color: #2563eb;
   background-color: #eff6ff;
   box-shadow: 0 0 0 1px #2563eb;
+}
+
+.astp-mode-card.rejected,
+.astp-mode-card.rejected:hover {
+  border-color: #ef4444;
+  background-color: #fffaf0;
+  box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.14);
 }
 
 .astp-mode-card input[type="radio"] {
