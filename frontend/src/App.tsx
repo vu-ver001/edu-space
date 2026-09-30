@@ -9,7 +9,7 @@ import LoginPage from './features/auth/pages/LoginPage';
 import Placeholder from './pages/Placeholder';
 import { GeneralSettingsPage } from "./features/admin/settings-general/pages/GeneralSettingsPage.tsx";
 import { SpaceTypeDetailPageKT, SpaceTypeListPageKT, SpaceListPageKT, SpaceDetailPageKT, FacilityListPageKT } from "./features/space";
-import { BookingManagementPageKT, MaintenanceManagementPageKT } from "./features/staff";
+import { BookingManagementPageKT, StaffOperationsPageKT } from "./features/staff";
 import PolicyManagementPage from './features/admin/policy/pages/PolicyManagementPage';
 import PolicyHistoryPage from './features/admin/policy/pages/PolicyHistoryPage';
 import { TimelinePage } from './features/operations/pages/TimelinePage';
@@ -17,7 +17,6 @@ import { AuditLogPage } from './features/operations/pages/AuditLogPage';
 import { StatisticsDashboardPage } from './features/admin/statistics';
 import { SearchSpacesPage, SpaceDetailPage, MyBookingsPage } from './features/bookings/core';
 import { UserManagementPage } from './features/admin/auth/UserManagementPage.tsx';
-import './styles/kt-management-controls.css';
 
 const ADMIN_BASE = import.meta.env.VITE_ROUTE_ADMIN || '/admin';
 const STAFF_BASE = import.meta.env.VITE_ROUTE_STAFF || '/staff';
@@ -67,6 +66,7 @@ export default function App() {
     return (
         <BrowserRouter>
             <Routes>
+
                 {/* 3. Đăng nhập */}
                 <Route path="/login" element={<LoginPage />} />
 
@@ -76,6 +76,14 @@ export default function App() {
 
                     {/* ADMIN */}
                     <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
+                        <Route path="/admin/space-types" element={<SpaceTypeListPageKT />} />
+                        <Route path="/admin/space-types/:id" element={<SpaceTypeDetailPageKT />} />
+                        <Route path="/admin/spaces" element={<SpaceListPageKT />} />
+                        <Route path="/admin/spaces/:id" element={<SpaceDetailPageKT />} />
+                        <Route path="/admin/facilities" element={<FacilityListPageKT />} />
+                        <Route path="/staff" element={<BookingManagementPageKT />} />
+                        <Route path="/staff/bookings" element={<BookingManagementPageKT />} />
+                        <Route path="/staff/operations" element={<StaffOperationsPageKT />} />
                         <Route path={`${ADMIN_BASE}/stats`} element={<StatisticsDashboardPage />} />
                         <Route path={`${ADMIN_BASE}/policy`} element={<PolicyManagementPage />} />
                         <Route path={`${ADMIN_BASE}/policy/history`} element={<PolicyHistoryPage />} />
@@ -91,11 +99,7 @@ export default function App() {
 
                     {/* STAFF */}
                     <Route element={<ProtectedRoute allowedRoles={['STAFF', 'ADMIN']} />}>
-                        <Route path={STAFF_BASE} element={<BookingManagementPageKT />} />
-                        <Route path={`${STAFF_BASE}/bookings`} element={<BookingManagementPageKT />} />
-                        <Route path={`${STAFF_BASE}/approvals`} element={<BookingManagementPageKT />} />
-                        <Route path={`${STAFF_BASE}/checkin`} element={<BookingManagementPageKT />} />
-                        <Route path={`${STAFF_BASE}/maintenance`} element={<MaintenanceManagementPageKT />} />
+                        <Route path={STAFF_BASE} element={<StaffOperationsPageKT />} />
                         <Route path={`${STAFF_BASE}/timeline`} element={<TimelinePage />} />
                         <Route path={`${STAFF_BASE}/audit-logs`} element={<AuditLogPage />} />
                         <Route path={`${STAFF_BASE}/qr`} element={<Placeholder title="Check-in QR" owner="Vũ" />} />
