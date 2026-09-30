@@ -1,5 +1,7 @@
 package com.eduspace.backend.space.service;
 
+import com.eduspace.backend.booking.entity.BookingStatus;
+import com.eduspace.backend.booking.repository.BookingRepository;
 import com.eduspace.backend.common.exception.AppException;
 import com.eduspace.backend.space.dto.request.SpaceTableCreateRequestKT;
 import com.eduspace.backend.space.dto.request.SpaceTableUpdateRequestKT;
@@ -26,6 +28,13 @@ public class SpaceTableService {
 
     private final SpaceTableRepository spaceTableRepository;
     private final SpaceRepository spaceRepository;
+    private final BookingRepository bookingRepository;
+
+    private static final java.util.Set<BookingStatus> DELETE_BLOCKING_STATUSES = java.util.Set.of(
+            BookingStatus.PENDING_APPROVAL,
+            BookingStatus.CONFIRMED,
+            BookingStatus.CHECKED_IN
+    );
 
     @Transactional(readOnly = true)
     public List<SpaceTableResponseKT> getTablesBySpace(Long spaceId) {
@@ -164,8 +173,24 @@ public class SpaceTableService {
                         "Không tìm thấy bàn với id: " + tableId
                 ));
 
+        // Chặn xóa nếu bàn đang có booking chưa kết thúc
+        LocalDateTime now = LocalDateTime.now();
+        long blockingCount = bookingRepository.countBlockingBookingsForTableDeletion(
+                tableId,
+                DELETE_BLOCKING_STATUSES,
+                now
+        );
+        if (blockingCount > 0) {
+            throw new AppException(
+                    HttpStatus.CONFLICT,
+                    "TABLE_HAS_ACTIVE_BOOKINGS",
+                    "Không thể xóa bàn '" + table.getTableCode() + "' vì đang có "
+                            + blockingCount + " booking chưa kết thúc."
+            );
+        }
+
         table.setStatus(SpaceTableStatus.INACTIVE);
-        table.setDeletedAt(LocalDateTime.now());
+        table.setDeletedAt(now);
         spaceTableRepository.save(table);
     }
 

@@ -297,6 +297,46 @@ export const SpaceFormModalKT: React.FC<Props> = ({
     if (!capacity || Number(capacity) < 1) errors.capacity = 'Sức chứa phải lớn hơn 0.';
     if (images.length === 0) errors.images = 'Vui lòng thêm ít nhất 1 hình ảnh cho không gian.';
 
+    // Khi chỉnh sửa, kiểm tra đồng thời các ràng buộc phụ thuộc ghế/bàn để
+    // tất cả ô không phù hợp cùng được báo ngay trong một lần nhấn Lưu.
+    if (mode === 'edit' && space) {
+      const currentBookingMode = space.spaceType?.bookingMode || space.bookingMode;
+      const currentSpaceTypeId = space.spaceType?.id || space.spaceTypeId;
+      const targetSpaceType = spaceTypes.find((item) => item.id === spaceTypeId);
+      const numericCapacity = Number(capacity);
+
+      if (currentBookingMode === 'PER_SEAT') {
+        const activeSeatCount = space.activeSeatCount || 0;
+        if (numericCapacity >= 1 && numericCapacity < activeSeatCount) {
+          errors.capacity = `Sức chứa mới (${numericCapacity}) không thể nhỏ hơn số chỗ ngồi đang hoạt động (${activeSeatCount} chỗ).`;
+        }
+        if (
+          spaceTypeId !== currentSpaceTypeId
+          && targetSpaceType
+          && targetSpaceType.bookingMode !== 'PER_SEAT'
+          && activeSeatCount > 0
+        ) {
+          errors.spaceTypeId = `Không thể chuyển loại phòng vì không gian đang có ${activeSeatCount} chỗ ngồi hoạt động.`;
+        }
+      }
+
+      if (currentBookingMode === 'PER_TABLE') {
+        const activeTableCount = space.activeTableCount || 0;
+        const activeTableCapacity = space.activeTableCapacity || 0;
+        if (numericCapacity >= 1 && numericCapacity < activeTableCapacity) {
+          errors.capacity = `Sức chứa mới (${numericCapacity}) không thể nhỏ hơn tổng sức chứa của các bàn đang hoạt động (${activeTableCapacity} chỗ).`;
+        }
+        if (
+          spaceTypeId !== currentSpaceTypeId
+          && targetSpaceType
+          && targetSpaceType.bookingMode !== 'PER_TABLE'
+          && activeTableCount > 0
+        ) {
+          errors.spaceTypeId = `Không thể chuyển loại phòng vì không gian đang có ${activeTableCount} bàn hoạt động.`;
+        }
+      }
+    }
+
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       if (errors.images) setImageError(errors.images);
