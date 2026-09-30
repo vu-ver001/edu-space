@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation, Link, Navigate } from 'react-router-dom';
 import { DynamicIcon } from '../../helper/DynamicIcon.tsx';
-import { ROLE_NAV_ITEMS, isNavActive, ADMIN_BASE, STAFF_BASE, STUDENT_SPACES_PATH } from '../../config/roleNavigation.tsx';
-import type { AppRole, NavItem } from '../../config/roleNavigation.tsx';
+import { ROLE_NAV_ITEMS, isNavActive, isNavGroup, isNavGroupActive, ADMIN_BASE, STAFF_BASE, STUDENT_SPACES_PATH } from '../../config/roleNavigation.tsx';
+import type { AppRole, NavEntry, NavGroup } from '../../config/roleNavigation.tsx';
 import './PortalLayout.css';
 import { ChangePasswordModal } from '../../features/admin/components/ChangePasswordModal.tsx';
 
@@ -31,6 +31,8 @@ export const PortalLayout = () => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+  // Ghi đè thủ công của trạng thái nhóm; undefined = suy ra từ route (đang ở mục con thì mở).
+  const [groupOpenOverrides, setGroupOpenOverrides] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const userStr = localStorage.getItem('eduspace_user') || localStorage.getItem('user');
@@ -80,12 +82,14 @@ export const PortalLayout = () => {
   };
 
   // Menu lấy từ nguồn dùng chung theo role; lọc theo allowedRoles để tự ẩn khi config lệch.
-  const getNavItems = (): NavItem[] => {
+  const getNavItems = (): NavEntry[] => {
     const role = user.role as AppRole;
     const overrides = UI_OVERRIDES[role] ?? [];
     return ROLE_NAV_ITEMS[role]
       .filter((item) => item.allowedRoles.includes(role))
       .map((item) => {
+        // Nhóm không có route riêng nên không tham gia UI_OVERRIDES.
+        if (isNavGroup(item)) return item;
         const override = overrides.find((o) => o.to === item.to);
         if (!override) return item;
         const label = override.labelKey ? uiSettings[override.labelKey] : undefined;
@@ -97,6 +101,16 @@ export const PortalLayout = () => {
           icon: renderIcon(iconKey, item.icon),
         };
       });
+  };
+
+  // Ở chế độ sidebar thu gọn chữ bị ẩn nên bấm nhóm phải bung sidebar ra rồi mới thấy mục con.
+  const handleGroupToggle = (group: NavGroup, isOpen: boolean) => {
+    if (isCollapsed) {
+      setIsCollapsed(false);
+      setGroupOpenOverrides((prev) => ({ ...prev, [group.id]: true }));
+      return;
+    }
+    setGroupOpenOverrides((prev) => ({ ...prev, [group.id]: !isOpen }));
   };
 
   if (!VALID_ROLES.includes(user.role as AppRole)) {
@@ -130,19 +144,59 @@ export const PortalLayout = () => {
             </div>
 
             <nav className="sidebar-wide-nav" aria-label="Điều hướng theo vai trò">
-              {navItems.map((item) => (
+              {navItems.map((entry) => {
+                if (isNavGroup(entry)) {
+                  const group = entry;
+                  const isOpen = groupOpenOverrides[group.id] ?? isNavGroupActive(group, pathname);
+                  const childrenId = `sidebar-group-${group.id}`;
+                  return (
+                    <div className="sidebar-wide-group" key={group.id}>
+                      <button
+                        type="button"
+                        className="sidebar-wide-item sidebar-group-trigger"
+                        aria-expanded={isOpen}
+                        aria-controls={childrenId}
+                        title={isCollapsed ? group.label : undefined}
+                        onClick={() => handleGroupToggle(group, isOpen)}
+                      >
+                        <span className="nav-item-icon">{group.icon}</span>
+                        <span className="nav-item-text">{group.label}</span>
+                      </button>
+                      {/* Luôn render để có animation thu; khi đóng container ở cao 0 + ẩn hoàn toàn. */}
+                      <div className={`sidebar-group-children ${isOpen ? 'is-open' : ''}`} id={childrenId}>
+                        <div className="sidebar-group-children-inner">
+                          {group.children.map((child) => (
+                            <NavLink
+                              key={child.to}
+                              to={child.to}
+                              end={child.exact}
+                              aria-label={child.label}
+                              className={() => `sidebar-wide-item sidebar-wide-item-child ${isNavActive(child, pathname) ? 'active' : ''}`}
+                            >
+                              <span className="nav-item-icon">{child.icon}</span>
+                              <span className="nav-item-text">{child.label}</span>
+                            </NavLink>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
                   <NavLink
-                    key={item.to}
-                    to={item.to}
-                    end={item.exact}
-                    aria-label={item.label}
-                    className={() => `sidebar-wide-item ${isNavActive(item, pathname) ? 'active' : ''}`}
-                    title={isCollapsed ? item.label : undefined}
+                    key={entry.to}
+                    to={entry.to}
+                    end={entry.exact}
+                    aria-label={entry.label}
+                    className={() => `sidebar-wide-item ${isNavActive(entry, pathname) ? 'active' : ''}`}
+                    title={isCollapsed ? entry.label : undefined}
                   >
-                    <span className="nav-item-icon">{item.icon}</span>
-                    <span className="nav-item-text">{item.label}</span>
+                    <span className="nav-item-icon">{entry.icon}</span>
+                    <span className="nav-item-text">{entry.label}</span>
                   </NavLink>
-              ))}
+                );
+              })}
             </nav>
           </div>
 
