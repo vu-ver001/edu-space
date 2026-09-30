@@ -127,6 +127,7 @@ export const SpaceDetailPageKT: React.FC = () => {
   // Table Delete State (Xóa bàn)
   const [deletingTable, setDeletingTable] = useState<SpaceTable | null>(null);
   const [isTableDeleting, setIsTableDeleting] = useState<boolean>(false);
+  const [tableDeleteError, setTableDeleteError] = useState<string | null>(null);
 
   // Seat Modal State (Thêm 1 ghế hoặc nhiều ghế / Sửa ghế)
   const [isSeatModalOpen, setIsSeatModalOpen] = useState<boolean>(false);
@@ -154,6 +155,7 @@ export const SpaceDetailPageKT: React.FC = () => {
   // Seat Delete State (Xóa ghế)
   const [deletingSeat, setDeletingSeat] = useState<SpaceSeat | null>(null);
   const [isSeatDeleting, setIsSeatDeleting] = useState<boolean>(false);
+  const [seatDeleteError, setSeatDeleteError] = useState<string | null>(null);
 
   // Handlers for Table
   const handleOpenCreateTable = () => {
@@ -216,16 +218,13 @@ export const SpaceDetailPageKT: React.FC = () => {
 
   const handleConfirmDeleteTable = async () => {
     if (!deletingTable || !space) return;
-    if (isTableBooked(deletingTable)) {
-      showToast(`Không thể xóa bàn '${deletingTable.tableCode}' vì đang có người đặt bàn này trong hệ thống!`, 'error');
-      setDeletingTable(null);
-      return;
-    }
     setIsTableDeleting(true);
+    setTableDeleteError(null);
     try {
       const response = await spaceApi.deleteTable(deletingTable.id);
       showToast(response.message);
       setDeletingTable(null);
+      setTableDeleteError(null);
       const [updatedTables, updatedSpace] = await Promise.all([
         spaceApi.getTablesBySpace(space.id),
         spaceApi.getSpaceById(space.id),
@@ -236,10 +235,13 @@ export const SpaceDetailPageKT: React.FC = () => {
       const apiError = readSpaceApiError(error, 'Không thể xóa bàn. Vui lòng thử lại.');
       if (apiError.code === 'TABLE_NOT_FOUND') {
         setDeletingTable(null);
+        setTableDeleteError(null);
         const updatedTables = await spaceApi.getTablesBySpace(space.id).catch(() => []);
         setTables(updatedTables);
+        showToast(apiError.message, 'error');
+        return;
       }
-      showToast(apiError.message, 'error');
+      setTableDeleteError(apiError.message);
     } finally {
       setIsTableDeleting(false);
     }
@@ -434,16 +436,13 @@ export const SpaceDetailPageKT: React.FC = () => {
 
   const handleConfirmDeleteSeat = async () => {
     if (!deletingSeat || !space) return;
-    if (isSeatBooked(deletingSeat)) {
-      showToast(`Không thể xóa chỗ ngồi '${deletingSeat.seatCode}' vì đã có người đặt trước trong hệ thống!`, 'error');
-      setDeletingSeat(null);
-      return;
-    }
     setIsSeatDeleting(true);
+    setSeatDeleteError(null);
     try {
       const response = await spaceApi.deleteSeat(deletingSeat.id);
       showToast(response.message);
       setDeletingSeat(null);
+      setSeatDeleteError(null);
       const [updatedSeats, updatedSpace] = await Promise.all([
         spaceApi.getSeatsBySpace(space.id),
         spaceApi.getSpaceById(space.id),
@@ -454,10 +453,13 @@ export const SpaceDetailPageKT: React.FC = () => {
       const apiError = readSpaceApiError(error, 'Không thể xóa chỗ ngồi. Vui lòng thử lại.');
       if (apiError.code === 'SEAT_NOT_FOUND') {
         setDeletingSeat(null);
+        setSeatDeleteError(null);
         const updatedSeats = await spaceApi.getSeatsBySpace(space.id).catch(() => []);
         setSeats(updatedSeats);
+        showToast(apiError.message, 'error');
+        return;
       }
-      showToast(apiError.message, 'error');
+      setSeatDeleteError(apiError.message);
     } finally {
       setIsSeatDeleting(false);
     }
@@ -1407,16 +1409,12 @@ export const SpaceDetailPageKT: React.FC = () => {
                                     </button>
                                     <button
                                       type="button"
-                                      className={`btn-action-icon btn-action-delete ${tableBooked ? 'disabled' : ''}`}
+                                      className="btn-action-icon btn-action-delete"
                                       onClick={() => {
-                                        if (tableBooked) {
-                                          showToast(`Bàn '${tbl.tableCode}' đã có người đặt trong hệ thống, không thể xóa!`, 'error');
-                                          return;
-                                        }
+                                        setTableDeleteError(null);
                                         setDeletingTable(tbl);
                                       }}
-                                      title={tableBooked ? `Bàn ${tbl.tableCode} đã có người đặt, không thể xóa` : `Xóa bàn ${tbl.tableCode}`}
-                                      disabled={tableBooked}
+                                      title={`Xóa bàn ${tbl.tableCode}`}
                                     >
                                       <Trash2 size={13} />
                                     </button>
@@ -1789,13 +1787,10 @@ export const SpaceDetailPageKT: React.FC = () => {
                 {tableModalMode === 'edit' && editingTable ? (
                   <button
                     type="button"
-                    className={`btn-item-delete-link ${isTableBooked(editingTable) ? 'disabled' : ''}`}
+                    className="btn-item-delete-link"
                     onClick={() => {
-                      if (isTableBooked(editingTable)) {
-                        showToast(`Không thể xóa bàn '${editingTable.tableCode}' vì đang có người đặt trong hệ thống!`, 'error');
-                        return;
-                      }
                       setIsTableModalOpen(false);
+                      setTableDeleteError(null);
                       setDeletingTable(editingTable);
                     }}
                     disabled={isTableSubmitting}
@@ -2084,17 +2079,14 @@ export const SpaceDetailPageKT: React.FC = () => {
                 {seatModalMode === 'edit' && editingSeat ? (
                   <button
                     type="button"
-                    className={`btn-item-delete-link ${isSeatBooked(editingSeat) ? 'disabled' : ''}`}
+                    className="btn-item-delete-link"
                     onClick={() => {
-                      if (isSeatBooked(editingSeat)) {
-                        showToast(`Không thể xóa chỗ ngồi '${editingSeat.seatCode}' vì đã có người đặt trong hệ thống!`, 'error');
-                        return;
-                      }
                       setIsSeatModalOpen(false);
+                      setSeatDeleteError(null);
                       setDeletingSeat(editingSeat);
                     }}
-                    disabled={isSeatSubmitting || isSeatBooked(editingSeat)}
-                    title={isSeatBooked(editingSeat) ? 'Chỗ ngồi này đã có người đặt trong hệ thống, không thể xóa' : 'Xóa ghế này'}
+                    disabled={isSeatSubmitting}
+                    title="Xóa ghế này"
                   >
                     <Trash2 size={15} />
                     <span>Xóa ghế này</span>
@@ -2141,11 +2133,15 @@ export const SpaceDetailPageKT: React.FC = () => {
           title="Xác nhận xóa bàn"
           message={`Bạn có chắc chắn muốn xóa bàn "${deletingTable.tableCode}" (${deletingTable.capacity} chỗ)?`}
           warningNote="Bàn bị xóa sẽ không còn hiển thị cho sinh viên chọn đặt theo bàn."
+          errorMessage={tableDeleteError}
           confirmText="Xóa bàn"
           cancelText="Hủy bỏ"
           isLoading={isTableDeleting}
           onConfirm={handleConfirmDeleteTable}
-          onCancel={() => setDeletingTable(null)}
+          onCancel={() => {
+            setDeletingTable(null);
+            setTableDeleteError(null);
+          }}
         />
       )}
 
@@ -2156,11 +2152,15 @@ export const SpaceDetailPageKT: React.FC = () => {
           title="Xác nhận xóa chỗ ngồi"
           message={`Bạn có chắc chắn muốn xóa chỗ ngồi "${deletingSeat.seatCode}"?`}
           warningNote="Chỗ ngồi bị xóa sẽ không còn hiển thị cho sinh viên chọn khi đặt chỗ cá nhân."
+          errorMessage={seatDeleteError}
           confirmText="Xóa ghế"
           cancelText="Hủy bỏ"
           isLoading={isSeatDeleting}
           onConfirm={handleConfirmDeleteSeat}
-          onCancel={() => setDeletingSeat(null)}
+          onCancel={() => {
+            setDeletingSeat(null);
+            setSeatDeleteError(null);
+          }}
         />
       )}
 
