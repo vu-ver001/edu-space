@@ -12,6 +12,8 @@ interface Props {
     startTime?: string;
     endTime?: string;
     participantCount?: number;
+    spaceTypeId?: number;
+    facilityIds?: number[];
   };
   onBook?: (space: Space) => void;
 }
@@ -170,6 +172,8 @@ export const RoomCard: React.FC<Props> = ({ space, searchParams }) => {
     if (searchParams?.startTime) params.set('startTime', searchParams.startTime);
     if (searchParams?.endTime) params.set('endTime', searchParams.endTime);
     if (searchParams?.participantCount) params.set('participantCount', String(searchParams.participantCount));
+    if (searchParams?.spaceTypeId) params.set('spaceTypeId', String(searchParams.spaceTypeId));
+    if (searchParams?.facilityIds?.length) params.set('facilityIds', searchParams.facilityIds.join(','));
     
     const queryString = params.toString();
     navigate(`/student/spaces/${space.id}${queryString ? `?${queryString}` : ''}`);
@@ -256,7 +260,7 @@ export const RoomCard: React.FC<Props> = ({ space, searchParams }) => {
               <path d="M23 21v-2a4 4 0 00-3-3.87" />
               <path d="M16 3.13a4 4 0 010 7.75" />
             </svg>
-            {space.capacity} chỗ ngồi
+            {isPerTable && space.activeTableCount ? `${space.activeTableCount} bàn (${space.capacity} chỗ)` : isPerSeat && space.activeSeatCount ? `${space.activeSeatCount} ghế cá nhân` : `${space.capacity} chỗ ngồi`}
           </span>
         </div>
 

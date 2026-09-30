@@ -269,7 +269,7 @@ public class AvailabilityService {
                 .requiresApproval(requiresApproval)
                 .building(space.getBuilding())
                 .floor(space.getFloor())
-                .capacity(space.getCapacity() != null ? space.getCapacity() : 10)
+                .capacity(space.getCapacity() != null ? space.getCapacity() : 0)
                 .status(statusStr)
                 .imageUrl(img)
                 .description(space.getDescription())
@@ -532,7 +532,10 @@ public class AvailabilityService {
                     List<com.eduspace.backend.staff.dto.response.MaintenanceResponseKT> mDtos = getUpcomingMaintenanceDtos(space.getId());
                     com.eduspace.backend.staff.dto.response.MaintenanceResponseKT nextM = mDtos.isEmpty() ? null : mDtos.get(0);
 
-                    return SpaceResponse.builder()
+                    SpaceResponse resp = mapToResponse(space);
+                    resp.setIsAvailable(true);
+                    return resp;
+                    /* return SpaceResponse.builder()
                             .id(space.getId())
                             .name(space.getName())
                             .spaceTypeName(space.getSpaceTypeName())
@@ -551,7 +554,7 @@ public class AvailabilityService {
                             .isAvailable(true)
                             .allowSeatSelection(isPerSeat)
                             .allowTableSelection(isPerTable)
-                            .build();
+                            .build(); */
                 })
                 .collect(Collectors.toList());
     }
@@ -808,7 +811,18 @@ public class AvailabilityService {
 
             // C. Nếu là PER_SEAT: Kiểm tra số ghế trống
             if (isPerSeat) {
-                int capacity = space.getCapacity() > 0 ? space.getCapacity() : 10;
+                long availableSeatCount = 0;
+                if (seatRepository != null) {
+                    try {
+                        availableSeatCount = seatRepository.findBySpaceIdAndDeletedAtIsNull(space.getId()).stream()
+                                .filter(s -> s.getStatus() != null && com.eduspace.backend.space.entity.SeatStatus.AVAILABLE.equals(s.getStatus()))
+                                .count();
+                    } catch (Exception ignored) {}
+                }
+                if (availableSeatCount == 0 && space.getCapacity() > 0) {
+                    availableSeatCount = space.getCapacity();
+                }
+                int capacity = (int) availableSeatCount;
                 int reqSeats = (participantCount != null && participantCount > 0) ? participantCount : 1;
 
                 Set<String> occupiedSeatCodes = new HashSet<>();
@@ -822,7 +836,7 @@ public class AvailabilityService {
 
             // D. Nếu là PER_TABLE: Kiểm tra số bàn trống
             if (isPerTable) {
-                int totalTables = 4; // Mặc định phòng thảo luận có 4 bàn (T01 - T04)
+                int totalTables = 0;
                 if (spaceTableRepository != null) {
                     try {
                         long count = spaceTableRepository.findBySpaceIdAndDeletedAtIsNull(space.getId()).stream()
@@ -945,6 +959,21 @@ public class AvailabilityService {
         List<com.eduspace.backend.staff.dto.response.MaintenanceResponseKT> mDtos = getUpcomingMaintenanceDtos(space.getId());
         com.eduspace.backend.staff.dto.response.MaintenanceResponseKT nextM = mDtos.isEmpty() ? null : mDtos.get(0);
 
+        Long activeSeatCount = 0L;
+        Long activeTableCount = 0L;
+        Integer activeTableCapacity = 0;
+        if (seatRepository != null && isPerSeat) {
+            try {
+                activeSeatCount = seatRepository.countBySpaceIdAndDeletedAtIsNull(space.getId());
+            } catch (Exception ignored) {}
+        }
+        if (spaceTableRepository != null && isPerTable) {
+            try {
+                activeTableCount = spaceTableRepository.countBySpaceIdAndDeletedAtIsNull(space.getId());
+                activeTableCapacity = spaceTableRepository.sumActiveCapacityBySpaceId(space.getId());
+            } catch (Exception ignored) {}
+        }
+
         return SpaceResponse.builder()
                 .id(space.getId())
                 .name(space.getName())
@@ -963,6 +992,9 @@ public class AvailabilityService {
                 .upcomingMaintenances(mDtos)
                 .allowSeatSelection(isPerSeat)
                 .allowTableSelection(isPerTable)
+                .activeSeatCount(activeSeatCount)
+                .activeTableCount(activeTableCount)
+                .activeTableCapacity(activeTableCapacity)
                 .build();
     }
 
@@ -990,9 +1022,9 @@ public class AvailabilityService {
         return List.of(
                 java.util.Map.of("id", 1L, "name", "Phòng học nhóm tiêu chuẩn", "bookingMode", "WHOLE_SPACE", "requiresApproval", true, "description", "Đặt nguyên phòng 4-6 chỗ, cần Staff duyệt"),
                 java.util.Map.of("id", 2L, "name", "Phòng thuyết trình & Hội thảo", "bookingMode", "WHOLE_SPACE", "requiresApproval", true, "description", "Đặt nguyên phòng, cần Staff duyệt"),
-                java.util.Map.of("id", 3L, "name", "Khu tự học chung (Mở)", "bookingMode", "PER_SEAT", "requiresApproval", false, "description", "Không gian tự học chung, đặt theo từng ghế (S01-S10), duyệt tức thì"),
+                java.util.Map.of("id", 3L, "name", "Khu tự học chung (Mở)", "bookingMode", "PER_SEAT", "requiresApproval", false, "description", "Không gian tự học chung, đặt theo từng ghế, duyệt tức thì"),
                 java.util.Map.of("id", 4L, "name", "Study Booth cá nhân", "bookingMode", "WHOLE_SPACE", "requiresApproval", true, "description", "Khoang tự học cách âm, đặt phòng, cần Staff duyệt"),
-                java.util.Map.of("id", 5L, "name", "Phòng thảo luận theo bàn", "bookingMode", "PER_TABLE", "requiresApproval", true, "description", "Phòng thảo luận nhóm, đặt theo từng bàn (T01-T04), cần Staff duyệt")
+                java.util.Map.of("id", 5L, "name", "Phòng thảo luận theo bàn", "bookingMode", "PER_TABLE", "requiresApproval", true, "description", "Phòng thảo luận nhóm, đặt theo từng bàn, cần Staff duyệt")
         );
     }
 
@@ -1121,7 +1153,7 @@ public class AvailabilityService {
             }
             SpaceCatalogItem space = SPACE_CATALOG.get(spaceId);
             int capacity = (space != null) ? space.getCapacity() : 30;
-            return generateDefaultSeatCodes(capacity);
+            return Collections.emptyList();
         }
 
         List<String> occupied = new ArrayList<>();

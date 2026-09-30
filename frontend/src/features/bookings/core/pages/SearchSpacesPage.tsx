@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { FilterBar } from '../components/FilterBar';
 import { RoomCard } from '../components/RoomCard';
 import { BookingModal } from '../components/BookingModal';
@@ -10,6 +11,65 @@ import '../components/MaintenanceModal.css';
 
 const SPACE_ROWS_PER_PAGE = 4;
 
+const readFilterFromUrl = (params: URLSearchParams): SearchFilter => {
+  const participant = Number(params.get('participantCount'));
+  const spaceTypeId = Number(params.get('spaceTypeId'));
+  const facilityIds = (params.get('facilityIds') || '')
+    .split(',')
+    .map(Number)
+    .filter((id) => Number.isFinite(id) && id > 0);
+
+  return {
+    date: params.get('date') || '',
+    startTime: params.get('startTime') || '',
+    endTime: params.get('endTime') || '',
+    participantCount: Number.isFinite(participant) && participant > 0 ? participant : undefined,
+    spaceTypeId: Number.isFinite(spaceTypeId) && spaceTypeId > 0 ? spaceTypeId : undefined,
+    facilityIds: facilityIds.length ? facilityIds : undefined,
+  };
+};
+
+const writeFilterToUrl = (filter: SearchFilter): URLSearchParams => {
+  const params = new URLSearchParams();
+  if (filter.date) params.set('date', filter.date);
+  if (filter.startTime) params.set('startTime', filter.startTime);
+  if (filter.endTime) params.set('endTime', filter.endTime);
+  if (filter.participantCount) params.set('participantCount', String(filter.participantCount));
+  if (filter.spaceTypeId) params.set('spaceTypeId', String(filter.spaceTypeId));
+  if (filter.facilityIds?.length) params.set('facilityIds', filter.facilityIds.join(','));
+  return params;
+};
+
+const sortSpacesBySuitability = (items: Space[], participantCount?: number): Space[] => {
+  const requested = participantCount && participantCount > 0 ? participantCount : undefined;
+  const modeRank = (space: Space) => {
+    if (!requested) return 0;
+    const mode = space.bookingMode || space.spaceType?.bookingMode || 'WHOLE_SPACE';
+    if (requested === 1) return mode === 'PER_SEAT' ? 0 : mode === 'PER_TABLE' ? 1 : 2;
+    if (requested && requested > 1) return mode === 'PER_TABLE' ? 0 : mode === 'WHOLE_SPACE' ? 1 : 2;
+    return 0;
+  };
+
+  return [...items].sort((left, right) => {
+    const byMode = modeRank(left) - modeRank(right);
+    if (byMode !== 0) return byMode;
+
+    if (requested) {
+      const leftWaste = Math.max(0, Number(left.capacity) - requested);
+      const rightWaste = Math.max(0, Number(right.capacity) - requested);
+      if (leftWaste !== rightWaste) return leftWaste - rightWaste;
+    }
+
+    const leftApproval = left.requiresApproval ?? left.spaceType?.requiresApproval ?? true;
+    const rightApproval = right.requiresApproval ?? right.spaceType?.requiresApproval ?? true;
+    if (leftApproval !== rightApproval) return leftApproval ? 1 : -1;
+
+    const byCapacity = Number(left.capacity) - Number(right.capacity);
+    if (byCapacity !== 0) return byCapacity;
+    return left.name.localeCompare(right.name, 'vi', { numeric: true, sensitivity: 'base' });
+  });
+};
+
 const matchesParticipantBookingMode = (space: Space, participantCount?: number): boolean => {
   const count = Math.max(1, Number(participantCount) || 1);
   const bookingMode = space.bookingMode || space.spaceType?.bookingMode;
@@ -20,16 +80,12 @@ const matchesParticipantBookingMode = (space: Space, participantCount?: number):
 };
 
 export const SearchSpacesPage: React.FC = () => {
+  const [urlSearchParams, setUrlSearchParams] = useSearchParams();
   const [spaces, setSpaces] = useState<Space[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeFilter, setActiveFilter] = useState<SearchFilter>({
-    date: '',
-    startTime: '',
-    endTime: '',
-    participantCount: undefined,
-  });
-  const [hasSearched, setHasSearched] = useState<boolean>(false);
+  const [activeFilter, setActiveFilter] = useState<SearchFilter>(() => readFilterFromUrl(urlSearchParams));
+  const [hasSearched, setHasSearched] = useState<boolean>(true);
   const [selectedSpaceForBooking, setSelectedSpaceForBooking] = useState<Space | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -38,12 +94,6 @@ export const SearchSpacesPage: React.FC = () => {
   );
 
   const fetchSpaces = (filter: SearchFilter = activeFilter) => {
-    if (!filter.date || !filter.startTime || !filter.endTime || !filter.participantCount) {
-      setSpaces([]);
-      setLoading(false);
-      return;
-    }
-
     setCurrentPage(1);
     setLoading(true);
     setError(null);
@@ -155,7 +205,8 @@ export const SearchSpacesPage: React.FC = () => {
       .then((data) => {
         // Ẩn hoàn toàn các phòng đang hoặc có lịch bảo trì trong khoảng thời gian tìm kiếm
         let filtered = data.filter(
-          (s) => !isMaintenanceConflict(s) && matchesParticipantBookingMode(s, filter.participantCount)
+          (s) => !isMaintenanceConflict(s)
+            && (!filter.participantCount || matchesParticipantBookingMode(s, filter.participantCount))
         );
 
         if (filter.facilityIds && filter.facilityIds.length > 0) {
@@ -166,7 +217,7 @@ export const SearchSpacesPage: React.FC = () => {
             return true;
           });
         }
-        setSpaces(filtered);
+        setSpaces(sortSpacesBySuitability(filtered, filter.participantCount));
       })
       .catch((err) => {
         const serverMsg = formatMessageDatesVI(err?.response?.data?.message);
@@ -188,11 +239,15 @@ export const SearchSpacesPage: React.FC = () => {
   };
 
   useEffect(() => {
+    fetchSpaces(activeFilter);
+    // Khôi phục bộ lọc từ URL và tải dữ liệu một lần khi mở trang.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
     // Lắng nghe sự kiện chuyển user hoặc cấp token tự động từ PortalLayout
     const handleUserSwitch = () => {
-      if (activeFilter.date && activeFilter.startTime && activeFilter.endTime && activeFilter.participantCount) {
-        fetchSpaces(activeFilter);
-      }
+      fetchSpaces(activeFilter);
     };
     window.addEventListener('user-switched', handleUserSwitch);
     return () => window.removeEventListener('user-switched', handleUserSwitch);
@@ -210,6 +265,7 @@ export const SearchSpacesPage: React.FC = () => {
   const handleSearch = (filter: SearchFilter) => {
     setHasSearched(true);
     setActiveFilter(filter);
+    setUrlSearchParams(writeFilterToUrl(filter), { replace: true });
     fetchSpaces(filter);
   };
 
@@ -233,6 +289,14 @@ export const SearchSpacesPage: React.FC = () => {
   const displayDate = formatDisplayDate(activeFilter.date);
   const displayStart = activeFilter.startTime ? activeFilter.startTime.substring(0, 5) : '';
   const displayEnd = activeFilter.endTime ? activeFilter.endTime.substring(0, 5) : '';
+  const hasAnyFilter = Boolean(
+    activeFilter.date
+    || activeFilter.startTime
+    || activeFilter.endTime
+    || activeFilter.participantCount
+    || activeFilter.spaceTypeId
+    || activeFilter.facilityIds?.length
+  );
   const pageSize = SPACE_ROWS_PER_PAGE * cardsPerRow;
   const totalPages = Math.max(1, Math.ceil(spaces.length / pageSize));
   const safeCurrentPage = Math.min(currentPage, totalPages);
@@ -293,13 +357,18 @@ export const SearchSpacesPage: React.FC = () => {
         onSearch={handleSearch}
         isLoading={loading}
         availableCount={hasSearched ? availableCount : undefined}
+        initialFilter={activeFilter}
       />
 
       {/* Thanh trạng thái khả dụng theo Ảnh 1 (Đã bỏ nút Dạng bảng) */}
       {hasSearched && <div className="results-control-bar">
         <div className="results-info-group">
           <span className="results-availability-text">
-            Khả dụng trong khung giờ đã chọn — <strong>{displayDate}</strong> • <strong>{displayStart} - {displayEnd}</strong>
+            {displayDate && displayStart && displayEnd ? (
+              <>Khả dụng trong khung giờ đã chọn — <strong>{displayDate}</strong> • <strong>{displayStart} - {displayEnd}</strong></>
+            ) : (
+              <>{hasAnyFilter ? 'Không gian đang hoạt động phù hợp bộ lọc' : 'Tất cả không gian đang hoạt động'} — sắp xếp theo mức độ phù hợp</>
+            )}
           </span>
         </div>
 
@@ -356,6 +425,8 @@ export const SearchSpacesPage: React.FC = () => {
                   startTime: activeFilter.startTime,
                   endTime: activeFilter.endTime,
                   participantCount: activeFilter.participantCount,
+                  spaceTypeId: activeFilter.spaceTypeId,
+                  facilityIds: activeFilter.facilityIds,
                 }}
                 onBook={(s) => setSelectedSpaceForBooking(s)}
               />

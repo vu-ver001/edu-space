@@ -82,13 +82,13 @@ export const SpaceDetailPageKT: React.FC = () => {
   const [showAllFacilities, setShowAllFacilities] = useState<boolean>(false);
   const FACILITY_SHOW_LIMIT = 3;
 
-  // Table expand/collapse state (Tối đa 2 hàng ngang bàn, trên 2 hàng là phải ấn xem thêm)
-  const [showAllTables, setShowAllTables] = useState<boolean>(false);
-  const TABLE_SHOW_LIMIT = 2;
+  // Table expand/collapse state (Mặc định hiển thị đầy đủ bàn từ CSDL)
+  const [showAllTables, setShowAllTables] = useState<boolean>(true);
+  const TABLE_SHOW_LIMIT = 50;
 
-  // Seat expand/collapse state
-  const [showAllSeats, setShowAllSeats] = useState<boolean>(false);
-  const SEAT_SHOW_LIMIT = 12;
+  // Seat expand/collapse state (Mặc định hiển thị đầy đủ ghế từ CSDL)
+  const [showAllSeats, setShowAllSeats] = useState<boolean>(true);
+  const SEAT_SHOW_LIMIT = 100;
 
   // Active gallery image & lightbox
   const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
@@ -1326,7 +1326,9 @@ export const SpaceDetailPageKT: React.FC = () => {
               const hasTables = tables.length > 0 || bookingMode === 'PER_TABLE';
               const hasSeats = seats.length > 0 || bookingMode === 'PER_SEAT';
 
-              const totalTableCap = tables.reduce((acc, t) => acc + (t.capacity || 0), 0) || space.activeTableCapacity || space.capacity;
+              const totalTableCap = tables.length > 0
+                ? tables.reduce((acc, t) => acc + (t.capacity || 0), 0)
+                : (space.activeTableCapacity || space.capacity || 0);
 
               const shouldLimitTables = tables.length > TABLE_SHOW_LIMIT;
               const displayedTables = (showAllTables || !shouldLimitTables)
@@ -1348,7 +1350,7 @@ export const SpaceDetailPageKT: React.FC = () => {
                         <div className="alloc-header-title-group">
                           <Users size={18} strokeWidth={2.2} />
                           <h3 className="alloc-header-title">
-                            Danh sách bàn ({tables.length || space.activeTableCount || 0})
+                            Danh sách bàn ({tables.length})
                           </h3>
                         </div>
                         <div className="alloc-header-actions">
@@ -1378,7 +1380,7 @@ export const SpaceDetailPageKT: React.FC = () => {
                       <div className="alloc-summary-bar">
                         <div className="alloc-summary-item">
                           <span className="alloc-summary-label">Số lượng bàn:</span>
-                          <span className="alloc-summary-val highlight-sky">{tables.length || space.activeTableCount || 0} bàn</span>
+                          <span className="alloc-summary-val highlight-sky">{tables.length} bàn</span>
                         </div>
                         <div className="alloc-summary-divider" />
                         <div className="alloc-summary-item">
@@ -1478,7 +1480,7 @@ export const SpaceDetailPageKT: React.FC = () => {
                         </div>
                       ) : (
                         <div className="detail-empty-state">
-                          Không gian có {space.activeTableCount || 0} bàn với tổng sức chứa {space.capacity} người.
+                          Không gian này chưa có bàn nào được cấu hình trong cơ sở dữ liệu.
                         </div>
                       )}
                     </>
@@ -1488,7 +1490,7 @@ export const SpaceDetailPageKT: React.FC = () => {
                         <div className="alloc-header-title-group">
                           <Armchair size={18} strokeWidth={2.2} />
                           <h3 className="alloc-header-title">
-                            Danh sách ghế ({seats.length || space.activeSeatCount || space.capacity})
+                            Danh sách ghế ({seats.length})
                           </h3>
                         </div>
                         <div className="alloc-header-actions">
@@ -1523,7 +1525,7 @@ export const SpaceDetailPageKT: React.FC = () => {
                         <div className="alloc-summary-divider" />
                         <div className="alloc-summary-item">
                           <span className="alloc-summary-label">Tổng số:</span>
-                          <span className="alloc-summary-val highlight-sky">{seats.length || space.capacity} ghế</span>
+                          <span className="alloc-summary-val highlight-sky">{seats.length} ghế</span>
                         </div>
                       </div>
 
@@ -1576,7 +1578,7 @@ export const SpaceDetailPageKT: React.FC = () => {
                         </>
                       ) : (
                         <div className="detail-empty-state">
-                          Hệ thống tự động đồng bộ {space.capacity} vị trí ghế ngồi theo sức chứa phòng.
+                          Không gian này chưa có ghế nào được cấu hình trong cơ sở dữ liệu.
                         </div>
                       )}
                     </>

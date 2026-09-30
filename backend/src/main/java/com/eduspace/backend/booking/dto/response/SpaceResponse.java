@@ -29,4 +29,7 @@ public class SpaceResponse {
     private Boolean isAvailable;
     private Boolean allowSeatSelection;
     private Boolean allowTableSelection;
+    private Long activeSeatCount;
+    private Long activeTableCount;
+    private Integer activeTableCapacity;
 }
