@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { Layers, Building2, Sparkles, ClipboardList } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import type { SpaceType, SpaceTypeCreateRequest, SpaceTypeUpdateRequest } from '../types/spaceType';
 import type { Space } from '../types/space';
 import { spaceTypeApi } from '../api/spaceTypeApi';
@@ -16,7 +15,6 @@ import './SpaceTypeListPageKT.css';
 
 export const SpaceTypeListPageKT: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const [spaceTypes, setSpaceTypes] = useState<SpaceType[]>([]);
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -222,38 +220,6 @@ export const SpaceTypeListPageKT: React.FC = () => {
     <div className="kt-page-wrapper space-type-list-page">
       {/* Main Page Content */}
       <main className="kt-main-content">
-        {/* Sub Navigation Bar */}
-        <div className="kt-subnav-bar">
-          <Link
-            to="/admin/space-types"
-            className={`kt-subnav-item ${location.pathname.includes('space-types') ? 'active' : ''}`}
-          >
-            <Layers size={16} />
-            <span>Loại không gian</span>
-          </Link>
-          <Link
-            to="/admin/spaces"
-            className={`kt-subnav-item ${location.pathname.includes('spaces') ? 'active' : ''}`}
-          >
-            <Building2 size={16} />
-            <span>Không gian</span>
-          </Link>
-          <Link
-            to="/admin/facilities"
-            className={`kt-subnav-item ${location.pathname.includes('facilities') ? 'active' : ''}`}
-          >
-            <Sparkles size={16} />
-            <span>Tiện ích</span>
-          </Link>
-          <Link
-            to="/staff"
-            className={`kt-subnav-item ${location.pathname.startsWith('/staff') ? 'active' : ''}`}
-          >
-            <ClipboardList size={16} />
-            <span>Vận hành Staff</span>
-          </Link>
-        </div>
-
         {/* Header Section */}
         <div className="page-header-row">
           <div className="page-header-left">

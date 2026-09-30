@@ -38,6 +38,18 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     long countBySpaceIdAndCreatedAtBetween(Long spaceId, LocalDateTime from, LocalDateTime to);
 
+    /**
+     * Đếm booking còn hiệu lực của không gian tại thời điểm kiểm tra xóa.
+     * Booking đã kết thúc hoặc ở trạng thái không còn chiếm chỗ không ngăn xóa mềm không gian.
+     */
+    @Query("SELECT COUNT(b) FROM Booking b WHERE b.spaceId = :spaceId " +
+           "AND b.status IN :statuses AND b.endTime > :now")
+    long countBlockingBookingsForSpaceDeletion(
+            @Param("spaceId") Long spaceId,
+            @Param("statuses") Collection<BookingStatus> statuses,
+            @Param("now") LocalDateTime now
+    );
+
 
     /**
      * Tìm các booking đang chiếm chỗ của một phòng giao nhau với khoảng thời gian [startTime, endTime].
@@ -177,5 +189,29 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             @Param("fromTime") LocalDateTime fromTime,
             @Param("toTime") LocalDateTime toTime,
             @Param("statuses") Collection<BookingStatus> statuses
+    );
+    /**
+     * Đếm booking đang chiếm chỗ của bàn cụ thể (chặn xóa bàn nếu > 0).
+     */
+    @Query("SELECT COUNT(b) FROM Booking b WHERE b.tableId = :tableId " +
+           "AND b.status IN :statuses AND b.endTime > :now")
+    long countBlockingBookingsForTableDeletion(
+            @Param("tableId") Long tableId,
+            @Param("statuses") Collection<BookingStatus> statuses,
+            @Param("now") LocalDateTime now
+    );
+
+    /**
+     * Đếm booking đang chiếm chỗ chứa ghế cụ thể (chặn xóa ghế nếu > 0).
+     * selectedSeats lưu dạng chuỗi, dùng LIKE để tìm seatLabel.
+     */
+    @Query("SELECT COUNT(b) FROM Booking b WHERE b.spaceId = :spaceId " +
+           "AND b.status IN :statuses AND b.endTime > :now " +
+           "AND b.selectedSeats LIKE CONCAT('%', :seatLabel, '%')")
+    long countBlockingBookingsForSeatDeletion(
+            @Param("spaceId") Long spaceId,
+            @Param("seatLabel") String seatLabel,
+            @Param("statuses") Collection<BookingStatus> statuses,
+            @Param("now") LocalDateTime now
     );
 }

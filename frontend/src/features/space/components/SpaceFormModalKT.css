@@ -118,6 +118,7 @@
 .astp-form-select.input-error {
   border-color: #ef4444 !important;
   background: #fffaf0 !important;
+  box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.14) !important;
 }
 
 .astp-form-input.input-error:focus,

@@ -65,6 +65,20 @@ public class AdminStatisticsController {
 
         DashboardStatisticsResponse stats = statisticsService.getDashboardStatistics(fromDate, toDate);
 
+        // Kiểm tra xem khoảng thời gian / tháng được chọn có dữ liệu hay không
+        if (stats.getTotalBookings() == null || stats.getTotalBookings() == 0) {
+            String periodName = "Khoảng thời gian này";
+            if (fromDate != null && toDate != null) {
+                LocalDate start = fromDate.toLocalDate();
+                LocalDate end = toDate.toLocalDate();
+                if (start.getYear() == end.getYear() && start.getMonth() == end.getMonth()
+                        && start.getDayOfMonth() == 1 && end.getDayOfMonth() == end.lengthOfMonth()) {
+                    periodName = String.format("Tháng %02d/%d", start.getMonthValue(), start.getYear());
+                }
+            }
+            throw new AppException(HttpStatus.BAD_REQUEST, "NO_REPORT_DATA", periodName + " không có dữ liệu để xuất báo cáo.");
+        }
+
         LocalDate startDate = (fromDate != null) ? fromDate.toLocalDate() : (stats.getFromDate() != null ? stats.getFromDate().toLocalDate() : LocalDate.now().minusDays(30));
         LocalDate endDate = (toDate != null) ? toDate.toLocalDate() : (stats.getToDate() != null ? stats.getToDate().toLocalDate() : LocalDate.now());
 
@@ -72,8 +86,21 @@ public class AdminStatisticsController {
 
         byte[] excelBytes = excelExportService.generateStatisticsExcel(stats, dailySummaries);
 
-        String dateTag = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        String filename = "Thong_Ke_EduSpace_" + dateTag + ".xlsx";
+        String filename;
+        if (fromDate != null && toDate != null) {
+            LocalDate start = fromDate.toLocalDate();
+            LocalDate end = toDate.toLocalDate();
+            if (start.getYear() == end.getYear() && start.getMonth() == end.getMonth()
+                    && start.getDayOfMonth() == 1 && end.getDayOfMonth() == end.lengthOfMonth()) {
+                filename = String.format("Bao_Cao_Thong_Ke_Thang_%02d_%d.xlsx", start.getMonthValue(), start.getYear());
+            } else {
+                String dateTag = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+                filename = "Thong_Ke_EduSpace_" + dateTag + ".xlsx";
+            }
+        } else {
+            String dateTag = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+            filename = "Thong_Ke_EduSpace_" + dateTag + ".xlsx";
+        }
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")

@@ -183,6 +183,83 @@ INSERT IGNORE INTO space_facilities (space_id, facility_id) VALUES
 (@space_table, @facility_camera),
 (@space_table, @facility_board);
 
+INSERT INTO space_images
+    (space_id, image_url, is_primary, sort_order, created_at, updated_at)
+SELECT @space_whole,
+       'https://files.catbox.moe/o57opz.jpg',
+       1, 0, NOW(), NOW()
+WHERE NOT EXISTS (
+    SELECT 1 FROM space_images
+    WHERE space_id = @space_whole
+      AND image_url LIKE '%o57opz%'
+);
+
+INSERT INTO space_images
+    (space_id, image_url, is_primary, sort_order, created_at, updated_at)
+SELECT @space_whole,
+       'https://files.catbox.moe/1ydvma.jpg',
+       0, 1, NOW(), NOW()
+WHERE NOT EXISTS (
+    SELECT 1 FROM space_images
+    WHERE space_id = @space_whole
+      AND image_url LIKE '%1ydvma%'
+);
+
+INSERT INTO space_images
+    (space_id, image_url, is_primary, sort_order, created_at, updated_at)
+SELECT @space_whole,
+       'https://files.catbox.moe/3z5h0n.jpg',
+       0, 2, NOW(), NOW()
+WHERE NOT EXISTS (
+    SELECT 1 FROM space_images
+    WHERE space_id = @space_whole
+      AND image_url LIKE '%3z5h0n%'
+);
+
+INSERT INTO space_images
+    (space_id, image_url, is_primary, sort_order, created_at, updated_at)
+SELECT @space_seat,
+       'https://files.catbox.moe/mjnyav.jpg',
+       1, 0, NOW(), NOW()
+WHERE NOT EXISTS (
+    SELECT 1 FROM space_images
+    WHERE space_id = @space_seat
+      AND image_url LIKE '%mjnyav%'
+);
+
+INSERT INTO space_images
+    (space_id, image_url, is_primary, sort_order, created_at, updated_at)
+SELECT @space_seat,
+       'https://files.catbox.moe/45lfh2.jpg',
+       0, 1, NOW(), NOW()
+WHERE NOT EXISTS (
+    SELECT 1 FROM space_images
+    WHERE space_id = @space_seat
+      AND image_url LIKE '%45lfh2%'
+);
+
+INSERT INTO space_images
+    (space_id, image_url, is_primary, sort_order, created_at, updated_at)
+SELECT @space_table,
+       'https://files.catbox.moe/9l2bgz.jpg',
+       1, 0, NOW(), NOW()
+WHERE NOT EXISTS (
+    SELECT 1 FROM space_images
+    WHERE space_id = @space_table
+      AND image_url LIKE '%9l2bgz%'
+);
+
+INSERT INTO space_images
+    (space_id, image_url, is_primary, sort_order, created_at, updated_at)
+SELECT @space_table,
+       'https://files.catbox.moe/0i2pak.jpg',
+       0, 1, NOW(), NOW()
+WHERE NOT EXISTS (
+    SELECT 1 FROM space_images
+    WHERE space_id = @space_table
+      AND image_url LIKE '%0i2pak%'
+);
+
 -- --------------------------------------------------------------------------
 -- 7. Chính sách booking mà backend hiện tại đang đọc
 -- --------------------------------------------------------------------------

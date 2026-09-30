@@ -1,10 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
 import {
-  Layers,
   Building2,
-  ClipboardList,
-  Sparkles,
   Plus,
   Search,
   Pencil,
@@ -27,8 +23,6 @@ import { Tooltip } from '../../../components/common/Tooltip';
 import './FacilityListPageKT.css';
 
 export const FacilityListPageKT: React.FC = () => {
-  const location = useLocation();
-
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
@@ -190,38 +184,6 @@ export const FacilityListPageKT: React.FC = () => {
   return (
     <div className="facility-page-wrapper kt-page-wrapper">
       <main className="facility-main-content">
-        {/* Sub Navigation Bar to toggle KT management pages */}
-        <div className="kt-subnav-bar">
-          <Link
-            to="/admin/space-types"
-            className={`kt-subnav-item ${location.pathname.includes('space-types') ? 'active' : ''}`}
-          >
-            <Layers size={16} />
-            <span>Loại không gian</span>
-          </Link>
-          <Link
-            to="/admin/spaces"
-            className={`kt-subnav-item ${location.pathname.includes('spaces') ? 'active' : ''}`}
-          >
-            <Building2 size={16} />
-            <span>Không gian</span>
-          </Link>
-          <Link
-            to="/admin/facilities"
-            className={`kt-subnav-item ${location.pathname.includes('facilities') ? 'active' : ''}`}
-          >
-            <Sparkles size={16} />
-            <span>Tiện ích</span>
-          </Link>
-          <Link
-            to="/staff"
-            className={`kt-subnav-item ${location.pathname.startsWith('/staff') ? 'active' : ''}`}
-          >
-            <ClipboardList size={16} />
-            <span>Vận hành Staff</span>
-          </Link>
-        </div>
-
         {/* Page Header */}
         <div className="page-header-row">
           <div className="page-header-left">

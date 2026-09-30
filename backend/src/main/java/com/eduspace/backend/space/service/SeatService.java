@@ -1,5 +1,7 @@
 package com.eduspace.backend.space.service;
 
+import com.eduspace.backend.booking.entity.BookingStatus;
+import com.eduspace.backend.booking.repository.BookingRepository;
 import com.eduspace.backend.space.dto.request.SeatBulkCreateRequestKT;
 import com.eduspace.backend.space.dto.request.SeatCreateRequestKT;
 import com.eduspace.backend.space.dto.request.SeatUpdateRequestKT;
@@ -30,6 +32,13 @@ public class SeatService {
 
     private final SeatRepository seatRepository;
     private final SpaceRepository spaceRepository;
+    private final BookingRepository bookingRepository;
+
+    private static final java.util.Set<BookingStatus> DELETE_BLOCKING_STATUSES = java.util.Set.of(
+            BookingStatus.PENDING_APPROVAL,
+            BookingStatus.CONFIRMED,
+            BookingStatus.CHECKED_IN
+    );
 
     @Transactional(readOnly = true)
     public List<SeatResponseKT> getSeatsBySpace(Long spaceId) {
@@ -219,8 +228,25 @@ public class SeatService {
                         "Không tìm thấy chỗ ngồi với id: " + seatId
                 ));
 
+        // Chặn xóa nếu ghế đang có booking chưa kết thúc
+        LocalDateTime now = LocalDateTime.now();
+        long blockingCount = bookingRepository.countBlockingBookingsForSeatDeletion(
+                seat.getSpace().getId(),
+                seat.getSeatCode(),
+                DELETE_BLOCKING_STATUSES,
+                now
+        );
+        if (blockingCount > 0) {
+            throw new AppException(
+                    HttpStatus.CONFLICT,
+                    "SEAT_HAS_ACTIVE_BOOKINGS",
+                    "Không thể xóa ghế '" + seat.getSeatCode() + "' vì đang có "
+                            + blockingCount + " booking chưa kết thúc."
+            );
+        }
+
         seat.setStatus(SeatStatus.INACTIVE);
-        seat.setDeletedAt(LocalDateTime.now());
+        seat.setDeletedAt(now);
         seatRepository.save(seat);
     }
 
