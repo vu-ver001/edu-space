@@ -26,43 +26,6 @@
   min-width: 0;
 }
 
-/* Sub-Navigation Bar */
-.kt-subnav-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: #ffffff;
-  padding: 8px 16px;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  margin-bottom: 20px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-}
-
-.kt-subnav-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 13.5px;
-  font-weight: 600;
-  color: #64748b;
-  text-decoration: none;
-  transition: all 0.15s ease;
-}
-
-.kt-subnav-item:hover {
-  color: #2563eb;
-  background: #eff6ff;
-}
-
-.kt-subnav-item.active {
-  color: #1d4ed8;
-  background: #dbeafe;
-}
-
-
 /* Standalone Topbar */
 .kt-standalone-topbar {
   background: #ffffff;
@@ -657,7 +620,6 @@
   min-width: 0;
   overflow-x: auto;
   overflow-y: hidden;
-  scrollbar-gutter: stable;
   -webkit-overflow-scrolling: touch;
 }
 
