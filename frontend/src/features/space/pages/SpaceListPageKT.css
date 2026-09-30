@@ -142,11 +142,12 @@
 }
 
 .custom-spaces-table-v2 tbody tr {
-  transition: background-color 0.15s ease;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .custom-spaces-table-v2 tbody tr:hover {
-  background-color: #f8fafc;
+  background-color: #f7faff;
+  box-shadow: inset 4px 0 0 #3b82f6;
 }
 
 .custom-spaces-table-v2 tbody tr:last-child td {
@@ -160,68 +161,43 @@
   font-weight: 500;
 }
 
-/* Space Table Thumbnail (from space_images) */
-.space-table-thumb-container {
-  width: 68px;
-  height: 45px;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid #e2e8f0;
-  background: #f1f5f9;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-}
-
-.space-table-thumb-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.space-thumb-placeholder-box {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: #f8fafc;
-  color: #94a3b8;
-  border-radius: 6px;
-}
-
-
 /* Space Code */
 .space-code-text {
-  font-weight: 700;
-  font-size: 14px;
+  font-weight: 600;
+  font-size: 13.5px;
   color: #2563eb;
-  letter-spacing: 0.01em;
+  letter-spacing: 0;
 }
 
 /* Space Plain Name */
 .space-name-plain {
-  font-weight: 500;
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  font-weight: 600;
   font-size: 13.5px;
-  color: #1e293b;
+  color: #0f172a;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* Space Type Badges (Pastel Pills with Icon) */
+/* Space type with booking-mode icon */
 .space-type-badge-pill {
   box-sizing: border-box;
   max-width: 100%;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 14px;
-  border-radius: 20px;
-  font-size: 12.5px;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 12px;
   font-weight: 600;
+  letter-spacing: 0.01em;
   white-space: nowrap;
   overflow: hidden;
 }
 
-.space-type-badge-pill > span {
+.space-type-badge-pill>span {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -232,39 +208,19 @@
   flex-shrink: 0;
 }
 
-/* Type 1: Phòng thảo luận - Purple */
-.badge-type-discussion {
-  background-color: #f3e8ff;
-  color: #9333ea;
-  border: 1px solid #e9d5ff;
-}
-
-/* Type 2: Phòng học nhóm - Fuchsia / Purple */
-.badge-type-group {
-  background-color: #f5d0fe;
-  color: #a21caf;
-  border: 1px solid #f0abfc;
-}
-
-/* Type 3: Phòng tự học - Violet */
-.badge-type-self-study {
-  background-color: #ede9fe;
-  color: #7c3aed;
-  border: 1px solid #ddd6fe;
-}
-
-/* Type 4: Khu bàn học - Sky / Cyan */
-.badge-type-desk {
+.space-type-mode-whole {
   background-color: #e0f2fe;
   color: #0284c7;
-  border: 1px solid #bae6fd;
 }
 
-/* Type 5: Phòng seminar - Pink */
-.badge-type-seminar {
-  background-color: #fce7f3;
-  color: #db2777;
-  border: 1px solid #fbcfe8;
+.space-type-mode-seat {
+  background-color: #dcfce7;
+  color: #16a34a;
+}
+
+.space-type-mode-table {
+  background-color: #f3e8ff;
+  color: #9333ea;
 }
 
 /* Building & Floor */
@@ -275,15 +231,15 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 13px;
-  color: #334155;
+  color: #64748b;
   font-weight: 400;
 }
 
 /* Capacity Number */
 .col-capacity-number {
   font-size: 13.5px;
-  font-weight: 500;
-  color: #334155;
+  font-weight: 600;
+  color: #0f172a;
 }
 
 /* Compact Columns */
@@ -314,10 +270,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 4px 10px;
-  border-radius: 16px;
+  padding: 2px 10px;
+  border-radius: 9999px;
   font-size: 12px;
   font-weight: 600;
+  letter-spacing: 0.01em;
   white-space: nowrap;
 }
 
@@ -344,10 +301,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .btn-action-icon {
+  box-sizing: border-box;
   width: 32px;
   height: 32px;
   border-radius: 8px;
@@ -357,40 +315,41 @@
   cursor: pointer;
   transition: all 0.15s ease;
   padding: 0;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
 }
 
 .btn-action-view {
   background: #ffffff;
-  border: 1px solid #e2e8f0;
-  color: #475569;
 }
 
 .btn-action-view:hover {
-  background: #f8fafc;
-  color: #0f172a;
-  border-color: #cbd5e1;
-}
-
-.btn-action-edit {
+  border-color: #93c5fd;
   background: #eff6ff;
-  border: 1px solid #dbeafe;
   color: #2563eb;
 }
 
+.btn-action-edit {
+  background: #ffffff;
+}
+
 .btn-action-edit:hover {
-  background: #dbeafe;
-  color: #1d4ed8;
+  border-color: #c7d2fe;
+  background: #eef2ff;
+  color: #4f46e5;
 }
 
 .btn-action-delete {
-  background: #fef2f2;
-  border: 1px solid #fee2e2;
+  background: #ffffff;
+  border-color: #fecdd3;
   color: #ef4444;
 }
 
 .btn-action-delete:hover {
-  background: #fee2e2;
-  color: #b91c1c;
+  border-color: #fda4af;
+  background: #fff1f2;
+  color: #e11d48;
 }
 
 /* ========================================================
@@ -565,7 +524,8 @@
   align-items: center !important;
   justify-content: flex-start !important;
   flex-wrap: nowrap !important;
-  gap: 100px !important; /* Khoảng cách 100px với chữ danh sách không gian theo yêu cầu */
+  gap: 100px !important;
+  /* Khoảng cách 100px với chữ danh sách không gian theo yêu cầu */
   width: 100% !important;
 }
 
@@ -618,6 +578,11 @@
   white-space: nowrap;
   overflow: hidden;
   flex-shrink: 1;
+}
+
+.space-select-fluid.filter-select-control {
+  padding: 0 !important;
+  background-image: none !important;
 }
 
 /* Nút chọn Thẻ / Bảng nằm liền kề trong cụm, không bị đẩy xa */
@@ -774,6 +739,7 @@
   color: #15803d;
   border: 1px solid #bbf7d0;
 }
+
 .dot-success {
   background-color: #16a34a;
 }
@@ -782,6 +748,7 @@
   color: #b45309;
   border: 1px solid #fde68a;
 }
+
 .dot-warning {
   background-color: #f59e0b;
 }
@@ -790,6 +757,7 @@
   color: #b91c1c;
   border: 1px solid #fecaca;
 }
+
 .dot-danger {
   background-color: #ef4444;
 }

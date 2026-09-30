@@ -10,6 +10,7 @@ import com.eduspace.backend.space.repository.SpaceImageRepository;
 import com.eduspace.backend.space.repository.SpaceRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,10 +39,14 @@ public class SpaceImageService {
             "image/png",
             "image/webp"
     );
-    private static final String UPLOAD_DIR = "uploads/spaces";
+    private static final String SPACE_IMAGE_FOLDER = "spaces";
+    private static final String SPACE_IMAGE_URL_PREFIX = "/uploads/spaces/";
 
     private final SpaceImageRepository spaceImageRepository;
     private final SpaceRepository spaceRepository;
+
+    @Value("${eduspace.storage.upload-root:uploads}")
+    private String uploadRoot;
 
     @Transactional(readOnly = true)
     public List<SpaceImageResponseKT> getImagesBySpace(Long spaceId) {
@@ -122,18 +127,22 @@ public class SpaceImageService {
             );
         }
 
-        String storedPath = saveFileLocally(file, contentType);
+        StoredFile storedFile = saveFileLocally(file, contentType);
         boolean shouldBePrimary = resolvePrimaryFlagOnAdd(spaceId, isPrimary);
 
-        SpaceImage image = SpaceImage.builder()
-                .space(space)
-                .imageUrl(storedPath)
-                .isPrimary(shouldBePrimary)
-                .sortOrder(sortOrder != null ? sortOrder : 0)
-                .build();
+        try {
+            SpaceImage image = SpaceImage.builder()
+                    .space(space)
+                    .imageUrl(storedFile.publicUrl())
+                    .isPrimary(shouldBePrimary)
+                    .sortOrder(sortOrder != null ? sortOrder : 0)
+                    .build();
 
-        SpaceImage saved = spaceImageRepository.save(image);
-        return SpaceImageResponseKT.fromEntity(saved);
+            return SpaceImageResponseKT.fromEntity(spaceImageRepository.save(image));
+        } catch (RuntimeException exception) {
+            deleteFileQuietly(storedFile.path());
+            throw exception;
+        }
     }
 
     @Transactional
@@ -160,9 +169,11 @@ public class SpaceImageService {
         SpaceImage image = findImageOrThrow(imageId);
         Long spaceId = image.getSpace().getId();
         boolean wasPrimary = image.isPrimary();
+        String imageUrl = image.getImageUrl();
 
         spaceImageRepository.delete(image);
         spaceImageRepository.flush();
+        deleteStoredFile(imageUrl);
 
         if (wasPrimary) {
             List<SpaceImage> remainingImages = spaceImageRepository.findBySpaceIdOrderBySortOrderAscIdAsc(spaceId);
@@ -228,39 +239,76 @@ public class SpaceImageService {
                 ));
     }
 
-    private String saveFileLocally(MultipartFile file, String contentType) {
+    private StoredFile saveFileLocally(MultipartFile file, String contentType) {
         try {
-            Path uploadPath = Paths.get(UPLOAD_DIR);
-            if (!Files.exists(uploadPath)) {
-                Files.createDirectories(uploadPath);
-            }
+            Path uploadDirectory = getSpaceImageDirectory();
+            Files.createDirectories(uploadDirectory);
 
-            String extension = resolveFileExtension(file.getOriginalFilename(), contentType);
-            String fileName = UUID.randomUUID() + extension;
-            Path targetLocation = uploadPath.resolve(fileName);
+            String fileName = UUID.randomUUID() + resolveFileExtension(contentType);
+            Path targetPath = uploadDirectory.resolve(fileName).normalize();
+            Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
 
-            Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
-            return "/uploads/spaces/" + fileName;
-        } catch (IOException e) {
-            log.error("Lỗi khi lưu file upload ảnh: {}", e.getMessage(), e);
+            return new StoredFile(targetPath, SPACE_IMAGE_URL_PREFIX + fileName);
+        } catch (IOException exception) {
+            log.error("Không thể lưu file ảnh vào storage: {}", exception.getMessage(), exception);
             throw new AppException(
                     HttpStatus.INTERNAL_SERVER_ERROR,
                     "FILE_STORAGE_ERROR",
-                    "Không thể lưu trữ file ảnh lên hệ thống"
+                    "Không thể lưu file ảnh vào hệ thống"
             );
         }
     }
 
-    private String resolveFileExtension(String originalFilename, String contentType) {
-        if (originalFilename != null && originalFilename.contains(".")) {
-            return originalFilename.substring(originalFilename.lastIndexOf("."));
+    private void deleteStoredFile(String imageUrl) {
+        if (imageUrl == null || !imageUrl.startsWith(SPACE_IMAGE_URL_PREFIX)) {
+            return;
         }
-        if ("image/png".equalsIgnoreCase(contentType)) {
-            return ".png";
+
+        String fileName = imageUrl.substring(SPACE_IMAGE_URL_PREFIX.length());
+        Path uploadDirectory = getSpaceImageDirectory();
+        Path targetPath = uploadDirectory.resolve(fileName).normalize();
+
+        if (!targetPath.startsWith(uploadDirectory)) {
+            log.warn("Bỏ qua đường dẫn ảnh không hợp lệ: {}", imageUrl);
+            return;
         }
-        if ("image/webp".equalsIgnoreCase(contentType)) {
-            return ".webp";
+
+        try {
+            Files.deleteIfExists(targetPath);
+        } catch (IOException exception) {
+            throw new AppException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "FILE_DELETE_ERROR",
+                    "Không thể xóa file ảnh khỏi hệ thống"
+            );
         }
-        return ".jpg";
     }
+
+    private void deleteFileQuietly(Path path) {
+        try {
+            Files.deleteIfExists(path);
+        } catch (IOException exception) {
+            log.warn("Không thể dọn file ảnh sau khi lưu dữ liệu thất bại: {}", path, exception);
+        }
+    }
+
+    private Path getSpaceImageDirectory() {
+        return Paths.get(uploadRoot)
+                .toAbsolutePath()
+                .normalize()
+                .resolve(SPACE_IMAGE_FOLDER)
+                .normalize();
+    }
+
+    private String resolveFileExtension(String contentType) {
+        return switch (contentType.toLowerCase()) {
+            case "image/png" -> ".png";
+            case "image/webp" -> ".webp";
+            default -> ".jpg";
+        };
+    }
+
+    private record StoredFile(Path path, String publicUrl) {
+    }
+
 }

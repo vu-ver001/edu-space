@@ -59,18 +59,12 @@ public class CheckInService {
             throw BusinessException.badRequest("INVALID_STATUS_FOR_CHECKIN", "Booking phải ở trạng thái CONFIRMED.");
         }
 
-        long openMinutes = availabilityService.getPolicyLong("CHECKIN_OPEN_MINUTES", 15L);
-        long graceMinutes = availabilityService.getPolicyLong("CHECKIN_GRACE_MINUTES", 15L);
-        if (openMinutes < 0 || graceMinutes < 0) {
-            throw new BusinessException("INVALID_CHECKIN_POLICY", "Cấu hình thời gian check-in không hợp lệ.",
-                    HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-
         LocalDateTime now = LocalDateTime.now(checkInClock);
-        if (now.isBefore(booking.getStartTime().minusMinutes(openMinutes))) {
+        CheckInWindow window = getCheckInWindow(booking, now);
+        if (now.isBefore(window.openAt())) {
             throw BusinessException.badRequest("CHECKIN_TOO_EARLY", "Chưa đến thời gian check-in.");
         }
-        if (now.isAfter(booking.getStartTime().plusMinutes(graceMinutes))) {
+        if (now.isAfter(window.closeAt())) {
             throw BusinessException.badRequest("CHECKIN_WINDOW_EXPIRED", "Đã quá thời hạn check-in.");
         }
 
@@ -88,5 +82,23 @@ public class CheckInService {
                 .note("Check-in thành công")
                 .build());
         return bookingService.toBookingResponse(booking, now);
+    }
+
+    /**
+     * Calculates the single check-in window used by both manual and QR check-in.
+     * Package visibility keeps the policy decision in this feature while allowing
+     * the one-time-token service to validate the exact same boundaries.
+     */
+    CheckInWindow getCheckInWindow(Booking booking, LocalDateTime now) {
+        long openMinutes = availabilityService.getPolicyLong("CHECKIN_OPEN_MINUTES", 15L);
+        long graceMinutes = availabilityService.getPolicyLong("CHECKIN_GRACE_MINUTES", 15L);
+        if (openMinutes < 0 || graceMinutes < 0) {
+            throw new BusinessException("INVALID_CHECKIN_POLICY", "Cấu hình thời gian check-in không hợp lệ.",
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        return new CheckInWindow(
+                booking.getStartTime().minusMinutes(openMinutes),
+                booking.getStartTime().plusMinutes(graceMinutes)
+        );
     }
 }

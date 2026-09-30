@@ -187,16 +187,6 @@ export const CustomDateRangePicker: React.FC<CustomDateRangePickerProps> = ({
   // Selected range computation
   const activeEnd = tempEnd || (tempStart ? hoverDate || tempStart : '');
 
-  // Days count between tempStart and tempEnd
-  const selectedDaysCount = useMemo(() => {
-    if (!tempStart || !tempEnd) return 0;
-    if (tempEnd <= tempStart) return 0;
-    const start = parseLocalDate(tempStart).getTime();
-    const end = parseLocalDate(tempEnd).getTime();
-    const diff = end - start;
-    return Math.round(diff / (1000 * 3600 * 24)) + 1;
-  }, [tempStart, tempEnd]);
-
   return (
     <div className="custom-date-picker-container" ref={containerRef}>
       {/* Trigger Button */}
@@ -340,16 +330,8 @@ export const CustomDateRangePicker: React.FC<CustomDateRangePickerProps> = ({
             </div>
           )}
 
-          {/* Footer with Selected Summary & Actions */}
+          {/* Footer actions */}
           <div className="popover-footer">
-            <div className="popover-summary-text">
-              <span>Đã chọn:</span>
-              <strong>
-                {tempStart && tempEnd ? `${formatDisplay(tempStart)} - ${formatDisplay(tempEnd)}` : tempStart ? `${formatDisplay(tempStart)} - (Chọn ngày đến)` : 'Chưa chọn'}
-                {selectedDaysCount > 0 && ` (${selectedDaysCount} ngày)`}
-              </strong>
-            </div>
-
             <div className="popover-footer-actions">
               <button type="button" className="popover-btn-clear" onClick={handleClear}>
                 Đặt lại

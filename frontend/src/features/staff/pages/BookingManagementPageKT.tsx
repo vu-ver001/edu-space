@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   Clock3,
   DoorOpen,
+  IdCard,
   Mail,
   MapPin,
   RefreshCw,
@@ -16,15 +17,17 @@ import {
   UsersRound,
   X,
 } from 'lucide-react';
-import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
 import { Pagination } from '../../../components/common/Pagination';
+import { FilterSelect } from '../../../components/common/FilterSelect';
 import { StatusBadge } from '../../../components/common/StatusBadge';
+import { Tooltip } from '../../../components/common/Tooltip';
 import type { Space } from '../../space/types/space';
 import { spaceApi } from '../../space/api/spaceApi';
 import { formatImageUrl } from '../../../utils/imageUrl';
 import { staffApi } from '../api/staffApi';
 import { ApproveBookingModalKT } from '../components/ApproveBookingModalKT';
-import { RejectBookingModalKT } from '../components/RejectBookingModalKT';
+import { BulkBookingActionModalKT } from '../components/BulkBookingActionModalKT';
+import { CheckInBookingModalKT } from '../components/CheckInBookingModalKT';
 import { RejectBookingConfirmModalKT } from '../components/RejectBookingConfirmModalKT';
 import type { BookingStatus, StaffBooking } from '../types/staff';
 import './BookingManagementPageKT.css';
@@ -114,6 +117,11 @@ const formatFloor = (floor?: string) => {
   return /^tầng\b/i.test(value) ? value : `Tầng ${value}`;
 };
 
+const getPrimarySpaceImage = (space?: Space) => {
+  const primaryImage = space?.images?.find((image) => image.isPrimary || image.primary);
+  return formatImageUrl(space?.primaryImageUrl || primaryImage?.imageUrl);
+};
+
 const wasHandledByStaff = (booking: StaffBooking) => {
   if (booking.status === 'REJECTED') return true;
   return ['CHECKED_IN', 'COMPLETED'].includes(booking.status)
@@ -183,8 +191,34 @@ export const BookingManagementPageKT = () => {
     return () => window.clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    if (
+      selectedBookingId == null
+      || confirmAction != null
+      || rejectingBooking != null
+      || bulkRejectingBookings.length > 0
+    ) return;
+
+    const previousOverflow = document.body.style.overflow;
+    const closeDetailOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setSelectedBookingId(null);
+    };
+
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', closeDetailOnEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', closeDetailOnEscape);
+    };
+  }, [selectedBookingId, confirmAction, rejectingBooking, bulkRejectingBookings.length]);
+
   const spaceById = useMemo(
     () => new Map(spaces.map((space) => [space.id, space])),
+    [spaces],
+  );
+  const spaceCodeById = useMemo(
+    () => new Map(spaces.map((space) => [space.id, space.spaceCode])),
     [spaces],
   );
 
@@ -199,7 +233,7 @@ export const BookingManagementPageKT = () => {
   const filteredBookings = useMemo(() => {
     const normalizedSearch = searchQuery.trim().toLowerCase();
 
-    return bookings.filter((booking) => {
+    const result = bookings.filter((booking) => {
       if (activeTab === 'pending' && booking.status !== 'PENDING_APPROVAL') return false;
       if (activeTab === 'checkin' && booking.status !== 'CONFIRMED') return false;
       if (statusFilter !== 'ALL' && booking.status !== statusFilter) return false;
@@ -223,7 +257,99 @@ export const BookingManagementPageKT = () => {
 
       return true;
     });
-  }, [bookings, activeTab, statusFilter, dateFilter, spaceFilter, modeFilter, searchQuery, spaceById]);
+
+    if (activeTab === 'pending') {
+      const nowTimestamp = now.getTime();
+
+      result.sort((first, second) => {
+        const firstStart = new Date(first.startTime).getTime();
+        const secondStart = new Date(second.startTime).getTime();
+        const firstValid = !Number.isNaN(firstStart);
+        const secondValid = !Number.isNaN(secondStart);
+
+        if (!firstValid || !secondValid) {
+          if (firstValid) return -1;
+          if (secondValid) return 1;
+          return first.id - second.id;
+        }
+
+        const firstUpcoming = firstStart >= nowTimestamp;
+        const secondUpcoming = secondStart >= nowTimestamp;
+
+        if (firstUpcoming !== secondUpcoming) return firstUpcoming ? -1 : 1;
+        if (firstUpcoming) return firstStart - secondStart;
+        return secondStart - firstStart;
+      });
+    } else if (activeTab === 'checkin') {
+      const nowTimestamp = now.getTime();
+
+      result.sort((first, second) => {
+        const firstStart = new Date(first.startTime).getTime();
+        const secondStart = new Date(second.startTime).getTime();
+        const firstValid = !Number.isNaN(firstStart);
+        const secondValid = !Number.isNaN(secondStart);
+
+        if (!firstValid || !secondValid) {
+          if (firstValid) return -1;
+          if (secondValid) return 1;
+          return first.id - second.id;
+        }
+
+        const firstCanCheckIn = first.canCheckIn === true;
+        const secondCanCheckIn = second.canCheckIn === true;
+        if (firstCanCheckIn !== secondCanCheckIn) return firstCanCheckIn ? -1 : 1;
+
+        if (firstCanCheckIn) {
+          // Giờ bắt đầu sớm hơn đồng nghĩa hạn check-in cũng đến sớm hơn.
+          return firstStart - secondStart;
+        }
+
+        const firstUpcoming = firstStart >= nowTimestamp;
+        const secondUpcoming = secondStart >= nowTimestamp;
+        if (firstUpcoming !== secondUpcoming) return firstUpcoming ? -1 : 1;
+        if (firstUpcoming) return firstStart - secondStart;
+
+        // Dữ liệu quá hạn chưa kịp chuyển NO_SHOW nằm cuối danh sách.
+        return secondStart - firstStart;
+      });
+    } else {
+      const nowTimestamp = now.getTime();
+
+      result.sort((first, second) => {
+        const firstStart = new Date(first.startTime).getTime();
+        const secondStart = new Date(second.startTime).getTime();
+        const firstEnd = new Date(first.endTime).getTime();
+        const secondEnd = new Date(second.endTime).getTime();
+        const firstValid = !Number.isNaN(firstStart) && !Number.isNaN(firstEnd);
+        const secondValid = !Number.isNaN(secondStart) && !Number.isNaN(secondEnd);
+
+        if (!firstValid || !secondValid) {
+          if (firstValid) return -1;
+          if (secondValid) return 1;
+          return first.id - second.id;
+        }
+
+        const firstOngoing = firstStart <= nowTimestamp && firstEnd >= nowTimestamp;
+        const secondOngoing = secondStart <= nowTimestamp && secondEnd >= nowTimestamp;
+        if (firstOngoing !== secondOngoing) return firstOngoing ? -1 : 1;
+
+        if (firstOngoing) {
+          // Booking bắt đầu gần hiện tại nhất nằm trước trong nhóm đang diễn ra.
+          return secondStart - firstStart;
+        }
+
+        const firstUpcoming = firstStart > nowTimestamp;
+        const secondUpcoming = secondStart > nowTimestamp;
+        if (firstUpcoming !== secondUpcoming) return firstUpcoming ? -1 : 1;
+        if (firstUpcoming) return firstStart - secondStart;
+
+        // Booking đã qua: thời điểm kết thúc mới nhất nằm trước.
+        return secondEnd - firstEnd;
+      });
+    }
+
+    return result;
+  }, [bookings, activeTab, statusFilter, dateFilter, spaceFilter, modeFilter, searchQuery, spaceById, now]);
 
   const totalPages = Math.max(1, Math.ceil(filteredBookings.length / pageSize));
   const safePage = Math.min(currentPage, totalPages);
@@ -238,6 +364,7 @@ export const BookingManagementPageKT = () => {
     ? null
     : bookings.find((booking) => booking.id === selectedBookingId) ?? null;
   const selectedSpace = selectedBooking ? spaceById.get(selectedBooking.spaceId) : undefined;
+  const selectedSpacePrimaryImage = getPrimarySpaceImage(selectedSpace);
 
   const handleConfirmAction = async () => {
     if (!confirmAction) return;
@@ -256,17 +383,13 @@ export const BookingManagementPageKT = () => {
         });
 
         if (response.failureCount > 0) {
-          const firstFailure = response.failedBookings[0];
-          const failedCode = firstFailure?.bookingCode || `#${firstFailure?.bookingId}`;
-          showToast(
-            `Đã duyệt ${response.successCount}/${response.totalRequested} booking. ${failedCode}: ${firstFailure?.errorMessage || 'Không thể duyệt.'}`,
-            'error',
-          );
+          showToast(response.message || 'Không thể duyệt toàn bộ booking đã chọn.', 'error');
         } else {
-          showToast(`Đã duyệt thành công ${response.successCount} booking.`);
+          showToast(response.message || `Đã duyệt thành công ${response.successCount} booking.`);
         }
       } else if (confirmAction.type === 'approve') {
-        await staffApi.approveBooking(confirmAction.booking.id);
+        const response = await staffApi.approveBooking(confirmAction.booking.id);
+        showToast(response.message || 'Duyệt đặt phòng thành công');
       } else {
         await staffApi.staffAssistedCheckIn(confirmAction.booking.id);
       }
@@ -287,7 +410,7 @@ export const BookingManagementPageKT = () => {
     setActionLoading(true);
     try {
       if (targetBookings.length === 1) {
-        await staffApi.rejectBooking(targetBookings[0].id, reason);
+        const response = await staffApi.rejectBooking(targetBookings[0].id, reason);
         setSelectedPendingIds((current) => {
           const next = new Set(current);
           next.delete(targetBookings[0].id);
@@ -296,6 +419,7 @@ export const BookingManagementPageKT = () => {
         setRejectingBooking(null);
         setBulkRejectingBookings([]);
         await loadData();
+        showToast(response.message || 'Từ chối đặt phòng thành công');
         return;
       }
 
@@ -315,14 +439,12 @@ export const BookingManagementPageKT = () => {
       await loadData();
       if (response.failureCount > 0) {
         setBulkRejectingBookings(failed);
-        const firstFailure = response.failedBookings[0];
-        const failedCode = firstFailure?.bookingCode || `#${firstFailure?.bookingId}`;
-        throw new Error(`${failedCode}: ${firstFailure?.errorMessage || 'Không thể từ chối booking.'}`);
+        throw new Error(response.message || 'Không thể từ chối toàn bộ booking đã chọn.');
       }
 
       setRejectingBooking(null);
       setBulkRejectingBookings([]);
-      showToast(`Đã từ chối thành công ${response.successCount} booking.`);
+      showToast(response.message || `Đã từ chối thành công ${response.successCount} booking.`);
     } finally {
       setActionLoading(false);
     }
@@ -369,18 +491,11 @@ export const BookingManagementPageKT = () => {
     <div className="booking-management-page">
       <header className="booking-page-header">
         <div className="booking-page-title">
-          <span className="booking-title-icon"><CalendarCheck2 size={26} /></span>
           <div>
             <h1>Quản lý booking</h1>
             <p>Duyệt, từ chối và hỗ trợ check-in cho các yêu cầu đặt chỗ</p>
           </div>
         </div>
-        <time className="booking-live-time">
-          {new Intl.DateTimeFormat('vi-VN', {
-            weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric',
-            hour: '2-digit', minute: '2-digit', hour12: false,
-          }).format(now)}
-        </time>
       </header>
 
       <section className="booking-stat-grid" aria-label="Thống kê booking">
@@ -414,7 +529,7 @@ export const BookingManagementPageKT = () => {
         </article>
       </section>
 
-      <div className={`booking-workspace${selectedBooking ? ' detail-open' : ''}`}>
+      <div className="booking-workspace">
         <main className="booking-list-panel">
           <nav className="booking-tabs" aria-label="Phân loại booking">
             <button className={activeTab === 'pending' ? 'active' : ''} onClick={() => changeTab('pending')} type="button">
@@ -447,23 +562,36 @@ export const BookingManagementPageKT = () => {
               />
             </label>
             <label className="booking-filter-field">
-              <select aria-label="Không gian" value={spaceFilter} onChange={(event) => { setSpaceFilter(event.target.value); setCurrentPage(1); }}>
-                <option value="ALL">Tất cả không gian</option>
-                {spaces.map((space) => <option key={space.id} value={space.id}>{space.spaceCode} — {space.name}</option>)}
-              </select>
+              <FilterSelect
+                value={spaceFilter}
+                ariaLabel="Không gian"
+                options={[
+                  { value: 'ALL', label: 'Tất cả không gian' },
+                  ...spaces.map((space) => ({ value: String(space.id), label: `${space.spaceCode} — ${space.name}` })),
+                ]}
+                onChange={(value) => { setSpaceFilter(value); setCurrentPage(1); }}
+              />
             </label>
             <label className="booking-filter-field">
-              <select aria-label="Hình thức đặt" value={modeFilter} onChange={(event) => { setModeFilter(event.target.value); setCurrentPage(1); }}>
-                <option value="ALL">Tất cả hình thức</option>
-                <option value="WHOLE_SPACE">Nguyên phòng</option>
-                <option value="PER_TABLE">Theo bàn</option>
-                <option value="PER_SEAT">Theo ghế</option>
-              </select>
+              <FilterSelect
+                value={modeFilter}
+                ariaLabel="Hình thức đặt"
+                options={[
+                  { value: 'ALL', label: 'Tất cả hình thức' },
+                  { value: 'WHOLE_SPACE', label: 'Nguyên phòng' },
+                  { value: 'PER_TABLE', label: 'Theo bàn' },
+                  { value: 'PER_SEAT', label: 'Theo ghế' },
+                ]}
+                onChange={(value) => { setModeFilter(value); setCurrentPage(1); }}
+              />
             </label>
             <label className="booking-filter-field">
-              <select aria-label="Trạng thái" value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value as BookingStatus | 'ALL'); setCurrentPage(1); }}>
-                {STATUS_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-              </select>
+              <FilterSelect
+                value={statusFilter}
+                ariaLabel="Trạng thái"
+                options={STATUS_OPTIONS}
+                onChange={(value) => { setStatusFilter(value as BookingStatus | 'ALL'); setCurrentPage(1); }}
+              />
             </label>
             <button
               className="booking-refresh-btn"
@@ -538,14 +666,15 @@ export const BookingManagementPageKT = () => {
                     <tr>
                       <th>
                         <div className="booking-select-code">
-                          <input
-                            type="checkbox"
-                            checked={allVisiblePendingSelected}
-                            disabled={visiblePendingBookings.length === 0}
-                            aria-label="Chọn tất cả booking chờ duyệt trên trang này"
-                            title="Chọn tất cả booking chờ duyệt trên trang này"
-                            onChange={toggleVisiblePendingBookings}
-                          />
+                          {visiblePendingBookings.length > 0 ? (
+                            <input
+                              type="checkbox"
+                              checked={allVisiblePendingSelected}
+                              aria-label="Chọn tất cả booking chờ duyệt trên trang này"
+                              title="Chọn tất cả booking chờ duyệt trên trang này"
+                              onChange={toggleVisiblePendingBookings}
+                            />
+                          ) : null}
                           <span>Mã đặt chỗ</span>
                         </div>
                       </th>
@@ -578,20 +707,33 @@ export const BookingManagementPageKT = () => {
                                   onClick={(event) => event.stopPropagation()}
                                   onChange={() => togglePendingBooking(booking.id)}
                                 />
-                              ) : <span className="booking-checkbox-placeholder" />}
+                              ) : visiblePendingBookings.length > 0 ? (
+                                <span className="booking-checkbox-placeholder" />
+                              ) : null}
                               <strong className="booking-code">{bookingCode(booking)}</strong>
                             </div>
                           </td>
                           <td>
                             <div className="booking-student-cell">
                               <span className="booking-avatar small">{initials(booking.studentName)}</span>
-                              <span><strong>{booking.studentName || 'Sinh viên'}</strong><small>{booking.studentEmail}</small></span>
+                              <span>
+                                <Tooltip content={booking.studentName || 'Sinh viên'} maxWidth={320} onlyWhenOverflow>
+                                  <strong>{booking.studentName || 'Sinh viên'}</strong>
+                                </Tooltip>
+                                <Tooltip content={booking.studentEmail} maxWidth={360} onlyWhenOverflow>
+                                  <small>{booking.studentEmail}</small>
+                                </Tooltip>
+                              </span>
                             </div>
                           </td>
                           <td><strong>{space?.spaceCode || booking.spaceName}</strong><small>{booking.spaceName}<br />{booking.building} {booking.floor ? `• ${formatFloor(booking.floor)}` : ''}</small></td>
                           <td><strong>{formatDate(booking.startTime)}</strong><small>{formatTime(booking.startTime)} – {formatTime(booking.endTime)}</small></td>
                           <td><span className={`booking-mode-badge mode-${mode.toLowerCase()}`}>{modeLabel(mode)}</span></td>
-                          <td><span className="booking-purpose" title={booking.purpose}>{booking.purpose || '—'}</span></td>
+                          <td>
+                            <Tooltip content={booking.purpose || '—'} maxWidth={440} onlyWhenOverflow>
+                              <span className="booking-purpose">{booking.purpose || '—'}</span>
+                            </Tooltip>
+                          </td>
                           <td><StatusBadge status={booking.status} size="sm" /></td>
                           <td>
                             <div className="booking-row-actions">
@@ -648,11 +790,21 @@ export const BookingManagementPageKT = () => {
         </main>
 
         {selectedBooking && (
-          <aside className="booking-detail-panel">
+          <div
+            className="booking-detail-backdrop"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) setSelectedBookingId(null);
+            }}
+          >
+            <aside
+              className="booking-detail-panel"
+              role="dialog"
+              aria-modal="true"
+              aria-label={`Chi tiết booking ${bookingCode(selectedBooking)}`}
+            >
               <div className="booking-detail-header">
-                <div><span>Chi tiết đặt chỗ</span><strong>{bookingCode(selectedBooking)}</strong></div>
+                <div><strong>{bookingCode(selectedBooking)}</strong></div>
                 <div className="booking-detail-heading-actions">
-                  <StatusBadge status={selectedBooking.status} size="sm" />
                   <button
                     type="button"
                     className="booking-detail-close"
@@ -665,19 +817,23 @@ export const BookingManagementPageKT = () => {
                 </div>
               </div>
 
-              <section className="booking-detail-section">
-                <h3>Thông tin sinh viên</h3>
+              <section className="booking-detail-section booking-student-section">
                 <div className="booking-student-profile">
-                  <span className="booking-avatar">{initials(selectedBooking.studentName)}</span>
-                  <div><strong>{selectedBooking.studentName || 'Sinh viên'}</strong><span><Mail size={14} /> {selectedBooking.studentEmail || 'Chưa có email'}</span></div>
+                  <span className="booking-avatar small">{initials(selectedBooking.studentName)}</span>
+                  <div>
+                    <strong>{selectedBooking.studentName || 'Sinh viên'}</strong>
+                    <span><IdCard size={14} /> {selectedBooking.studentUserCode || 'Chưa cập nhật mã sinh viên'}</span>
+                    <span><UserRound size={14} /> Lớp: {selectedBooking.studentClassName || 'Chưa cập nhật'}</span>
+                    <span><Mail size={14} /> {selectedBooking.studentEmail || 'Chưa cập nhật email'}</span>
+                  </div>
                 </div>
               </section>
 
-              <section className="booking-detail-section">
+              <section className="booking-detail-section booking-reservation-section">
                 <h3>Thông tin đặt chỗ</h3>
                 <div className="booking-space-summary">
-                  {formatImageUrl(selectedSpace?.primaryImageUrl || selectedSpace?.imageUrl) ? (
-                    <img src={formatImageUrl(selectedSpace?.primaryImageUrl || selectedSpace?.imageUrl) || ''} alt={selectedBooking.spaceName} />
+                  {selectedSpacePrimaryImage ? (
+                    <img src={selectedSpacePrimaryImage} alt={selectedBooking.spaceName} />
                   ) : (
                     <span className="booking-space-placeholder"><Building2 size={24} /></span>
                   )}
@@ -689,11 +845,13 @@ export const BookingManagementPageKT = () => {
                   </div>
                 </div>
                 <div className="booking-detail-list">
-                  <div><CalendarDays size={17} /><span><small>Thời gian</small><strong>{formatDate(selectedBooking.startTime)} · {formatTime(selectedBooking.startTime)} – {formatTime(selectedBooking.endTime)}</strong></span></div>
-                  <div><Target size={17} /><span><small>Mục đích</small><strong>{selectedBooking.purpose || 'Chưa cung cấp'}</strong></span></div>
-                  <div><UsersRound size={17} /><span><small>Số người tham gia</small><strong>{selectedBooking.participantCount} người</strong></span></div>
-                  {selectedBooking.tableCode && <div><DoorOpen size={17} /><span><small>Bàn đã chọn</small><strong>{selectedBooking.tableCode}</strong></span></div>}
-                  {!!selectedBooking.selectedSeats?.length && <div><UserRound size={17} /><span><small>Ghế đã chọn</small><strong>{selectedBooking.selectedSeats.join(', ')}</strong></span></div>}
+                  <div className="booking-detail-time"><CalendarDays size={17} /><span><small>Thời gian</small><strong>{formatDate(selectedBooking.startTime)} · {formatTime(selectedBooking.startTime)} – {formatTime(selectedBooking.endTime)}</strong></span></div>
+                  <div className="booking-detail-purpose"><Target size={17} /><span><small>Mục đích</small><strong>{selectedBooking.purpose || 'Chưa cung cấp'}</strong></span></div>
+                  {getBookingMode(selectedBooking, selectedSpace) !== 'PER_SEAT' && (
+                    <div className="booking-detail-participants"><UsersRound size={17} /><span><small>Số người tham gia</small><strong>{selectedBooking.participantCount} người</strong></span></div>
+                  )}
+                  {selectedBooking.tableCode && <div className="booking-detail-table"><DoorOpen size={17} /><span><small>Bàn đã chọn</small><strong>{selectedBooking.tableCode}</strong></span></div>}
+                  {!!selectedBooking.selectedSeats?.length && <div className="booking-detail-seats"><UserRound size={17} /><span><small>Ghế đã chọn</small><strong>{selectedBooking.selectedSeats.join(', ')}</strong></span></div>}
                 </div>
               </section>
 
@@ -710,7 +868,6 @@ export const BookingManagementPageKT = () => {
 
               {(selectedBooking.status === 'PENDING_APPROVAL' || selectedBooking.status === 'CONFIRMED') && (
                 <section className="booking-detail-actions">
-                  <h3>Thao tác</h3>
                   {selectedBooking.status === 'PENDING_APPROVAL' && (
                     <div>
                       <button type="button" className="approve" onClick={() => setConfirmAction({ type: 'approve', booking: selectedBooking })}><Check size={18} /> Duyệt yêu cầu</button>
@@ -727,7 +884,8 @@ export const BookingManagementPageKT = () => {
                   )}
                 </section>
               )}
-          </aside>
+            </aside>
+          </div>
         )}
       </div>
 
@@ -742,34 +900,33 @@ export const BookingManagementPageKT = () => {
         onConfirm={handleConfirmAction}
       />
 
-      <ConfirmDialog
-        isOpen={confirmAction != null && confirmAction.type !== 'approve'}
-        title={confirmAction?.type === 'bulk-approve'
-          ? `Duyệt ${confirmAction.bookings.length} booking đã chọn?`
-          : 'Xác nhận check-in?'}
-        message={confirmAction?.type === 'bulk-approve'
-          ? 'Vui lòng kiểm tra các yêu cầu đã chọn trước khi duyệt.'
-          : confirmAction?.type === 'checkin'
-            ? `${bookingCode(confirmAction.booking)} · ${confirmAction.booking.studentName} · ${confirmAction.booking.spaceName}`
-            : ''}
-        confirmText={confirmAction?.type === 'bulk-approve'
-          ? `Duyệt ${confirmAction.bookings.length} booking`
-          : 'Xác nhận check-in'}
-        isDanger={false}
+      <CheckInBookingModalKT
+        isOpen={confirmAction?.type === 'checkin'}
+        booking={confirmAction?.type === 'checkin' ? confirmAction.booking : null}
+        space={confirmAction?.type === 'checkin' ? spaceById.get(confirmAction.booking.spaceId) : undefined}
         isLoading={actionLoading}
-        onCancel={() => setConfirmAction(null)}
+        onClose={() => setConfirmAction(null)}
         onConfirm={handleConfirmAction}
       />
 
-      <RejectBookingModalKT
-        isOpen={bulkRejectingBookings.length > 0}
-        booking={bulkRejectingBookings[0] || null}
-        bookingCount={bulkRejectingBookings.length}
+      <BulkBookingActionModalKT
+        isOpen={confirmAction?.type === 'bulk-approve'}
+        action="approve"
+        bookings={confirmAction?.type === 'bulk-approve' ? confirmAction.bookings : []}
+        spaceCodeById={spaceCodeById}
         isLoading={actionLoading}
-        onClose={() => {
-          setBulkRejectingBookings([]);
-        }}
-        onConfirm={handleReject}
+        onClose={() => setConfirmAction(null)}
+        onConfirm={handleConfirmAction}
+      />
+
+      <BulkBookingActionModalKT
+        isOpen={bulkRejectingBookings.length > 0}
+        action="reject"
+        bookings={bulkRejectingBookings}
+        spaceCodeById={spaceCodeById}
+        isLoading={actionLoading}
+        onClose={() => setBulkRejectingBookings([])}
+        onConfirm={(reason) => handleReject(reason || '')}
       />
 
       <RejectBookingConfirmModalKT

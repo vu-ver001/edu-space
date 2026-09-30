@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { X, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X } from 'lucide-react';
 import type { SpaceType, SpaceTypeCreateRequest, SpaceTypeUpdateRequest, BookingMode } from '../types/spaceType';
 import './SpaceTypeFormModalKT.css';
 
@@ -25,6 +25,7 @@ export const SpaceTypeFormModalKT: React.FC<SpaceTypeFormModalKTProps> = ({
   const [bookingMode, setBookingMode] = useState<BookingMode>('WHOLE_SPACE');
   const [requiresApproval, setRequiresApproval] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -42,6 +43,16 @@ export const SpaceTypeFormModalKT: React.FC<SpaceTypeFormModalKTProps> = ({
       setValidationError(null);
     }
   }, [isOpen, mode, spaceType]);
+
+  useEffect(() => {
+    if (!validationError) return;
+
+    const errorField = formRef.current?.querySelector<HTMLElement>('.input-error');
+    if (!errorField) return;
+
+    errorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    errorField.focus({ preventScroll: true });
+  }, [validationError]);
 
   if (!isOpen) return null;
 
@@ -81,14 +92,7 @@ export const SpaceTypeFormModalKT: React.FC<SpaceTypeFormModalKTProps> = ({
           </button>
         </div>
 
-        {validationError && (
-          <div className="astp-alert astp-alert-error" style={{ margin: '16px 24px 0', display: 'flex', alignItems: 'center' }}>
-            <AlertCircle size={17} style={{ marginRight: '8px', flexShrink: 0 }} />
-            <span>{validationError}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="astp-modal-form" noValidate>
+        <form ref={formRef} onSubmit={handleSubmit} className="astp-modal-form" noValidate>
           <div className="astp-form-group">
             <label className="astp-form-label">
               Tên loại không gian <span className="astp-required">*</span>

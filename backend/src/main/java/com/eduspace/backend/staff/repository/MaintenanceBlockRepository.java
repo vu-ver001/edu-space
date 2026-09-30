@@ -15,6 +15,8 @@ public interface MaintenanceBlockRepository extends JpaRepository<MaintenanceBlo
 
     Optional<MaintenanceBlock> findByIdAndDeletedAtIsNull(Long id);
 
+    List<MaintenanceBlock> findAllByDeletedAtIsNullOrderByStartTimeAsc();
+
     List<MaintenanceBlock> findBySpaceIdAndDeletedAtIsNullOrderByStartTimeAsc(Long spaceId);
 
     /**
@@ -58,13 +60,6 @@ public interface MaintenanceBlockRepository extends JpaRepository<MaintenanceBlo
             @Param("fromTime") LocalDateTime fromTime,
             @Param("toTime") LocalDateTime toTime
     );
-
-    /**
-     * Kiểm tra nhanh xem không gian có bất kỳ khoảng bảo trì nào giao với [startTime, endTime] hay không.
-     */
-    default boolean hasOverlappingMaintenance(Long spaceId, LocalDateTime startTime, LocalDateTime endTime) {
-        return !findOverlappingBlocks(spaceId, startTime, endTime).isEmpty();
-    }
 
     @Query("SELECT COUNT(DISTINCT m.space.id) FROM MaintenanceBlock m " +
            "WHERE m.deletedAt IS NULL " +

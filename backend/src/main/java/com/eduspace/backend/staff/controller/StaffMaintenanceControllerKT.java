@@ -68,8 +68,17 @@ public class StaffMaintenanceControllerKT {
      */
     @DeleteMapping("/maintenance/{maintenanceId}")
     public ResponseEntity<StaffActionResponseKT<Void>> deleteMaintenance(@PathVariable Long maintenanceId) {
-        maintenanceService.deleteMaintenance(maintenanceId);
-        return ResponseEntity.ok(StaffActionResponseKT.message("Đã hủy khoảng bảo trì thành công."));
+        String message = maintenanceService.deleteMaintenance(maintenanceId);
+        return ResponseEntity.ok(StaffActionResponseKT.message(message));
+    }
+
+    /**
+     * Lấy toàn bộ lịch bảo trì chưa bị xóa mềm.
+     * GET /api/staff/maintenance
+     */
+    @GetMapping("/maintenance")
+    public ResponseEntity<List<MaintenanceResponseKT>> getAllMaintenance() {
+        return ResponseEntity.ok(maintenanceService.getAllMaintenance());
     }
 
     /**

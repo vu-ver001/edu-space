@@ -9,8 +9,10 @@ export type BookingStatus =
   | 'COMPLETED';
 
 export interface Booking {
+  message?: string;
   id: number;
   bookingCode?: string;
+
   studentId: number;
   studentName: string;
   studentEmail: string;
@@ -26,7 +28,6 @@ export interface Booking {
   purpose?: string;
   status: BookingStatus;
   statusDisplayName: string;
-  isOccupying: boolean;
   rejectReason?: string;
   rejectedAt?: string;
   expireReason?: string;
@@ -40,17 +41,6 @@ export interface Booking {
   selectedSeats?: string[];
 }
 
-export interface BookingAuditLog {
-  id: number;
-  bookingId: number;
-  action: string;
-  actionDescription: string;
-  performedByName: string;
-  performedByEmail: string;
-  performedAt: string;
-  reason?: string;
-  note?: string;
-}
 
 export interface CreateBookingPayload {
   spaceId: number;
@@ -70,10 +60,12 @@ export interface BulkBookingFailureItem {
 }
 
 export interface BulkBookingOperationResponse {
+  message?: string;
   totalRequested: number;
   successCount: number;
   failureCount: number;
   successfulBookings: Booking[];
   failedBookings: BulkBookingFailureItem[];
 }
+
 

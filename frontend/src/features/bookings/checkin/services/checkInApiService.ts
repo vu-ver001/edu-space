@@ -7,18 +7,24 @@ import type {
   CheckInResult,
   CheckInService,
   CheckInServiceError,
+  CheckInToken,
 } from '../types/checkIn';
 
 type BookingResponseDto = {
   id: number;
   studentId: number;
+  spaceId?: number;
   studentName?: string | null;
   studentEmail?: string | null;
   spaceName?: string | null;
+  spaceTypeName?: string | null;
   building?: string | null;
   floor?: string | null;
+  participantCount?: number | null;
+  purpose?: string | null;
   startTime: string;
   endTime: string;
+  createdAt?: string | null;
   status: BookingStatus;
   checkedInAt?: string | null;
   checkedInBy?: number | null;
@@ -28,6 +34,13 @@ type BookingResponseDto = {
 type ApiErrorDto = {
   code?: string;
   message?: string;
+};
+
+type CheckInTokenResponseDto = {
+  bookingId: number;
+  token: string;
+  issuedAt: string;
+  expiresAt: string;
 };
 
 const toError = (error: unknown, fallback: string): CheckInServiceError => {
@@ -56,10 +69,15 @@ export const mapBookingResponse = (data: BookingResponseDto): CheckInBooking => 
   studentId: String(data.studentId),
   studentName: data.studentName || data.studentEmail || `Sinh viên #${data.studentId}`,
   studentCode: data.studentEmail || `ID ${data.studentId}`,
+  spaceId: data.spaceId,
   spaceName: data.spaceName || `Phòng #${data.id}`,
+  spaceTypeName: data.spaceTypeName ?? undefined,
   building: toBuildingLabel(data.building, data.floor),
+  participantCount: data.participantCount ?? undefined,
+  purpose: data.purpose ?? undefined,
   startTime: data.startTime,
   endTime: data.endTime,
+  createdAt: data.createdAt ?? undefined,
   status: data.status,
   canCheckIn: data.canCheckIn,
   checkedInAt: data.checkedInAt ?? undefined,
@@ -71,6 +89,13 @@ const toResult = (data: BookingResponseDto): CheckInResult => ({
   status: 'CHECKED_IN',
   checkedInAt: data.checkedInAt || '',
   checkedInById: data.checkedInBy ?? undefined,
+});
+
+const toToken = (data: CheckInTokenResponseDto): CheckInToken => ({
+  bookingId: data.bookingId,
+  token: data.token,
+  issuedAt: data.issuedAt,
+  expiresAt: data.expiresAt,
 });
 
 /** Adapter for the real booking/check-in API. The server remains the source of truth. */
@@ -107,6 +132,29 @@ export const checkInApiService = {
       throw toError(error, 'Không thể check-in lúc này.');
     }
   },
+
+  async issueToken(bookingId: number): Promise<CheckInToken> {
+    try {
+      const response = await api.post<CheckInTokenResponseDto>(`/api/bookings/${bookingId}/check-in-token`);
+      return toToken(response.data);
+    } catch (error) {
+      throw toError(error, 'Không thể tạo mã check-in.');
+    }
+  },
+
+  async verifyToken(bookingId: number, token: string): Promise<CheckInResult> {
+    try {
+      const response = await api.post<BookingResponseDto>(
+        `/api/bookings/${bookingId}/check-in/verify`,
+        { token },
+      );
+      return toResult(response.data);
+    } catch (error) {
+      throw toError(error, 'Mã check-in không hợp lệ hoặc đã hết hạn.');
+    }
+  },
 } satisfies CheckInService & {
   getBooking: (bookingId: number) => Promise<CheckInBooking>;
+  issueToken: (bookingId: number) => Promise<CheckInToken>;
+  verifyToken: (bookingId: number, token: string) => Promise<CheckInResult>;
 };

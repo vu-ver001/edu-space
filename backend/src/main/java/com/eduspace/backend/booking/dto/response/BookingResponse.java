@@ -16,10 +16,14 @@ import com.eduspace.backend.booking.entity.BookingStatus;
 @AllArgsConstructor
 @Builder
 public class BookingResponse {
+    private String message;
     private Long id;
     private String bookingCode;
+
     private Long studentId;
     private String studentName;
+    private String studentUserCode;
+    private String studentClassName;
     private String studentEmail;
     private Long spaceId;
     private String spaceName;
@@ -33,7 +37,6 @@ public class BookingResponse {
     private String purpose;
     private BookingStatus status;
     private String statusDisplayName;
-    private boolean isOccupying;
     private String rejectReason;
     private LocalDateTime rejectedAt;
     private String expireReason;
@@ -41,7 +44,9 @@ public class BookingResponse {
     private LocalDateTime checkedInAt;
     private Long checkedInBy;
     private LocalDateTime createdAt;
+    @com.fasterxml.jackson.annotation.JsonProperty("canCancel")
     private boolean canCancel;
+    @com.fasterxml.jackson.annotation.JsonProperty("canCheckIn")
     private boolean canCheckIn;
     private java.util.List<String> selectedSeats;
     private Long tableId;

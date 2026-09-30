@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Armchair } from 'lucide-react';
+import { TableMeetingIcon } from './RoomCard';
 import type { Space, SpaceTable, SpaceSeat } from '../services/spaceService';
 import { spaceService } from '../services/spaceService';
 import { bookingService } from '../services/bookingService';
+import { formatDateVI, formatMessageDatesVI } from './DateInputVI';
+import './SeatSelectionModal.css';
 
 interface Props {
   space: Space;
@@ -98,8 +102,9 @@ export const SeatSelectionModal: React.FC<Props> = ({
 
       // Tải danh sách mã đã bị đặt (ghế hoặc bàn) trong khung giờ từ API của Khánh Vân
       const occupied = await bookingService.getOccupiedSeats(space.id, startIso, endIso);
-      setOccupiedItems(new Set(occupied));
-      setSelectedItems((prev) => prev.filter((code) => !occupied.includes(code)));
+      const normOccupied = new Set(occupied.map((s) => String(s).trim().toUpperCase()));
+      setOccupiedItems(normOccupied);
+      setSelectedItems((prev) => prev.filter((code) => !normOccupied.has(String(code).trim().toUpperCase())));
     } catch (err) {
       console.error('Lỗi khi tải dữ liệu bàn/ghế từ server:', err);
     } finally {
@@ -113,22 +118,28 @@ export const SeatSelectionModal: React.FC<Props> = ({
 
   // Xử lý click chọn / hủy chọn Item (bàn hoặc ghế)
   const handleItemClick = (code: string, isInactive?: boolean) => {
-    if (occupiedItems.has(code) || isInactive) return;
+    const normCode = String(code).trim().toUpperCase();
+    if (occupiedItems.has(normCode) || isInactive) return;
 
+    if (isTableMode) {
+      const tbl = tablesList.find(
+        (t) => t.tableCode === code || String(t.id) === code || t.tableCode?.toUpperCase() === normCode
+      );
+      if (tbl && Number(participantCount) > tbl.capacity) {
+        setErrorMessage(
+          `Bàn ${tbl.tableCode} có sức chứa tối đa ${tbl.capacity} chỗ, không đủ cho nhóm ${participantCount} người của bạn. Vui lòng chọn bàn có sức chứa từ ${participantCount} chỗ trở lên.`
+        );
+        return;
+      }
+    }
+
+    setErrorMessage(null);
     setSelectedItems((prev) => {
       if (prev.includes(code)) {
         return prev.filter((item) => item !== code);
       } else {
-        if (isTableMode) {
-          // Với chế độ chọn bàn: thường chọn 1 bàn phù hợp (hoặc có thể chọn thêm)
-          return [code];
-        } else {
-          // Với chế độ chọn ghế: chọn đủ số người tham gia
-          if (prev.length >= participantCount) {
-            return [...prev.slice(1), code];
-          }
-          return [...prev, code];
-        }
+        // Cả chế độ chọn bàn và chọn ghế đều chỉ chọn 1 vị trí (1 bàn hoặc 1 ghế cá nhân)
+        return [code];
       }
     });
   };
@@ -140,24 +151,49 @@ export const SeatSelectionModal: React.FC<Props> = ({
       return;
     }
 
+    // Kiểm tra thời gian bắt đầu trong tương lai
+    const startDateTime = new Date(startIso);
+    if (startDateTime.getTime() <= Date.now()) {
+      setErrorMessage('Thời gian bắt đầu phải lớn hơn thời điểm hiện tại. Vui lòng đóng cửa sổ và chọn lại khung giờ trong tương lai.');
+      return;
+    }
+
+    const sortedItems = [...selectedItems].sort();
+    const selectedTable = isTableMode && selectedItems.length > 0
+      ? tablesList.find((t) => t.tableCode === selectedItems[0] || String(t.id) === selectedItems[0] || t.tableCode?.toUpperCase() === selectedItems[0]?.toUpperCase())
+      : null;
+
+    if (isTableMode && selectedTable) {
+      if (Number(participantCount) < 2) {
+        setErrorMessage('Bàn học nhóm yêu cầu tối thiểu từ 2 người trở lên. Nếu bạn đi 1 mình, vui lòng chọn đặt chỗ ngồi tại Khu tự học cá nhân.');
+        return;
+      }
+      if (Number(participantCount) > selectedTable.capacity) {
+        setErrorMessage(
+          `Bàn ${selectedTable.tableCode} chỉ có sức chứa tối đa ${selectedTable.capacity} chỗ, không đủ cho nhóm ${participantCount} người. Vui lòng chọn bàn lớn hơn.`
+        );
+        return;
+      }
+    }
+
     setSubmitting(true);
     setErrorMessage(null);
 
     try {
-      const sortedItems = [...selectedItems].sort();
       const newBooking = await bookingService.createBooking({
         spaceId: space.id,
         startTime: startIso,
         endTime: endIso,
-        participantCount: Math.max(selectedItems.length, participantCount),
+        participantCount: isTableMode ? Number(participantCount) : 1,
         purpose: purpose.trim() || (isTableMode ? 'Thảo luận theo bàn' : 'Tự học tại chỗ ngồi'),
-        selectedSeats: sortedItems,
+        selectedSeats: [sortedItems[0]],
+        tableId: isTableMode && selectedTable ? selectedTable.id : undefined,
       });
 
       onSuccess(newBooking.id, sortedItems);
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Có lỗi xảy ra khi tạo đặt chỗ. Vui lòng kiểm tra lại.';
-      setErrorMessage(msg);
+      setErrorMessage(formatMessageDatesVI(msg));
       await loadData();
     } finally {
       setSubmitting(false);
@@ -166,20 +202,42 @@ export const SeatSelectionModal: React.FC<Props> = ({
 
   // Render từng bàn thảo luận (mô hình to hơn ghế một chút, hình khối bàn nhóm)
   const renderTableCard = (tbl: SpaceTable) => {
-    const isOccupied = occupiedItems.has(tbl.tableCode);
+    const normCode = String(tbl.tableCode).trim().toUpperCase();
+    const isOccupied = occupiedItems.has(normCode);
     const isInactive = tbl.status === 'INACTIVE';
-    const isSelected = selectedItems.includes(tbl.tableCode);
-    const isUnavailable = isOccupied || isInactive;
+    const isSelected = selectedItems.includes(tbl.tableCode) || selectedItems.includes(normCode);
+    const isInsufficient = isTableMode && Number(participantCount) > tbl.capacity;
 
     return (
       <div
         key={tbl.id || tbl.tableCode}
-        className={`cinema-table-card ${isUnavailable ? 'table-occupied' : isSelected ? 'table-selected' : 'table-available'}`}
+        className={`cinema-table-card ${
+          isInactive
+            ? 'table-inactive'
+            : isOccupied
+            ? 'table-occupied'
+            : isInsufficient
+            ? 'table-insufficient'
+            : isSelected
+            ? 'table-selected'
+            : 'table-available'
+        }`}
         onClick={() => handleItemClick(tbl.tableCode, isInactive)}
+        title={
+          isInactive
+            ? `Bàn ${tbl.tableCode}: Tạm khóa bảo trì`
+            : isOccupied
+            ? `Bàn ${tbl.tableCode}: Đã có người đặt trong khung giờ này`
+            : isInsufficient
+            ? `Bàn ${tbl.tableCode}: Sức chứa tối đa ${tbl.capacity} chỗ, không đủ cho nhóm ${participantCount} người`
+            : isSelected
+            ? `Bàn ${tbl.tableCode}: Bạn đang chọn`
+            : `Bàn ${tbl.tableCode}: Bàn trống sẵn sàng đặt (${tbl.capacity} chỗ)`
+        }
       >
         <div className="table-card-top">
           <div className="table-card-code">
-            <span>🪑</span>
+            <TableMeetingIcon size={16} strokeWidth={2.2} style={{ color: isSelected ? '#FFFFFF' : isInsufficient ? '#E11D48' : '#2563EB', marginRight: '6px' }} />
             <span>Bàn {tbl.tableCode}</span>
           </div>
           <span className="table-card-capacity">
@@ -196,10 +254,12 @@ export const SeatSelectionModal: React.FC<Props> = ({
             <span style={{ color: '#EF4444' }}>🔒 Tạm khóa bảo trì</span>
           ) : isOccupied ? (
             <span style={{ color: '#64748B' }}>✕ Đã có người đặt</span>
+          ) : isInsufficient ? (
+            <span style={{ color: '#E11D48', fontWeight: 600 }}>⚠️ Không đủ chỗ ({tbl.capacity} &lt; {participantCount})</span>
           ) : isSelected ? (
             <span style={{ color: '#FFFFFF', fontWeight: 700 }}>✓ Bạn đang chọn</span>
           ) : (
-            <span style={{ color: '#10B981' }}>● Bàn trống</span>
+            <span style={{ color: '#10B981' }}>● Bàn trống ({tbl.capacity} chỗ)</span>
           )}
         </div>
       </div>
@@ -208,25 +268,26 @@ export const SeatSelectionModal: React.FC<Props> = ({
 
   // Render từng ghế ngồi cá nhân
   const renderSeatButton = (st: SpaceSeat) => {
-    const isOccupied = occupiedItems.has(st.seatCode);
+    const normCode = String(st.seatCode).trim().toUpperCase();
+    const isOccupied = occupiedItems.has(normCode);
     const isInactive = st.status === 'INACTIVE';
-    const isSelected = selectedItems.includes(st.seatCode);
+    const isSelected = selectedItems.includes(st.seatCode) || selectedItems.includes(normCode);
     const isUnavailable = isOccupied || isInactive;
 
     return (
       <button
         key={st.id || st.seatCode}
         type="button"
-        className={`cinema-seat ${isUnavailable ? 'seat-occupied' : ''} ${
-          isSelected ? 'seat-selected' : 'seat-available'
+        className={`cinema-seat ${
+          isInactive ? 'seat-inactive' : isOccupied ? 'seat-occupied' : isSelected ? 'seat-selected' : 'seat-available'
         }`}
         onClick={() => handleItemClick(st.seatCode, isInactive)}
         disabled={isUnavailable || submitting}
         title={
           isInactive
-            ? `Ghế ${st.seatCode}: Tạm khóa bảo dưỡng`
+            ? `Ghế ${st.seatCode}: ${st.description || 'Tạm khóa bảo dưỡng / Thay thiết bị'}`
             : isOccupied
-            ? `Ghế ${st.seatCode}: Đã có người đặt trước (Bận)`
+            ? `Ghế ${st.seatCode}: Đã có người đặt trước trong khung giờ này`
             : isSelected
             ? `Ghế ${st.seatCode}: Bạn đang chọn`
             : `Ghế ${st.seatCode}: Ghế trống sẵn sàng đặt`
@@ -244,7 +305,9 @@ export const SeatSelectionModal: React.FC<Props> = ({
         <div className="cinema-modal-header">
           <div>
             <h3 className="cinema-title">
-              <span style={{ fontSize: '1.25rem' }}>{isTableMode ? '🪑' : '💺'}</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', marginRight: '8px', color: '#2563EB' }}>
+                {isTableMode ? <TableMeetingIcon size={22} strokeWidth={2.2} /> : <Armchair size={22} strokeWidth={2.2} />}
+              </span>
               {isTableMode ? 'Sơ đồ chọn bàn thảo luận nhóm' : 'Sơ đồ chọn vị trí chỗ ngồi cá nhân'}
             </h3>
             <div className="cinema-subtitle">
@@ -299,7 +362,7 @@ export const SeatSelectionModal: React.FC<Props> = ({
                   fontSize: '0.825rem',
                   fontWeight: 600
                 }}>
-                  💡 Nhấp vào bàn bạn muốn chọn. Mô hình bàn độc lập với ổ cắm điện và bảng viết riêng.
+                  💡 Nhóm của bạn có <strong>{participantCount} người</strong>. Vui lòng chọn bàn có sức chứa từ {participantCount} chỗ trở lên.
                 </span>
               </div>
 
@@ -321,7 +384,7 @@ export const SeatSelectionModal: React.FC<Props> = ({
                   fontSize: '0.825rem',
                   fontWeight: 600
                 }}>
-                  💡 Nhấp vào ghế bạn muốn ngồi (Mã ghế S01 đến S10).
+                  💡 Mỗi sinh viên chọn 1 chỗ ngồi cá nhân (Mã ghế S01 đến S10). Nhấp vào ghế trống để chọn hoặc đổi vị trí.
                 </span>
               </div>
 
@@ -345,11 +408,21 @@ export const SeatSelectionModal: React.FC<Props> = ({
             </div>
             <div className="legend-item">
               <span className="legend-box occupied" />
-              <span>Đã có người đặt (Bận)</span>
+              <span>Đã có người đặt (Bận giờ này)</span>
+            </div>
+            {isTableMode && (
+              <div className="legend-item">
+                <span className="legend-box" style={{ background: '#FFF1F2', border: '1.5px solid #FECDD3' }} />
+                <span>Không đủ chỗ (&lt; {participantCount} người)</span>
+              </div>
+            )}
+            <div className="legend-item">
+              <span className="legend-box inactive" />
+              <span>Tạm khóa bảo trì</span>
             </div>
             <div className="legend-item">
               <span className="legend-box selected" />
-              <span>{isTableMode ? 'Bàn đang chọn' : `Ghế đang chọn (${selectedItems.length}/${participantCount})`}</span>
+              <span>{isTableMode ? 'Bàn đang chọn' : 'Ghế bạn đang chọn'}</span>
             </div>
           </div>
         </div>
@@ -358,17 +431,25 @@ export const SeatSelectionModal: React.FC<Props> = ({
         <div className="cinema-modal-footer">
           <div className="footer-booking-info">
             <div className="footer-meta-time">
-              📅 <strong>{date}</strong> • <strong>{startTime.substring(0, 5)} - {endTime.substring(0, 5)}</strong>
+              📅 <strong>{formatDateVI(date)}</strong> • <strong>{startTime.substring(0, 5)} - {endTime.substring(0, 5)}</strong>
             </div>
             <div className="footer-seats-selected">
               <span>{isTableMode ? 'Bàn đã chọn: ' : 'Chỗ ngồi đã chọn: '}</span>
               {selectedItems.length > 0 ? (
                 <span className="selected-seats-badge">
-                  {isTableMode ? `🪑 Bàn ${selectedItems.join(', ')}` : `💺 Ghế ${selectedItems.sort().join(', ')} (${selectedItems.length} chỗ)`}
+                  {isTableMode ? (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <TableMeetingIcon size={14} strokeWidth={2.2} /> Bàn {selectedItems.join(', ')} ({participantCount} người tham gia)
+                    </span>
+                  ) : (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <Armchair size={14} strokeWidth={2.2} /> Ghế {selectedItems[0]} (1 chỗ ngồi)
+                    </span>
+                  )}
                 </span>
               ) : (
                 <span className="no-seats-text">
-                  {isTableMode ? 'Chưa chọn bàn nào' : `Chưa chọn ghế nào (Cần chọn ${participantCount} ghế)`}
+                  {isTableMode ? 'Chưa chọn bàn nào' : 'Chưa chọn chỗ ngồi'}
                 </span>
               )}
             </div>

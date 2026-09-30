@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { X, AlertCircle, Sparkles } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Sparkles } from 'lucide-react';
 import type { Facility, FacilityCreateRequest, FacilityUpdateRequest } from '../types/space';
 import './FacilityFormModalKT.css';
 
@@ -23,6 +23,7 @@ export const FacilityFormModalKT: React.FC<FacilityFormModalKTProps> = ({
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -36,6 +37,16 @@ export const FacilityFormModalKT: React.FC<FacilityFormModalKTProps> = ({
       setValidationError(null);
     }
   }, [isOpen, mode, facility]);
+
+  useEffect(() => {
+    if (!validationError) return;
+
+    const errorField = formRef.current?.querySelector<HTMLElement>('.input-error');
+    if (!errorField) return;
+
+    errorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    errorField.focus({ preventScroll: true });
+  }, [validationError]);
 
   if (!isOpen) return null;
 
@@ -89,14 +100,7 @@ export const FacilityFormModalKT: React.FC<FacilityFormModalKTProps> = ({
           </button>
         </div>
 
-        {validationError && (
-          <div className="astp-alert astp-alert-error" style={{ margin: '16px 24px 0', display: 'flex', alignItems: 'center' }}>
-            <AlertCircle size={17} style={{ marginRight: '8px', flexShrink: 0 }} />
-            <span>{validationError}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="astp-modal-form" noValidate style={{ padding: '20px 24px' }}>
+        <form ref={formRef} onSubmit={handleSubmit} className="astp-modal-form" noValidate style={{ padding: '20px 24px' }}>
           <div className="astp-form-group" style={{ marginBottom: '18px' }}>
             <label className="astp-form-label">
               Tên tiện ích <span className="text-danger">*</span>

@@ -1,227 +1,309 @@
-import React, { useState, useEffect } from 'react';
-import type { MaintenanceBlock, MaintenanceCreateRequest, MaintenanceUpdateRequest } from '../types/staff';
+import { useEffect, useRef, useState } from 'react';
+import {
+  AlertCircle,
+  Save,
+  UserRound,
+  X,
+} from 'lucide-react';
+import { FilterSelect } from '../../../components/common/FilterSelect';
 import type { Space } from '../../space/types/space';
-import { readStaffApiError } from '../api/staffApiError';
+import type {
+  MaintenanceBlock,
+  MaintenanceCreateRequest,
+  StaffBooking,
+} from '../types/staff';
+import './MaintenanceFormModalKT.css';
 
-interface MaintenanceFormModalKTProps {
+interface Props {
   isOpen: boolean;
   mode: 'create' | 'edit';
-  maintenance?: MaintenanceBlock | null;
   spaces: Space[];
-  defaultSpaceId?: number;
-  isLoading?: boolean;
+  maintenance?: MaintenanceBlock | null;
+  isSubmitting?: boolean;
   onClose: () => void;
-  onSubmit: (spaceId: number, data: MaintenanceCreateRequest | MaintenanceUpdateRequest) => Promise<void>;
+  onSubmit: (spaceId: number, data: MaintenanceCreateRequest) => Promise<void>;
 }
 
-export const MaintenanceFormModalKT: React.FC<MaintenanceFormModalKTProps> = ({
+type FieldErrors = Partial<Record<'spaceId' | 'startTime' | 'endTime' | 'reason', string>>;
+
+const toInputDateTime = (value?: string) => value ? value.slice(0, 16) : '';
+
+const toLocalInputDateTime = (value: Date) => {
+  const pad = (part: number) => String(part).padStart(2, '0');
+  return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`
+    + `T${pad(value.getHours())}:${pad(value.getMinutes())}`;
+};
+
+const getEarliestSelectableTime = () => {
+  const value = new Date();
+  value.setSeconds(0, 0);
+  value.setMinutes(value.getMinutes() + 1);
+  return toLocalInputDateTime(value);
+};
+
+const formatConflictTime = (value?: string) => {
+  if (!value) return '—';
+  return new Intl.DateTimeFormat('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(new Date(value));
+};
+
+export const MaintenanceFormModalKT = ({
   isOpen,
   mode,
-  maintenance,
   spaces,
-  defaultSpaceId,
-  isLoading = false,
+  maintenance,
+  isSubmitting = false,
   onClose,
   onSubmit,
-}) => {
-  const [spaceId, setSpaceId] = useState<number>(defaultSpaceId || (spaces[0]?.id || 0));
-  const [reason, setReason] = useState('');
+}: Props) => {
+  const [spaceId, setSpaceId] = useState(0);
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
-  const [description, setDescription] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [reason, setReason] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [formError, setFormError] = useState<string | null>(null);
+  const [conflictingBookings, setConflictingBookings] = useState<StaffBooking[]>([]);
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
-    if (isOpen) {
-      if (mode === 'edit' && maintenance) {
-        setSpaceId(maintenance.spaceId);
-        setReason(maintenance.reason || '');
-        setStartTime(maintenance.startTime ? maintenance.startTime.slice(0, 16) : '');
-        setEndTime(maintenance.endTime ? maintenance.endTime.slice(0, 16) : '');
-        setDescription('');
-      } else {
-        setSpaceId(defaultSpaceId || (spaces[0]?.id || 0));
-        setReason('');
-        // default next hour to +3 hours
-        const now = new Date();
-        now.setMinutes(0, 0, 0);
-        now.setHours(now.getHours() + 1);
-        const next = new Date(now);
-        next.setHours(next.getHours() + 2);
+    if (!isOpen) return;
+    setSpaceId(mode === 'edit' && maintenance ? maintenance.spaceId : 0);
+    setStartTime(mode === 'edit' ? toInputDateTime(maintenance?.startTime) : '');
+    setEndTime(mode === 'edit' ? toInputDateTime(maintenance?.endTime) : '');
+    setReason(mode === 'edit' ? maintenance?.reason ?? '' : '');
+    setFieldErrors({});
+    setFormError(null);
+    setConflictingBookings([]);
+  }, [isOpen, mode, maintenance]);
 
-        const pad = (n: number) => (n < 10 ? `0${n}` : n);
-        const formatLocalISO = (d: Date) =>
-          `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  useEffect(() => {
+    if (Object.keys(fieldErrors).length === 0) return;
+    const firstError = formRef.current?.querySelector<HTMLElement>('.maintenance-input-error');
+    firstError?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const focusTarget = firstError?.classList.contains('filter-select-control')
+      ? firstError.querySelector<HTMLElement>('.filter-select-trigger')
+      : firstError;
+    focusTarget?.focus({ preventScroll: true });
+  }, [fieldErrors]);
 
-        setStartTime(formatLocalISO(now));
-        setEndTime(formatLocalISO(next));
-        setDescription('');
-      }
-      setError(null);
-    }
-  }, [isOpen, mode, maintenance, spaces, defaultSpaceId]);
+  const currentTime = Date.now();
+  const isInProgressEdit = mode === 'edit'
+    && Boolean(maintenance)
+    && new Date(maintenance!.startTime).getTime() <= currentTime
+    && new Date(maintenance!.endTime).getTime() > currentTime;
+  const earliestSelectableTime = getEarliestSelectableTime();
+  const endTimeMinimum = (() => {
+    if (!startTime || isInProgressEdit) return earliestSelectableTime;
+    const afterStart = new Date(startTime);
+    afterStart.setMinutes(afterStart.getMinutes() + 1);
+    const oneMinuteAfterStart = toLocalInputDateTime(afterStart);
+    return oneMinuteAfterStart > earliestSelectableTime ? oneMinuteAfterStart : earliestSelectableTime;
+  })();
 
   if (!isOpen) return null;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
+  const clearFieldError = (field: keyof FieldErrors) => {
+    setFieldErrors((current) => {
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
+    setFormError(null);
+    setConflictingBookings([]);
+  };
+
+  const validate = () => {
+    const errors: FieldErrors = {};
+    if (!spaceId) errors.spaceId = 'Vui lòng chọn không gian cần bảo trì.';
+    if (!startTime) errors.startTime = 'Vui lòng chọn thời gian bắt đầu.';
+    if (!endTime) errors.endTime = 'Vui lòng chọn thời gian kết thúc.';
+    if (!isInProgressEdit && startTime && new Date(startTime).getTime() < Date.now()) {
+      errors.startTime = 'Thời gian bắt đầu không được nằm trong quá khứ.';
+    }
+    if (endTime && new Date(endTime).getTime() <= Date.now()) {
+      errors.endTime = 'Thời gian kết thúc phải sau thời điểm hiện tại.';
+    }
+    if (startTime && endTime && new Date(startTime) >= new Date(endTime)) {
+      errors.endTime = 'Thời gian kết thúc phải sau thời gian bắt đầu.';
+    }
+    if (!reason.trim()) errors.reason = 'Lý do bảo trì không được để trống.';
+    if (reason.trim().length > 255) errors.reason = 'Lý do bảo trì không được vượt quá 255 ký tự.';
+    return errors;
+  };
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setFormError(null);
+    setConflictingBookings([]);
+
+    const errors = validate();
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
+    }
+
     try {
       await onSubmit(spaceId, {
+        startTime,
+        endTime,
         reason: reason.trim(),
-        startTime: startTime ? new Date(startTime).toISOString() : ('' as any),
-        endTime: endTime ? new Date(endTime).toISOString() : ('' as any),
-        description: description.trim() ? description.trim() : undefined,
       });
-    } catch (error: unknown) {
-      const apiError = readStaffApiError(error, 'Có lỗi xảy ra khi lưu thông tin bảo trì.');
+    } catch (error: any) {
+      const body = error?.response?.data;
+      const details = Array.isArray(body?.details) ? body.details : [];
+      const nextErrors: FieldErrors = {};
 
-      if (apiError.code === 'SPACE_HAS_OCCUPYING_BOOKING') {
-        const conflictCount = apiError.details.length;
-        setError(conflictCount > 0
-          ? `${apiError.message} Có ${conflictCount} yêu cầu đặt chỗ bị trùng.`
-          : apiError.message);
-        return;
+      details.forEach((detail: unknown) => {
+        if (typeof detail !== 'string' || !detail.includes(': ')) return;
+        const [field, ...messageParts] = detail.split(': ');
+        if (field === 'startTime' || field === 'endTime' || field === 'reason') {
+          nextErrors[field] = messageParts.join(': ');
+        }
+      });
+
+      if (body?.code === 'SPACE_HAS_OCCUPYING_BOOKING') {
+        setConflictingBookings(details as StaffBooking[]);
       }
 
-      if (apiError.code === 'MAINTENANCE_TIME_CONFLICT') {
-        setError(apiError.message);
-        return;
-      }
-
-      setError(apiError.message);
+      setFieldErrors(nextErrors);
+      setFormError(body?.message || error?.message || 'Không thể lưu lịch bảo trì.');
     }
   };
 
   return (
-    <div className="staff-modal-backdrop" onClick={onClose}>
-      <div className="staff-modal-card" onClick={(e) => e.stopPropagation()}>
-        <div className="staff-modal-header">
-          <div className="staff-modal-title-group">
-            <span style={{ fontSize: '24px' }}>🛠️</span>
+    <div className="maintenance-modal-backdrop" onMouseDown={(event) => {
+      if (event.target === event.currentTarget && !isSubmitting) onClose();
+    }}>
+      <section className="maintenance-modal" role="dialog" aria-modal="true" aria-labelledby="maintenance-form-title">
+        <header className="maintenance-modal-header">
+          <div className="maintenance-modal-heading">
             <div>
-              <h3 className="staff-modal-title">
-                {mode === 'create' ? 'Tạo khoảng bảo trì không gian' : 'Cập nhật thông tin bảo trì'}
-              </h3>
-              <p className="staff-modal-subtitle">
-                Trong thời gian bảo trì, không gian sẽ bị khóa lịch đặt cho sinh viên
-              </p>
+              <h2 id="maintenance-form-title">{mode === 'create' ? 'Tạo lịch bảo trì' : 'Chỉnh sửa lịch bảo trì'}</h2>
+              <p>{mode === 'create'
+                ? 'Khóa không gian trong một khoảng thời gian cụ thể'
+                : isInProgressEdit
+                  ? 'Lịch đang diễn ra, được cập nhật thời gian kết thúc và lý do'
+                  : 'Cập nhật thời gian và lý do bảo trì'}</p>
             </div>
           </div>
-          <button className="staff-modal-close-btn" type="button" onClick={onClose}>
-            ✕
+          <button type="button" className="maintenance-modal-close" onClick={onClose} disabled={isSubmitting} aria-label="Đóng">
+            <X size={20} />
           </button>
-        </div>
+        </header>
 
-        {error && (
-          <div className="staff-alert staff-alert-error" style={{ margin: '16px 24px 0' }}>
-            <span>⚠️ {error}</span>
-          </div>
-        )}
+        <form ref={formRef} className="maintenance-form" onSubmit={handleSubmit} noValidate>
+          <div className="maintenance-form-body">
+            {formError && (
+              <div className="maintenance-form-alert" role="alert">
+                <AlertCircle size={19} />
+                <span>{formError}</span>
+              </div>
+            )}
 
-        <form onSubmit={handleSubmit} className="staff-modal-form" noValidate>
-          {mode === 'create' && (
-            <div className="staff-form-group">
-              <label className="staff-form-label">
-                Không gian cần bảo trì <span style={{ color: '#dc2626' }}>*</span>
-              </label>
-              <select
-                className="staff-select"
-                value={spaceId}
-                onChange={(e) => setSpaceId(Number(e.target.value))}
-                disabled={isLoading}
-              >
-                {spaces.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name} ({s.building || 'Tòa nhà'} • Sức chứa {s.capacity})
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+            {isInProgressEdit && (
+              <div className="maintenance-form-info">
+                <span>Không gian và thời gian bắt đầu đã được khóa. Bạn có thể thay đổi thời gian kết thúc và lý do bảo trì.</span>
+              </div>
+            )}
 
-          <div className="staff-form-group">
-            <label className="staff-form-label">
-              Lý do bảo trì <span style={{ color: '#dc2626' }}>*</span>
+            <label className="maintenance-form-field maintenance-form-full">
+              <span>Không gian <b>*</b></span>
+              <FilterSelect
+                value={String(spaceId)}
+                portal={false}
+                disabled={mode === 'edit' || isSubmitting}
+                className={fieldErrors.spaceId ? 'maintenance-input-error' : ''}
+                ariaLabel="Chọn không gian cần bảo trì"
+                options={[
+                  { value: '0', label: 'Chọn không gian cần bảo trì' },
+                  ...spaces.map((space) => ({
+                    value: String(space.id),
+                    label: `${space.spaceCode} — ${space.name} (${space.building}, tầng ${space.floor})`,
+                  })),
+                ]}
+                onChange={(value) => { setSpaceId(Number(value)); clearFieldError('spaceId'); }}
+              />
+              {fieldErrors.spaceId && <small>{fieldErrors.spaceId}</small>}
             </label>
-            <input
-              type="text"
-              className="staff-input"
-              value={reason}
-              onChange={(e) => {
-                setReason(e.target.value);
-                if (error) setError(null);
-              }}
-              placeholder="VD: Kiểm tra hệ thống điều hòa, Nâng cấp máy chiếu..."
-              disabled={isLoading}
-            />
-          </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            <div className="staff-form-group">
-              <label className="staff-form-label">
-                Bắt đầu từ <span style={{ color: '#dc2626' }}>*</span>
+            <div className="maintenance-form-time-grid">
+              <label className="maintenance-form-field">
+                <span>Bắt đầu <b>*</b></span>
+                <input
+                  type="datetime-local"
+                  value={startTime}
+                  min={isInProgressEdit ? undefined : earliestSelectableTime}
+                  disabled={isSubmitting || isInProgressEdit}
+                  className={fieldErrors.startTime ? 'maintenance-input-error' : ''}
+                  onChange={(event) => { setStartTime(event.target.value); clearFieldError('startTime'); }}
+                />
+                {fieldErrors.startTime && <small>{fieldErrors.startTime}</small>}
               </label>
-              <input
-                type="datetime-local"
-                className="staff-input"
-                value={startTime}
-                onChange={(e) => {
-                  setStartTime(e.target.value);
-                  if (error) setError(null);
-                }}
-                disabled={isLoading}
-              />
+              <label className="maintenance-form-field">
+                <span>Kết thúc <b>*</b></span>
+                <input
+                  type="datetime-local"
+                  value={endTime}
+                  min={endTimeMinimum}
+                  disabled={isSubmitting}
+                  className={fieldErrors.endTime ? 'maintenance-input-error' : ''}
+                  onChange={(event) => { setEndTime(event.target.value); clearFieldError('endTime'); }}
+                />
+                {fieldErrors.endTime && <small>{fieldErrors.endTime}</small>}
+              </label>
             </div>
 
-            <div className="staff-form-group">
-              <label className="staff-form-label">
-                Kết thúc lúc <span style={{ color: '#dc2626' }}>*</span>
-              </label>
-              <input
-                type="datetime-local"
-                className="staff-input"
-                value={endTime}
-                onChange={(e) => {
-                  setEndTime(e.target.value);
-                  if (error) setError(null);
-                }}
-                disabled={isLoading}
+            <label className="maintenance-form-field maintenance-form-full">
+              <span>Lý do bảo trì <b>*</b></span>
+              <textarea
+                value={reason}
+                rows={4}
+                maxLength={255}
+                disabled={isSubmitting}
+                className={fieldErrors.reason ? 'maintenance-input-error' : ''}
+                placeholder="Ví dụ: Kiểm tra và bảo dưỡng hệ thống máy chiếu..."
+                onChange={(event) => { setReason(event.target.value); clearFieldError('reason'); }}
               />
-            </div>
+              <div className="maintenance-field-meta">
+                <small>{fieldErrors.reason || 'Nội dung này sẽ được lưu vào lịch sử vận hành.'}</small>
+                <em>{reason.length}/255</em>
+              </div>
+            </label>
+
+            {conflictingBookings.length > 0 && (
+              <div className="maintenance-conflicts">
+                <h3>Các booking đang xung đột ({conflictingBookings.length})</h3>
+                <p>Hãy chọn khoảng thời gian khác để không ảnh hưởng các booking đã có.</p>
+                <div className="maintenance-conflict-list">
+                  {conflictingBookings.map((booking) => (
+                    <article key={booking.id}>
+                      <div>
+                        <strong>{booking.bookingCode || `BK-${booking.id}`}</strong>
+                        <span><UserRound size={14} /> {booking.studentName || booking.studentEmail || 'Sinh viên'}</span>
+                      </div>
+                      <time>{formatConflictTime(booking.startTime)} – {formatConflictTime(booking.endTime)}</time>
+                      <p>{booking.purpose || 'Không có nội dung sử dụng'}</p>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
-          <div className="staff-form-group">
-            <label className="staff-form-label">Ghi chú bổ sung</label>
-            <textarea
-              className="staff-textarea"
-              rows={2}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Nhân sự kỹ thuật phụ trách, số liên hệ nhà thầu..."
-              disabled={isLoading}
-            />
-          </div>
-
-          <div className="staff-modal-footer">
-            <button
-              type="button"
-              className="staff-btn staff-btn-secondary"
-              onClick={onClose}
-              disabled={isLoading}
-            >
-              Hủy bỏ
+          <footer className="maintenance-modal-footer">
+            <button type="button" className="maintenance-btn-secondary" onClick={onClose} disabled={isSubmitting}>Hủy</button>
+            <button type="submit" className="maintenance-btn-primary" disabled={isSubmitting}>
+              <Save size={17} /> {isSubmitting ? 'Đang lưu...' : mode === 'create' ? 'Tạo lịch bảo trì' : 'Lưu thay đổi'}
             </button>
-            <button
-              type="submit"
-              className="staff-btn staff-btn-primary"
-              disabled={isLoading}
-            >
-              {isLoading ? 'Đang lưu...' : mode === 'create' ? 'Tạo bảo trì' : 'Lưu thay đổi'}
-            </button>
-          </div>
+          </footer>
         </form>
-      </div>
+      </section>
     </div>
   );
 };

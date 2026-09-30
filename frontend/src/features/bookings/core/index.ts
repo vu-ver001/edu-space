@@ -1,3 +1,10 @@
+// Import Stylesheets
+import './pages/SearchSpacesPage.css';
+import './pages/SpaceDetailPage.css';
+import './pages/MyBookingsPage.css';
+import './components/SeatSelectionModal.css';
+import './components/MaintenanceModal.css';
+
 // Export Pages
 export { SearchSpacesPage } from './pages/SearchSpacesPage';
 export { SpaceDetailPage } from './pages/SpaceDetailPage';
@@ -9,7 +16,6 @@ export { RoomCard } from './components/RoomCard';
 export { FilterBar, getNextAvailableSlot } from './components/FilterBar';
 export { BookingModal } from './components/BookingModal';
 export { SeatSelectionModal } from './components/SeatSelectionModal';
-export { AuditLogModal } from './components/AuditLogModal';
 
 // Export Services
 export { bookingService } from './services/bookingService';

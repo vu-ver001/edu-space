@@ -389,6 +389,11 @@
   border-bottom: none;
 }
 
+.facility-clean-row:hover {
+  background: #f7faff;
+  box-shadow: inset 4px 0 0 #3b82f6;
+}
+
 .facility-clean-icon-box {
   width: 34px;
   height: 34px;
@@ -759,7 +764,8 @@
 }
 
 .maint-mini-table tbody tr:hover {
-  background-color: #fcfdfe;
+  background-color: #f7faff;
+  box-shadow: inset 4px 0 0 #3b82f6;
 }
 
 /* Column 1: Index (#) */
@@ -829,7 +835,8 @@
   position: relative;
   display: block;
   max-width: 100%;
-  cursor: text; /* Con trỏ thanh dọc (I-beam) | thay cho dấu ? */
+  cursor: text;
+  /* Con trỏ thanh dọc (I-beam) | thay cho dấu ? */
 }
 
 .maint-reason-text {
@@ -837,7 +844,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  cursor: text; /* Con trỏ thanh dọc | */
+  cursor: text;
+  /* Con trỏ thanh dọc | */
   color: #334155;
   transition: color 0.15s ease;
 }
@@ -1293,12 +1301,12 @@
 }
 
 .btn-action-icon {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
+  border-radius: 8px;
   border: 1px solid #e2e8f0;
   background: #ffffff;
   cursor: pointer;
@@ -1410,10 +1418,23 @@
 }
 
 .item-form-input:focus,
-.item-form-select:focus,
+.item-form-select:focus-within,
 .item-form-textarea:focus {
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.item-form-select {
+  box-sizing: border-box;
+  width: 100%;
+  height: 40px;
+  padding: 0 !important;
+}
+
+.item-form-select.disabled {
+  color: #94a3b8;
+  background: #f1f5f9 !important;
+  cursor: not-allowed;
 }
 
 .item-modal-footer {

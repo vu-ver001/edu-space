@@ -31,7 +31,7 @@ VALUES
      'Không gian mở, sinh viên lựa chọn từng ghế khi đặt chỗ.',
      'PER_SEAT', FALSE, NULL, DATE_SUB(NOW(), INTERVAL 5 DAY), NOW()),
     ('Study Booth cá nhân',
-     'Khoang học tập yên tĩnh dành cho một hoặc hai sinh viên.',
+     'Khoang học tập yên tĩnh dành cho đúng một sinh viên.',
      'WHOLE_SPACE', FALSE, NULL, DATE_SUB(NOW(), INTERVAL 4 DAY), NOW()),
     ('Phòng thảo luận theo bàn',
      'Phòng được chia thành nhiều bàn nhóm độc lập.',
@@ -100,9 +100,9 @@ VALUES
     ('P-201', 'Phòng thuyết trình P-201', @type_presentation, 'Tòa A', '2', 30, 'AVAILABLE',
      'Phòng thuyết trình & Hội thảo chuyên dụng tầng 2. Trang bị máy chiếu Full HD và màn chiếu lớn, bục phát biểu, bảng viết dạ, âm thanh micro và điều hòa công suất cao.', NULL, DATE_SUB(NOW(), INTERVAL 5 DAY), NOW()),
     ('S-201', 'Khu tự học S-201', @type_seat, 'Tòa B', '2', 12, 'AVAILABLE',
-     'Phòng học tập trung cá nhân (Khu tự học chung tầng 2). Bố trí các dãy bàn học cá nhân có vách ngăn cách âm, đèn học chống cận, ổ cắm điện riêng từng vị trí và hệ thống điều hòa làm mát liên tục.', NULL, DATE_SUB(NOW(), INTERVAL 4 DAY), NOW()),
-    ('B-301', 'Study Booth B-301', @type_booth, 'Tòa B', '3', 2, 'AVAILABLE',
-     'Study Booth tự học cá nhân cách âm độc lập tầng 3. Không gian yên tĩnh tuyệt đối dành cho 1-2 sinh viên, có bàn ghế đôi, đèn học, ổ cắm điện và quạt thông gió làm mát.', NULL, DATE_SUB(NOW(), INTERVAL 3 DAY), NOW()),
+     'Khu tự học yên tĩnh gồm mười hai ghế cá nhân.', NULL, DATE_SUB(NOW(), INTERVAL 4 DAY), NOW()),
+    ('B-301', 'Study Booth B-301', @type_booth, 'Tòa B', '3', 1, 'AVAILABLE',
+     'Khoang học cá nhân có vách cách âm dành cho đúng 1 người.', NULL, DATE_SUB(NOW(), INTERVAL 3 DAY), NOW()),
     ('G-103', 'Phòng học nhóm G-103', @type_group, 'Tòa A', '1', 6, 'MAINTENANCE',
      'Phòng học nhóm G-103 (Bảo trì). Đang trong quá trình cải tạo, nâng cấp đường dây điện và bảo dưỡng thiết bị, tạm ngừng phục vụ.', NULL, DATE_SUB(NOW(), INTERVAL 2 DAY), NOW()),
     ('D-201', 'Phòng thảo luận D-201', @type_table, 'Tòa D', '2', 24, 'AVAILABLE',
@@ -291,9 +291,5 @@ UNION ALL
 SELECT 'space_tables', COUNT(*) FROM space_tables WHERE space_id IN (@space_d201, @space_l202)
 UNION ALL
 SELECT 'space_facilities', COUNT(*) FROM space_facilities
-WHERE space_id IN (@space_g101, @space_g102, @space_p201, @space_s201,
-                   @space_b301, @space_g103, @space_d201, @space_clb401, @space_l202)
-UNION ALL
-SELECT 'space_images', COUNT(*) FROM space_images
 WHERE space_id IN (@space_g101, @space_g102, @space_p201, @space_s201,
                    @space_b301, @space_g103, @space_d201, @space_clb401, @space_l202);

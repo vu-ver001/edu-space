@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import type { Space } from '../services/spaceService';
 import { bookingService } from '../services/bookingService';
+import { DateInputVI, formatMessageDatesVI } from './DateInputVI';
+import { TimeInput24H } from './TimeInput24H';
 
 interface Props {
   space: Space;
@@ -12,6 +14,13 @@ interface Props {
   onSuccess: () => void;
 }
 
+const toLocalDateString = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export const BookingModal: React.FC<Props> = ({
   space,
   defaultDate,
@@ -21,7 +30,7 @@ export const BookingModal: React.FC<Props> = ({
   onClose,
   onSuccess
 }) => {
-  const today = new Date().toISOString().split('T')[0];
+  const today = toLocalDateString(new Date());
   const [date, setDate] = useState<string>(defaultDate || today);
   const [startTime, setStartTime] = useState<string>(
     defaultStartTime ? defaultStartTime.substring(0, 5) : '09:00'
@@ -40,6 +49,9 @@ export const BookingModal: React.FC<Props> = ({
     'WHOLE_SPACE'
   );
   const isPerSeat = bookingMode === 'PER_SEAT';
+  const isPerTable = bookingMode === 'PER_TABLE';
+  const isWholeSpace = !isPerSeat && !isPerTable;
+  const isGroupSpace = isPerTable || (isWholeSpace && (space.capacity ?? 1) > 1);
   // LOGIC MỚI: PER_SEAT duyệt tức thì (false), PER_TABLE & WHOLE_SPACE chờ Staff duyệt (true)
   const requiresApproval = space.requiresApproval !== undefined ? space.requiresApproval : !isPerSeat;
 
@@ -52,6 +64,14 @@ export const BookingModal: React.FC<Props> = ({
       setErrorInfo({
         code: 'PURPOSE_REQUIRED',
         message: 'Vui lòng nhập mục đích sử dụng (bắt buộc đối với phòng trọn gói và đặt theo bàn).'
+      });
+      return;
+    }
+
+    if (isGroupSpace && Number(participantCount) < 2) {
+      setErrorInfo({
+        code: 'MIN_PARTICIPANTS_REQUIRED',
+        message: 'Không gian học nhóm / thảo luận yêu cầu tối thiểu từ 2 người trở lên. Nếu bạn đi 1 mình, vui lòng chọn đặt chỗ ngồi tại Khu tự học cá nhân.'
       });
       return;
     }
@@ -144,12 +164,13 @@ export const BookingModal: React.FC<Props> = ({
               <span className="error-icon">🚫</span>
               <strong>{errorInfo.code}</strong>
             </div>
-            <p className="error-msg">{errorInfo.message}</p>
+            <p className="error-msg">{formatMessageDatesVI(errorInfo.message)}</p>
             {errorInfo.details && errorInfo.details.length > 0 && (
               <div className="error-details-box">
                 {errorInfo.details.map((d: any, idx: number) => (
                   <div key={idx} className="error-detail-item">
-                    • <strong>{d.type || 'XUNG ĐỘT'}:</strong> {d.description || `Từ ${d.startTime} đến ${d.endTime}`}
+                    • <strong>{d.type || 'XUNG ĐỘT'}:</strong>{' '}
+                    {formatMessageDatesVI(d.description || `Từ ${d.startTime} đến ${d.endTime}`)}
                   </div>
                 ))}
               </div>
@@ -162,11 +183,10 @@ export const BookingModal: React.FC<Props> = ({
           <div className="modal-form-grid">
             <div className="form-group">
               <label className="form-label">📅 Ngày sử dụng *</label>
-              <input
-                type="date"
+              <DateInputVI
                 className="form-input internal-date-input"
                 value={date}
-                onChange={(e) => setDate(e.target.value)}
+                onChange={(val) => setDate(val)}
                 min={today}
                 required
               />
@@ -180,7 +200,16 @@ export const BookingModal: React.FC<Props> = ({
                 value={participantCount}
                 onChange={(e) => {
                   const val = e.target.value;
-                  setParticipantCount(val === '' ? '' : parseInt(val) || 1);
+                  if (val === '') {
+                    setParticipantCount('');
+                    return;
+                  }
+
+                  const parsedCount = Number.parseInt(val, 10);
+                  if (!Number.isFinite(parsedCount)) return;
+
+                  setParticipantCount(Math.min(Math.max(parsedCount, 1), space.capacity));
+                  setErrorInfo(null);
                 }}
                 onBlur={() => {
                   if (!participantCount || Number(participantCount) < 1) {
@@ -198,24 +227,18 @@ export const BookingModal: React.FC<Props> = ({
 
             <div className="form-group">
               <label className="form-label">⏰ Giờ bắt đầu *</label>
-              <input
-                type="time"
-                step="60"
-                className="form-input internal-time-input"
+              <TimeInput24H
                 value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
+                onChange={(val) => setStartTime(val)}
                 required
               />
             </div>
 
             <div className="form-group">
               <label className="form-label">⌛ Giờ kết thúc *</label>
-              <input
-                type="time"
-                step="60"
-                className="form-input internal-time-input"
+              <TimeInput24H
                 value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
+                onChange={(val) => setEndTime(val)}
                 required
               />
             </div>

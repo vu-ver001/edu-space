@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -51,6 +52,7 @@ public class MaintenanceService {
                         "Không tìm thấy không gian yêu cầu."));
 
         validateTimeRange(request.getStartTime(), request.getEndTime());
+        validateStartTimeNotInPast(request.getStartTime(), LocalDateTime.now());
 
         // 1. Kiểm tra Hard-block: Booking đang chiếm chỗ (WHOLE_SPACE, PER_SEAT, PER_TABLE)
         checkOccupyingBookingConflict(spaceId, request.getStartTime(), request.getEndTime());
@@ -79,7 +81,7 @@ public class MaintenanceService {
         log.info("Staff {} đã tạo bảo trì #{} cho Space #{} từ {} đến {}",
                 actorEmail, saved.getId(), spaceId, request.getStartTime(), request.getEndTime());
 
-        return toResponse(saved, actorEmail);
+        return toResponse(saved, currentUser);
     }
 
     /**
@@ -91,55 +93,110 @@ public class MaintenanceService {
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "MAINTENANCE_NOT_FOUND",
                         "Không tìm thấy khoảng bảo trì yêu cầu."));
 
-        validateTimeRange(request.getStartTime(), request.getEndTime());
+        LocalDateTime now = LocalDateTime.now();
+        if (!now.isBefore(block.getEndTime())) {
+            throw new AppException(HttpStatus.CONFLICT, "MAINTENANCE_ALREADY_COMPLETED",
+                    "Lịch bảo trì đã kết thúc nên không thể chỉnh sửa.");
+        }
+
+        boolean inProgress = !now.isBefore(block.getStartTime());
+        LocalDateTime effectiveStartTime = inProgress ? block.getStartTime() : request.getStartTime();
+        String effectiveReason = request.getReason().trim();
+
+        if (!inProgress) {
+            validateStartTimeNotInPast(effectiveStartTime, now);
+        }
+
+        if (inProgress && !request.getEndTime().isAfter(now)) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "INVALID_MAINTENANCE_END_TIME",
+                    "Thời gian kết thúc mới phải sau thời điểm hiện tại.");
+        }
+
+        validateTimeRange(effectiveStartTime, request.getEndTime());
 
         Long spaceId = block.getSpace().getId();
 
         // 1. Kiểm tra Hard-block với booking trong khoảng thời gian mới
-        checkOccupyingBookingConflict(spaceId, request.getStartTime(), request.getEndTime());
+        checkOccupyingBookingConflict(spaceId, effectiveStartTime, request.getEndTime());
 
         // 2. Kiểm tra trùng lặp với các khoảng bảo trì khác (loại trừ chính nó)
-        checkMaintenanceOverlap(spaceId, maintenanceId, request.getStartTime(), request.getEndTime());
+        checkMaintenanceOverlap(spaceId, maintenanceId, effectiveStartTime, request.getEndTime());
 
         User currentUser = requireCurrentUser();
         Long actorId = currentUser.getId();
         String actorEmail = currentUser.getEmail();
 
-        block.setStartTime(request.getStartTime());
+        block.setStartTime(effectiveStartTime);
         block.setEndTime(request.getEndTime());
-        block.setReason(request.getReason().trim());
+        block.setReason(effectiveReason);
 
         MaintenanceBlock updated = maintenanceBlockRepository.save(block);
 
         // Ghi Staff Audit Log
         staffAuditService.logAction(actorId, actorEmail, StaffAuditAction.MAINTENANCE_UPDATED,
-                "MAINTENANCE", updated.getId(), spaceId, "Cập nhật bảo trì: " + request.getReason().trim());
+                "MAINTENANCE", updated.getId(), spaceId,
+                inProgress
+                        ? "Cập nhật bảo trì đang diễn ra: kết thúc " + request.getEndTime()
+                            + ", lý do: " + effectiveReason
+                        : "Cập nhật bảo trì: " + effectiveReason);
 
         log.info("Staff {} đã cập nhật bảo trì #{} cho Space #{}", actorEmail, updated.getId(), spaceId);
-        return toResponse(updated, actorEmail);
+        return toResponse(updated);
     }
 
     /**
      * Xóa mềm khoảng bảo trì (Soft delete).
      */
     @Transactional
-    public void deleteMaintenance(Long maintenanceId) {
+    public String deleteMaintenance(Long maintenanceId) {
         MaintenanceBlock block = maintenanceBlockRepository.findByIdAndDeletedAtIsNull(maintenanceId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "MAINTENANCE_NOT_FOUND",
                         "Không tìm thấy khoảng bảo trì yêu cầu."));
+
+        LocalDateTime now = LocalDateTime.now();
+        boolean inProgress = !now.isBefore(block.getStartTime()) && now.isBefore(block.getEndTime());
+        if (inProgress) {
+            throw new AppException(HttpStatus.CONFLICT, "MAINTENANCE_IN_PROGRESS_CANNOT_DELETE",
+                    "Lịch bảo trì đang diễn ra nên không thể xóa.");
+        }
+        boolean completed = !now.isBefore(block.getEndTime());
 
         User currentUser = requireCurrentUser();
         Long actorId = currentUser.getId();
         String actorEmail = currentUser.getEmail();
 
-        block.setDeletedAt(LocalDateTime.now());
+        block.setDeletedAt(now);
         maintenanceBlockRepository.save(block);
 
         // Ghi Staff Audit Log
         staffAuditService.logAction(actorId, actorEmail, StaffAuditAction.MAINTENANCE_CANCELLED,
-                "MAINTENANCE", block.getId(), block.getSpace().getId(), "Hủy bảo trì #" + maintenanceId);
+                "MAINTENANCE", block.getId(), block.getSpace().getId(),
+                completed
+                        ? "Xóa lịch bảo trì đã kết thúc #" + maintenanceId
+                        : "Hủy lịch bảo trì #" + maintenanceId);
 
         log.info("Staff {} đã xóa mềm bảo trì #{}", actorEmail, maintenanceId);
+        return completed
+                ? "Đã xóa lịch bảo trì đã kết thúc khỏi danh sách."
+                : "Đã hủy lịch bảo trì thành công.";
+    }
+
+    @Transactional(readOnly = true)
+    public List<MaintenanceResponseKT> getAllMaintenance() {
+        List<MaintenanceBlock> blocks = maintenanceBlockRepository
+                .findAllByDeletedAtIsNullOrderByStartTimeAsc();
+        Map<Long, User> creators = userRepository.findAllById(
+                        blocks.stream()
+                                .map(MaintenanceBlock::getCreatedBy)
+                                .filter(id -> id != null && id > 0)
+                                .distinct()
+                                .toList())
+                .stream()
+                .collect(Collectors.toMap(User::getId, user -> user));
+
+        return blocks.stream()
+                .map(block -> toResponse(block, creators.get(block.getCreatedBy())))
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -169,6 +226,13 @@ public class MaintenanceService {
         if (!start.isBefore(end)) {
             throw new AppException(HttpStatus.BAD_REQUEST, "INVALID_MAINTENANCE_TIME",
                     "Thời gian bắt đầu bảo trì phải trước thời gian kết thúc");
+        }
+    }
+
+    private void validateStartTimeNotInPast(LocalDateTime start, LocalDateTime now) {
+        if (start.isBefore(now)) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "MAINTENANCE_START_TIME_IN_PAST",
+                    "Thời gian bắt đầu bảo trì không được nằm trong quá khứ");
         }
     }
 
@@ -210,16 +274,13 @@ public class MaintenanceService {
     }
 
     private MaintenanceResponseKT toResponse(MaintenanceBlock block) {
-        String creatorEmail = "Không xác định";
-        if (block.getCreatedBy() != null && block.getCreatedBy() > 0) {
-            creatorEmail = userRepository.findById(block.getCreatedBy())
-                    .map(User::getEmail)
-                    .orElse("Không xác định");
-        }
-        return toResponse(block, creatorEmail);
+        User creator = block.getCreatedBy() == null || block.getCreatedBy() <= 0
+                ? null
+                : userRepository.findById(block.getCreatedBy()).orElse(null);
+        return toResponse(block, creator);
     }
 
-    private MaintenanceResponseKT toResponse(MaintenanceBlock block, String creatorEmail) {
+    private MaintenanceResponseKT toResponse(MaintenanceBlock block, User creator) {
         return MaintenanceResponseKT.builder()
                 .id(block.getId())
                 .spaceId(block.getSpace().getId())
@@ -228,11 +289,26 @@ public class MaintenanceService {
                 .endTime(block.getEndTime())
                 .reason(block.getReason())
                 .createdBy(block.getCreatedBy())
-                .creatorEmail(creatorEmail)
+                .creatorName(resolveCreatorName(creator))
+                .creatorUserCode(creator == null || creator.getUserCode() == null
+                        || creator.getUserCode().isBlank() ? null : creator.getUserCode().trim())
                 .createdAt(block.getCreatedAt())
                 .updatedAt(block.getUpdatedAt())
                 .deletedAt(block.getDeletedAt())
                 .active(block.isActive())
                 .build();
+    }
+
+    private String resolveCreatorName(User creator) {
+        if (creator == null) {
+            return "Không xác định";
+        }
+        if (creator.getFullName() != null && !creator.getFullName().isBlank()) {
+            return creator.getFullName().trim();
+        }
+        if (creator.getUsername() != null && !creator.getUsername().isBlank()) {
+            return creator.getUsername().trim();
+        }
+        return "Không xác định";
     }
 }

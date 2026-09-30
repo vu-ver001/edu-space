@@ -1,12 +1,14 @@
 import api from '../../../../services/api';
-import type { 
-  Facility, 
-  SpaceType, 
-  SpaceSeat, 
-  SpaceTable, 
-  Space, 
-  ConflictDetail, 
-  SearchFilter 
+import type {
+  Facility,
+  SpaceType,
+  SpaceSeat,
+  SpaceTable,
+  SpaceImage,
+  Space,
+  ConflictDetail,
+  SearchFilter,
+  MaintenanceSchedule
 } from '../types/space.types';
 
 export * from '../types/space.types';
@@ -76,6 +78,30 @@ export const spaceService = {
   // Danh sách bàn của một không gian PER_TABLE
   getTablesBySpace: async (spaceId: number): Promise<SpaceTable[]> => {
     const res = await api.get<SpaceTable[]>(`/api/spaces/${spaceId}/tables`);
+    return res.data;
+  },
+
+  // Danh sách hình ảnh của một không gian (bảng space_images)
+  getImagesBySpace: async (spaceId: number): Promise<SpaceImage[]> => {
+    const res = await api.get<SpaceImage[]>(`/api/spaces/${spaceId}/images`);
+    return res.data;
+  },
+
+  // Khung giờ mở cửa & đóng cửa của tòa nhà và các chính sách hạn mức (Đồng bộ từ CSDL)
+  getOperatingHours: async (): Promise<{
+    openingHour: string;
+    closingHour: string;
+    maxDurationMinutes?: number;
+    maxBookingsPerDay?: number;
+    checkInGraceMinutes?: number;
+  }> => {
+    const res = await api.get('/api/spaces/operating-hours');
+    return res.data;
+  },
+
+  // Danh sách các đợt bảo trì sắp tới của không gian (Chỉ thời điểm hiện tại và tương lai)
+  getMaintenancesBySpace: async (spaceId: number): Promise<MaintenanceSchedule[]> => {
+    const res = await api.get<MaintenanceSchedule[]>(`/api/spaces/${spaceId}/maintenances`);
     return res.data;
   }
 };

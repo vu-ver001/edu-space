@@ -1,6 +1,7 @@
 package com.eduspace.backend.auth.security;
 
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
@@ -25,7 +26,25 @@ public class SecurityUtils {
     // Lấy email của người đang đăng nhập
     public static String getCurrentUserEmail() {
         CustomUserDetails userDetails = getCurrentUserPrincipal();
-        return (userDetails != null) ? userDetails.getEmail() : null;
+        if (userDetails != null) {
+            return userDetails.getEmail();
+        }
+
+        // JWT filter currently uses Spring's standard UserDetails implementation,
+        // while service/unit tests commonly use the email as the principal.
+        // Both representations must resolve to the same authenticated identity.
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return null;
+        }
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof UserDetails standardUser) {
+            return standardUser.getUsername();
+        }
+        if (principal instanceof String email && !"anonymousUser".equals(email)) {
+            return email;
+        }
+        return null;
     }
 
     public static String getCurrentUserRole() {

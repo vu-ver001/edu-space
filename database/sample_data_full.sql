@@ -19,14 +19,22 @@ SET @demo_password := COALESCE(
     '$2a$10$XPrJX/BgkfBcGGHJtDVUmefiCIdNdlHBgAg6h3.DPSQbrW1.tK5S2'
 );
 
-INSERT INTO users (email, password, full_name, phone_number, role, is_active) VALUES
-('sv.anh@eduspace.vn', @demo_password, 'Nguyễn Minh Anh', '0987654321', 'STUDENT', b'1'),
-('sv.nam@eduspace.vn', @demo_password, 'Trần Hoàng Nam', '0987654322', 'STUDENT', b'1'),
-('sv.ha@eduspace.vn',  @demo_password, 'Lê Thu Hà',      '0987654323', 'STUDENT', b'1')
+INSERT INTO users
+    (username, email, password, full_name, phone_number, role, is_active,
+     dob, user_code, department, class_name)
+VALUES
+('sv.anh', 'sv.anh@eduspace.vn', @demo_password, 'Nguyễn Minh Anh', '0987654321', 'STUDENT', b'1', '15/03/2005', 'SV005', 'Khoa Công nghệ thông tin', 'CNTT2'),
+('sv.nam', 'sv.nam@eduspace.vn', @demo_password, 'Trần Hoàng Nam', '0987654322', 'STUDENT', b'1', '22/07/2005', 'SV006', 'Khoa Kỹ thuật phần mềm', 'KTPM1'),
+('sv.ha',  'sv.ha@eduspace.vn',  @demo_password, 'Lê Thu Hà',      '0987654323', 'STUDENT', b'1', '09/11/2005', 'SV007', 'Khoa Hệ thống thông tin', 'HTTT1')
 ON DUPLICATE KEY UPDATE
+    username = VALUES(username),
     full_name = VALUES(full_name),
     phone_number = VALUES(phone_number),
     role = VALUES(role),
+    dob = VALUES(dob),
+    user_code = VALUES(user_code),
+    department = VALUES(department),
+    class_name = VALUES(class_name),
     is_active = b'1';
 
 SET @admin_id := (SELECT id FROM users WHERE email = 'admin@eduspace.vn' LIMIT 1);
@@ -164,7 +172,7 @@ SET @table_01 := (SELECT id FROM space_tables WHERE space_id = @space_table AND 
 SET @table_02 := (SELECT id FROM space_tables WHERE space_id = @space_table AND table_code = 'T02' LIMIT 1);
 
 -- --------------------------------------------------------------------------
--- 6. Liên kết tiện ích và hình ảnh
+-- 6. Liên kết tiện ích
 -- --------------------------------------------------------------------------
 INSERT IGNORE INTO space_facilities (space_id, facility_id) VALUES
 (@space_whole, @facility_wifi),
@@ -472,8 +480,6 @@ UNION ALL
 SELECT 'space_tables', COUNT(*) FROM space_tables WHERE space_id = @space_table AND table_code LIKE 'T%'
 UNION ALL
 SELECT 'space_facilities', COUNT(*) FROM space_facilities WHERE space_id IN (@space_whole, @space_seat, @space_table)
-UNION ALL
-SELECT 'space_images', COUNT(*) FROM space_images WHERE space_id IN (@space_whole, @space_seat, @space_table)
 UNION ALL
 SELECT 'booking_policies', COUNT(*) FROM booking_policies WHERE policy_key IN
     ('DAILY_BOOKING_QUOTA', 'MAX_DURATION_MINUTES', 'RATE_LIMIT_HOURLY',

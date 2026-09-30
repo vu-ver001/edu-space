@@ -100,4 +100,23 @@ public class AvailabilityController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endTime) {
         return ResponseEntity.ok(availabilityService.getOccupiedSeats(spaceId, startTime, endTime));
     }
+
+    /**
+     * Thông tin thời gian mở/đóng cửa của tòa nhà và các hạn mức đặt chỗ:
+     * GET /api/spaces/operating-hours
+     */
+    @GetMapping("/operating-hours")
+    public ResponseEntity<com.eduspace.backend.policy.dto.response.PolicyResponse> getOperatingHours() {
+        return ResponseEntity.ok(availabilityService.getOperatingHours());
+    }
+
+    /**
+     * Danh sách các đợt bảo trì sắp tới của không gian (chỉ lấy các đợt chưa kết thúc: endTime >= now)
+     * GET /api/spaces/{spaceId}/maintenances
+     */
+    @GetMapping("/{spaceId}/maintenances")
+    public ResponseEntity<List<com.eduspace.backend.staff.dto.response.MaintenanceResponseKT>> getUpcomingMaintenancesBySpace(@PathVariable Long spaceId) {
+        return ResponseEntity.ok(availabilityService.getUpcomingMaintenancesBySpace(spaceId));
+    }
 }
+

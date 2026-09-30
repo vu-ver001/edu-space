@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import { checkInService } from '../services/checkInService';
 import type {
   CheckInActor,
   CheckInBooking,
@@ -7,7 +6,7 @@ import type {
   CheckInServiceError,
 } from '../types/checkIn';
 
-export function useCheckIn(actor: CheckInActor, service: CheckInService = checkInService) {
+export function useCheckIn(actor: CheckInActor, service: CheckInService) {
   const [bookings, setBookings] = useState<CheckInBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyBookingId, setBusyBookingId] = useState<number | null>(null);
@@ -27,7 +26,7 @@ export function useCheckIn(actor: CheckInActor, service: CheckInService = checkI
   }, [actor, service]);
 
   useEffect(() => {
-    // The effect synchronizes the demo view with the mock service on first render.
+    // Synchronize the view with the real service on first render and actor changes.
     // oxlint-disable-next-line react/set-state-in-effect
     void loadBookings();
   }, [actor, service, loadBookings]);
@@ -52,11 +51,6 @@ export function useCheckIn(actor: CheckInActor, service: CheckInService = checkI
     [actor, service],
   );
 
-  const reset = useCallback(() => {
-    service.reset?.();
-    void loadBookings();
-  }, [loadBookings, service]);
-
   return {
     bookings,
     loading,
@@ -64,6 +58,5 @@ export function useCheckIn(actor: CheckInActor, service: CheckInService = checkI
     busyBookingId,
     checkIn,
     reload: loadBookings,
-    reset,
   };
 }
