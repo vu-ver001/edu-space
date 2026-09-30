@@ -9,6 +9,9 @@ import { ChangePasswordModal } from '../../features/admin/components/ChangePassw
 
 const VALID_ROLES: AppRole[] = ['ADMIN', 'STAFF', 'STUDENT'];
 
+// Lưu trạng thái thu gọn sidebar để không bị bung ra khi tải lại trang.
+const SIDEBAR_COLLAPSED_KEY = 'eduspace_sidebar_collapsed';
+
 // Key tùy biến UI theo role → route, dùng để override nhãn/icon mà không phụ thuộc text label.
 const UI_OVERRIDES: Record<AppRole, { to: string; labelKey?: string; iconKey?: string }[]> = {
   ADMIN: [
@@ -29,7 +32,14 @@ export const PortalLayout = () => {
   const [user, setUser] = useState<{ id: number, email: string, fullName: string, role: string } | null>(null);
   const [uiSettings, setUiSettings] = useState<any>({});
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  // Đọc đồng bộ ngay trong initializer để lần render đầu đã đúng, không nháy layout khi reload.
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   // Ghi đè thủ công của trạng thái nhóm; undefined = suy ra từ route (đang ở mục con thì mở).
   const [groupOpenOverrides, setGroupOpenOverrides] = useState<Record<string, boolean>>({});
@@ -42,6 +52,14 @@ export const PortalLayout = () => {
     const savedSettings = localStorage.getItem('eduspace_ui_settings');
     if (savedSettings) setUiSettings(JSON.parse(savedSettings));
   }, [navigate]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, isCollapsed ? '1' : '0');
+    } catch {
+      // Bỏ qua khi localStorage bị chặn.
+    }
+  }, [isCollapsed]);
 
   const handleLogout = () => {
     ['eduspace_token', 'token', 'accessToken', 'eduspace_user', 'user'].forEach(key => localStorage.removeItem(key));
