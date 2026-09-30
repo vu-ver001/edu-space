@@ -16,10 +16,25 @@ export const statisticsService = {
     if (from) params.from = from;
     if (to) params.to = to;
 
-    const res = await api.get('/api/admin/statistics/export-excel', {
-      params,
-      responseType: 'blob',
-    });
-    return res.data;
+    try {
+      const res = await api.get('/api/admin/statistics/export-excel', {
+        params,
+        responseType: 'blob',
+      });
+      return res.data;
+    } catch (err: any) {
+      if (err?.response?.data instanceof Blob) {
+        const text = await err.response.data.text();
+        try {
+          const json = JSON.parse(text);
+          if (json.message) {
+            throw new Error(json.message);
+          }
+        } catch (parseErr) {
+          if (text) throw new Error(text);
+        }
+      }
+      throw err;
+    }
   },
 };
