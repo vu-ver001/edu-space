@@ -47,14 +47,12 @@ import { spaceApi } from '../api/spaceApi';
 import { spaceTypeApi } from '../api/spaceTypeApi';
 import { spaceImageApi } from '../api/spaceImageApi';
 import { formatSpaceDeleteError, readSpaceApiError } from '../api/spaceApiError';
-import { maintenanceApi } from '../../staff/api/maintenanceApi';
 import { SpaceFormModalKT } from '../components/SpaceFormModalKT';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
 import { FilterSelect } from '../../../components/common/FilterSelect';
 import { Tooltip } from '../../../components/common/Tooltip';
 import { bookingService } from '../../../services/bookingService';
 import { formatImageUrl } from '../../../utils/imageUrl';
-import { staffApi } from '../../staff/api/staffApi';
 import { syncSpaceImages } from '../utils/syncSpaceImages';
 import './SpaceDetailPageKT.css';
 
@@ -473,7 +471,7 @@ export const SpaceDetailPageKT: React.FC = () => {
   const fetchMaintenance = async (spaceId: number) => {
     setLoadingMaintenance(true);
     try {
-      const data = await maintenanceApi.getMaintenanceBySpace(spaceId);
+      const data = await spaceApi.getMaintenanceBySpace(spaceId);
       setMaintenanceList(data || []);
     } catch {
       setMaintenanceList([]);
@@ -541,7 +539,7 @@ export const SpaceDetailPageKT: React.FC = () => {
           .catch(() => {});
 
         // 2. Lấy timeline sự kiện của không gian để nhận diện bàn & ghế có booking thực tế
-        staffApi.getSpaceTimeline(spaceId, startIso, endIso)
+        spaceApi.getSpaceTimeline(spaceId, startIso, endIso)
           .then((timelineRes) => {
             const bookedTables = new Set<number>();
             const bookedSeats = new Set<string>();

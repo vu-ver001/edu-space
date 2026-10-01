@@ -22,7 +22,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/staff")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")
+@PreAuthorize("hasRole('STAFF')")
 public class StaffOperationsControllerKT {
 
     private final StaffOperationsService staffOperationsService;
@@ -95,7 +95,7 @@ public class StaffOperationsControllerKT {
      *     &actorUserId=...&from=yyyy-MM-dd&to=yyyy-MM-dd&page=0&size=10
      * - Có page/size (hoặc from/to/spaceName/actorUserId) -> trả trang (chuẩn cho AuditLogPage).
      * - Không có -> trả List (tương thích API cũ).
-     * - STAFF tự bị scope theo JWT, ADMIN lọc tự do.
+     * - STAFF tự bị scope theo JWT.
      */
     @GetMapping("/audit-logs")
     public ResponseEntity<?> getAuditLogs(
