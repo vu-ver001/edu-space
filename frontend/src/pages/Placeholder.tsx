@@ -39,15 +39,24 @@ export default function Placeholder({ title, owner }: Props) {
 
       if (res.data?.token) {
         localStorage.setItem('eduspace_token', res.data.token);
+        const userToSave = {
+          id: res.data.id || (targetEmail.includes('admin') ? 1 : targetEmail.includes('staff') ? 2 : 3),
+          email: res.data.email || targetEmail,
+          fullName: res.data.fullName || (targetEmail.includes('admin') ? 'Quản Trị Viên' : targetEmail.includes('staff') ? 'Nhân Viên Quầy' : 'Sinh viên'),
+          role: (res.data.role || (targetEmail.includes('admin') ? 'ADMIN' : targetEmail.includes('staff') ? 'STAFF' : 'STUDENT')).replace(/^ROLE_/, '').toUpperCase(),
+        };
+        localStorage.setItem('eduspace_user', JSON.stringify(userToSave));
+        localStorage.setItem('user', JSON.stringify(userToSave));
+
         // Redirect to requested path or default to space-types for admin
         if (redirectPath) {
           navigate(redirectPath);
         } else if (targetEmail.includes('admin')) {
-          navigate('/space-types');
+          navigate('/admin/users');
         } else if (targetEmail.includes('staff')) {
           navigate('/staff');
         } else {
-          navigate('/spaces');
+          navigate('/student/spaces');
         }
       } else {
         setError('Không nhận được token xác thực.');
