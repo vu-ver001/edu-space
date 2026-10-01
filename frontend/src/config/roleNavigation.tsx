@@ -94,8 +94,6 @@ export const ROLE_NAV_ITEMS: Record<AppRole, NavEntry[]> = {
         { to: `${ADMIN_BASE}/facilities`, label: 'Tiện ích', icon: <Armchair size={19} />, allowedRoles: ['ADMIN'] },
       ],
     },
-    { to: `${STAFF_BASE}/timeline`, label: 'Timeline hoạt động', icon: <CalendarDays size={19} />, allowedRoles: ['ADMIN', 'STAFF'] },
-    { to: `${STAFF_BASE}/audit-logs`, label: 'Nhật ký kiểm toán', icon: <FileText size={19} />, allowedRoles: ['ADMIN', 'STAFF'] },
     // Lịch sử chính sách (/admin/policy/history) mở từ trang Cấu hình, không chiếm mục sidebar riêng.
     {
       to: `${ADMIN_BASE}/policy`,
@@ -107,12 +105,12 @@ export const ROLE_NAV_ITEMS: Record<AppRole, NavEntry[]> = {
     { to: `${ADMIN_BASE}/settings-general`, label: 'Cài đặt chung', icon: <Sliders size={19} />, allowedRoles: ['ADMIN'] },
   ],
   STAFF: [
-    { to: STAFF_BASE, label: 'Trang chủ', icon: <Home size={19} />, allowedRoles: ['STAFF', 'ADMIN'], exact: true },
-    { to: `${STAFF_BASE}/approvals`, label: 'Duyệt đặt chỗ', icon: <CheckSquare size={19} />, allowedRoles: ['STAFF', 'ADMIN'] },
+    { to: STAFF_BASE, label: 'Trang chủ', icon: <Home size={19} />, allowedRoles: ['STAFF'], exact: true },
+    { to: `${STAFF_BASE}/approvals`, label: 'Duyệt đặt chỗ', icon: <CheckSquare size={19} />, allowedRoles: ['STAFF'] },
     { to: `${STAFF_BASE}/qr`, label: 'Hỗ trợ check-in', icon: <UserCheck size={19} />, allowedRoles: ['STAFF', 'ADMIN'] },
-    { to: `${STAFF_BASE}/timeline`, label: 'Timeline hoạt động', icon: <CalendarDays size={19} />, allowedRoles: ['STAFF', 'ADMIN'] },
-    { to: `${STAFF_BASE}/maintenance`, label: 'Bảo trì', icon: <Wrench size={19} />, allowedRoles: ['STAFF', 'ADMIN'] },
-    { to: `${STAFF_BASE}/audit-logs`, label: 'Nhật ký kiểm toán', icon: <FileText size={19} />, allowedRoles: ['STAFF', 'ADMIN'] },
+    { to: `${STAFF_BASE}/timeline`, label: 'Timeline hoạt động', icon: <CalendarDays size={19} />, allowedRoles: ['STAFF'] },
+    { to: `${STAFF_BASE}/maintenance`, label: 'Bảo trì', icon: <Wrench size={19} />, allowedRoles: ['STAFF'] },
+    { to: `${STAFF_BASE}/audit-logs`, label: 'Nhật ký kiểm toán', icon: <FileText size={19} />, allowedRoles: ['STAFF'] },
   ],
   STUDENT: [
     {

@@ -95,15 +95,20 @@ export default function App() {
 
                     </Route>
 
-                    {/* STAFF */}
-                    <Route element={<ProtectedRoute allowedRoles={['STAFF', 'ADMIN']} />}>
+                    {/* STAFF - Phần Quản lý không gian & Vận hành Staff của Kim Tuyến */}
+                    <Route element={<ProtectedRoute allowedRoles={['STAFF']} />}>
                         <Route path={STAFF_BASE} element={<BookingManagementPageKT />} />
-                        <Route path={`${STAFF_BASE}/approvals`} element={<BookingManagementPageKT />} />
                         <Route path={`${STAFF_BASE}/bookings`} element={<BookingManagementPageKT />} />
-                        <Route path={`${STAFF_BASE}/maintenance`} element={<MaintenanceManagementPageKT />} />
                         <Route path={`${STAFF_BASE}/operations`} element={<StaffOperationsPageKT />} />
+                        <Route path={`${STAFF_BASE}/approvals`} element={<BookingManagementPageKT />} />
+                        <Route path={`${STAFF_BASE}/checkin`} element={<BookingManagementPageKT />} />
+                        <Route path={`${STAFF_BASE}/maintenance`} element={<MaintenanceManagementPageKT />} />
                         <Route path={`${STAFF_BASE}/timeline`} element={<TimelinePage />} />
                         <Route path={`${STAFF_BASE}/audit-logs`} element={<AuditLogPage />} />
+                    </Route>
+
+                    {/* STAFF - Phần của thành viên khác, giữ nguyên quyền truy cập hiện có */}
+                    <Route element={<ProtectedRoute allowedRoles={['STAFF', 'ADMIN']} />}>
                         <Route path={`${STAFF_BASE}/qr`} element={<QrCheckInPage />} />
                         <Route path={`${STAFF_BASE}/equipment`} element={<Placeholder title="Thiết bị" owner="Vũ" />} />
                     </Route>
