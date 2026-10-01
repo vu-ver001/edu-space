@@ -101,9 +101,9 @@ export const PortalLayout = () => {
 
   // Menu lấy từ nguồn dùng chung theo role; lọc theo allowedRoles để tự ẩn khi config lệch.
   const getNavItems = (): NavEntry[] => {
-    const role = user.role as AppRole;
+    const role = (user.role || '').replace(/^ROLE_/, '').toUpperCase() as AppRole;
     const overrides = UI_OVERRIDES[role] ?? [];
-    return ROLE_NAV_ITEMS[role]
+    return (ROLE_NAV_ITEMS[role] || [])
       .filter((item) => item.allowedRoles.includes(role))
       .map((item) => {
         // Nhóm không có route riêng nên không tham gia UI_OVERRIDES.
@@ -131,7 +131,8 @@ export const PortalLayout = () => {
     setGroupOpenOverrides((prev) => ({ ...prev, [group.id]: !isOpen }));
   };
 
-  if (!VALID_ROLES.includes(user.role as AppRole)) {
+  const userRole = (user.role || '').replace(/^ROLE_/, '').toUpperCase() as AppRole;
+  if (!VALID_ROLES.includes(userRole)) {
     return <Navigate to="/403" replace />;
   }
 
