@@ -9,7 +9,8 @@ import LoginPage from './features/auth/pages/LoginPage';
 import Placeholder from './pages/Placeholder';
 import { GeneralSettingsPage } from "./features/admin/settings-general/pages/GeneralSettingsPage.tsx";
 import { SpaceTypeDetailPageKT, SpaceTypeListPageKT, SpaceListPageKT, SpaceDetailPageKT, FacilityListPageKT } from "./features/space";
-import { BookingManagementPageKT, StaffOperationsPageKT } from "./features/staff";
+import { BookingManagementPageKT, MaintenanceManagementPageKT, StaffOperationsPageKT } from "./features/staff";
+import QrCheckInPage from './features/staff/pages/QrCheckInPage';
 import PolicyManagementPage from './features/admin/policy/pages/PolicyManagementPage';
 import PolicyHistoryPage from './features/admin/policy/pages/PolicyHistoryPage';
 import { TimelinePage } from './features/operations/pages/TimelinePage';
@@ -96,19 +97,19 @@ export default function App() {
 
                     {/* STAFF - Phần Quản lý không gian & Vận hành Staff của Kim Tuyến */}
                     <Route element={<ProtectedRoute allowedRoles={['STAFF']} />}>
-                        <Route path={STAFF_BASE} element={<StaffOperationsPageKT />} />
+                        <Route path={STAFF_BASE} element={<BookingManagementPageKT />} />
                         <Route path={`${STAFF_BASE}/bookings`} element={<BookingManagementPageKT />} />
                         <Route path={`${STAFF_BASE}/operations`} element={<StaffOperationsPageKT />} />
                         <Route path={`${STAFF_BASE}/approvals`} element={<BookingManagementPageKT />} />
                         <Route path={`${STAFF_BASE}/checkin`} element={<BookingManagementPageKT />} />
-                        <Route path={`${STAFF_BASE}/maintenance`} element={<StaffOperationsPageKT />} />
+                        <Route path={`${STAFF_BASE}/maintenance`} element={<MaintenanceManagementPageKT />} />
                         <Route path={`${STAFF_BASE}/timeline`} element={<TimelinePage />} />
                         <Route path={`${STAFF_BASE}/audit-logs`} element={<AuditLogPage />} />
                     </Route>
 
                     {/* STAFF - Phần của thành viên khác, giữ nguyên quyền truy cập hiện có */}
                     <Route element={<ProtectedRoute allowedRoles={['STAFF', 'ADMIN']} />}>
-                        <Route path={`${STAFF_BASE}/qr`} element={<Placeholder title="Check-in QR" owner="Vũ" />} />
+                        <Route path={`${STAFF_BASE}/qr`} element={<QrCheckInPage />} />
                         <Route path={`${STAFF_BASE}/equipment`} element={<Placeholder title="Thiết bị" owner="Vũ" />} />
                     </Route>
 

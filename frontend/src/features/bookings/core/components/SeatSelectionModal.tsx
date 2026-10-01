@@ -1,10 +1,24 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Armchair } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  ArrowLeft,
+  Armchair,
+  CalendarDays,
+  CheckCircle2,
+  Clock3,
+  MapPin,
+  Users,
+  X,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+  Move,
+} from 'lucide-react';
 import { TableMeetingIcon } from './RoomCard';
-import type { Space, SpaceTable, SpaceSeat } from '../services/spaceService';
+import { DateInputVI, formatDateVI, formatMessageDatesVI } from './DateInputVI';
+import { TimeInput24H } from './TimeInput24H';
+import type { Space, SpaceSeat, SpaceTable } from '../services/spaceService';
 import { spaceService } from '../services/spaceService';
 import { bookingService } from '../services/bookingService';
-import { formatDateVI, formatMessageDatesVI } from './DateInputVI';
 import './SeatSelectionModal.css';
 
 interface Props {
@@ -15,30 +29,20 @@ interface Props {
   participantCount: number;
   purpose: string;
   mode?: 'SEAT' | 'TABLE';
+  openingHour?: string;
+  closingHour?: string;
+  maxDurationMinutes?: number;
   onClose: () => void;
   onSuccess: (bookingId: number, selectedItems: string[]) => void;
 }
 
-// Dữ liệu mẫu fallback khớp chuẩn 100% CSDL data-kimtuyen.sql
-const FALLBACK_TABLES: SpaceTable[] = [
-  { id: 1, spaceId: 7, tableCode: 'T01', capacity: 6, status: 'AVAILABLE', description: 'Bàn 6 chỗ gần cửa sổ dãy A' },
-  { id: 2, spaceId: 7, tableCode: 'T02', capacity: 6, status: 'AVAILABLE', description: 'Bàn 6 chỗ gần màn hình trình chiếu' },
-  { id: 3, spaceId: 7, tableCode: 'T03', capacity: 4, status: 'AVAILABLE', description: 'Bàn 4 chỗ góc yên tĩnh' },
-  { id: 4, spaceId: 7, tableCode: 'T04', capacity: 8, status: 'AVAILABLE', description: 'Bàn lớn 8 chỗ trung tâm phòng' },
-];
+const toMinutes = (value: string) => {
+  const [hours, minutes] = value.split(':').map(Number);
+  return (hours || 0) * 60 + (minutes || 0);
+};
 
-const FALLBACK_SEATS: SpaceSeat[] = [
-  { id: 1, spaceId: 4, seatCode: 'S01', status: 'AVAILABLE', description: 'Chỗ ngồi gần cửa sổ dãy A' },
-  { id: 2, spaceId: 4, seatCode: 'S02', status: 'AVAILABLE', description: 'Chỗ ngồi gần cửa sổ dãy A' },
-  { id: 3, spaceId: 4, seatCode: 'S03', status: 'AVAILABLE', description: 'Chỗ ngồi dãy A' },
-  { id: 4, spaceId: 4, seatCode: 'S04', status: 'AVAILABLE', description: 'Chỗ ngồi dãy A' },
-  { id: 5, spaceId: 4, seatCode: 'S05', status: 'AVAILABLE', description: 'Chỗ ngồi trung tâm có vách ngăn' },
-  { id: 6, spaceId: 4, seatCode: 'S06', status: 'AVAILABLE', description: 'Chỗ ngồi trung tâm có vách ngăn' },
-  { id: 7, spaceId: 4, seatCode: 'S07', status: 'AVAILABLE', description: 'Chỗ ngồi dãy B gần ổ cắm điện' },
-  { id: 8, spaceId: 4, seatCode: 'S08', status: 'AVAILABLE', description: 'Chỗ ngồi dãy B gần ổ cắm điện' },
-  { id: 9, spaceId: 4, seatCode: 'S09', status: 'AVAILABLE', description: 'Chỗ ngồi dãy B' },
-  { id: 10, spaceId: 4, seatCode: 'S10', status: 'INACTIVE', description: 'Chỗ ngồi đang thay bàn ghế mới (tạm khóa)' },
-];
+const toIsoDateTime = (date: string, time: string) =>
+  `${date}T${time.length === 5 ? `${time}:00` : time}`;
 
 export const SeatSelectionModal: React.FC<Props> = ({
   space,
@@ -48,432 +52,659 @@ export const SeatSelectionModal: React.FC<Props> = ({
   participantCount,
   purpose,
   mode,
+  openingHour = '07:00',
+  closingHour = '22:00',
+  maxDurationMinutes = 180,
   onClose,
   onSuccess,
 }) => {
-  // Xác định chế độ: PER_TABLE (chọn bàn) hay PER_SEAT (chọn ghế)
   const isTableMode = useMemo(() => {
     if (mode === 'TABLE') return true;
     if (mode === 'SEAT') return false;
-    const bMode = space.bookingMode || space.spaceType?.bookingMode;
-    if (bMode === 'PER_TABLE') return true;
-    if (bMode === 'PER_SEAT') return false;
-    return space.name?.toLowerCase().includes('bàn') || space.spaceTypeName?.toLowerCase().includes('bàn');
+    const bookingMode = space.bookingMode || space.spaceType?.bookingMode;
+    return bookingMode === 'PER_TABLE';
   }, [mode, space]);
 
+  const [step, setStep] = useState<'SELECT' | 'DETAILS'>('SELECT');
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [occupiedItems, setOccupiedItems] = useState<Set<string>>(new Set());
-  const [tablesList, setTablesList] = useState<SpaceTable[]>(FALLBACK_TABLES);
-  const [seatsList, setSeatsList] = useState<SpaceSeat[]>(FALLBACK_SEATS);
-  const [loadingData, setLoadingData] = useState<boolean>(true);
-  const [submitting, setSubmitting] = useState<boolean>(false);
+  const [tablesList, setTablesList] = useState<SpaceTable[]>([]);
+  const [seatsList, setSeatsList] = useState<SpaceSeat[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
+  const [resourceError, setResourceError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const startIso = `${date}T${startTime.length === 5 ? startTime + ':00' : startTime}`;
-  const endIso = `${date}T${endTime.length === 5 ? endTime + ':00' : endTime}`;
+  // Zoom & Pan state cho giao diện sơ đồ phòng học tương tác (Zero Page Scroll)
+  const [zoomLevel, setZoomLevel] = useState<number>(1);
+  const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState<boolean>(false);
+  const panStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const hasMovedRef = useRef<boolean>(false);
 
-  // Tải danh sách cấu hình và trạng thái bận từ MySQL Database
+  const [bookingDate, setBookingDate] = useState(date);
+  const [bookingStartTime, setBookingStartTime] = useState(startTime);
+  const [bookingEndTime, setBookingEndTime] = useState(endTime);
+  const [bookingParticipantCount, setBookingParticipantCount] = useState(
+    isTableMode ? Math.max(1, Number(participantCount) || 1) : 1,
+  );
+  const [bookingPurpose, setBookingPurpose] = useState(purpose);
+
+  const requiresApproval = space.requiresApproval ?? space.spaceType?.requiresApproval ?? isTableMode;
+  const today = useMemo(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  }, []);
+  const startIso = toIsoDateTime(bookingDate, bookingStartTime);
+  const endIso = toIsoDateTime(bookingDate, bookingEndTime);
+
+  const selectedTable = useMemo(
+    () => isTableMode
+      ? tablesList.find((table) => table.tableCode.toUpperCase() === selectedItems[0]?.toUpperCase()) || null
+      : null,
+    [isTableMode, selectedItems, tablesList],
+  );
+  const selectedCapacity = isTableMode ? (selectedTable?.capacity || space.capacity) : 1;
+
+  // Zoom controls
+  const handleZoomIn = () => setZoomLevel((prev) => Math.min(2.2, +(prev + 0.15).toFixed(2)));
+  const handleZoomOut = () => setZoomLevel((prev) => Math.max(0.65, +(prev - 0.15).toFixed(2)));
+  const handleResetZoom = () => {
+    setZoomLevel(1);
+    setPanOffset({ x: 0, y: 0 });
+  };
+
+  // Mouse pan event handlers
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    setIsPanning(true);
+    hasMovedRef.current = false;
+    panStartRef.current = { x: e.clientX - panOffset.x, y: e.clientY - panOffset.y };
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isPanning) return;
+    const dx = e.clientX - panStartRef.current.x - panOffset.x;
+    const dy = e.clientY - panStartRef.current.y - panOffset.y;
+    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+      hasMovedRef.current = true;
+    }
+    setPanOffset({
+      x: e.clientX - panStartRef.current.x,
+      y: e.clientY - panStartRef.current.y,
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsPanning(false);
+  };
+
+  // Touch pan event handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      setIsPanning(true);
+      hasMovedRef.current = false;
+      panStartRef.current = { x: touch.clientX - panOffset.x, y: touch.clientY - panOffset.y };
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isPanning || e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    const dx = touch.clientX - panStartRef.current.x - panOffset.x;
+    const dy = touch.clientY - panStartRef.current.y - panOffset.y;
+    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+      hasMovedRef.current = true;
+    }
+    setPanOffset({
+      x: touch.clientX - panStartRef.current.x,
+      y: touch.clientY - panStartRef.current.y,
+    });
+  };
+
+  const handleTouchEnd = () => {
+    setIsPanning(false);
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    if (e.deltaY < 0) {
+      handleZoomIn();
+    } else {
+      handleZoomOut();
+    }
+  };
+
   const loadData = useCallback(async () => {
     setLoadingData(true);
+    setResourceError(null);
     try {
       if (isTableMode) {
-        // Tải danh sách bàn từ API Tuyến
-        try {
-          const fetchedTables = await spaceService.getTablesBySpace(space.id);
-          if (fetchedTables && fetchedTables.length > 0) {
-            setTablesList(fetchedTables);
-          }
-        } catch (e) {
-          // Dùng FALLBACK_TABLES nếu chưa cấu hình
-          setTablesList(FALLBACK_TABLES);
+        const tables = await spaceService.getTablesBySpace(space.id);
+        setTablesList(tables || []);
+        setSeatsList([]);
+        if (!tables?.length) {
+          setResourceError(`Phòng ${space.name} chưa được cấu hình bàn trong cơ sở dữ liệu.`);
         }
       } else {
-        // Tải danh sách ghế từ API Tuyến
-        try {
-          const fetchedSeats = await spaceService.getSeatsBySpace(space.id);
-          if (fetchedSeats && fetchedSeats.length > 0) {
-            setSeatsList(fetchedSeats);
-          }
-        } catch (e) {
-          // Dùng FALLBACK_SEATS nếu chưa cấu hình
-          setSeatsList(FALLBACK_SEATS);
+        const seats = await spaceService.getSeatsBySpace(space.id);
+        setSeatsList(seats || []);
+        setTablesList([]);
+        if (!seats?.length) {
+          setResourceError(`Phòng ${space.name} chưa được cấu hình ghế trong cơ sở dữ liệu.`);
         }
       }
 
-      // Tải danh sách mã đã bị đặt (ghế hoặc bàn) trong khung giờ từ API của Khánh Vân
-      const occupied = await bookingService.getOccupiedSeats(space.id, startIso, endIso);
-      const normOccupied = new Set(occupied.map((s) => String(s).trim().toUpperCase()));
-      setOccupiedItems(normOccupied);
-      setSelectedItems((prev) => prev.filter((code) => !normOccupied.has(String(code).trim().toUpperCase())));
-    } catch (err) {
-      console.error('Lỗi khi tải dữ liệu bàn/ghế từ server:', err);
+      if (bookingDate && bookingStartTime && bookingEndTime) {
+        const occupied = await bookingService.getOccupiedSeats(space.id, startIso, endIso);
+        const normalized = new Set(occupied.map((item) => String(item).trim().toUpperCase()));
+        setOccupiedItems(normalized);
+        setSelectedItems((current) => current.filter((code) => !normalized.has(code.toUpperCase())));
+      } else {
+        setOccupiedItems(new Set());
+      }
+    } catch (error) {
+      setTablesList([]);
+      setSeatsList([]);
+      setOccupiedItems(new Set());
+      setSelectedItems([]);
+      setResourceError(`Không thể tải danh sách ${isTableMode ? 'bàn' : 'ghế'} từ cơ sở dữ liệu. Vui lòng thử lại.`);
+      console.error('Không thể tải dữ liệu bàn/ghế từ cơ sở dữ liệu:', error);
     } finally {
       setLoadingData(false);
     }
-  }, [isTableMode, space.id, startIso, endIso]);
+  }, [bookingDate, bookingEndTime, bookingStartTime, endIso, isTableMode, space.id, space.name, startIso]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
-  // Xử lý click chọn / hủy chọn Item (bàn hoặc ghế)
-  const handleItemClick = (code: string, isInactive?: boolean) => {
-    const normCode = String(code).trim().toUpperCase();
-    if (occupiedItems.has(normCode) || isInactive) return;
-
-    if (isTableMode) {
-      const tbl = tablesList.find(
-        (t) => t.tableCode === code || String(t.id) === code || t.tableCode?.toUpperCase() === normCode
-      );
-      if (tbl && Number(participantCount) > tbl.capacity) {
-        setErrorMessage(
-          `Bàn ${tbl.tableCode} có sức chứa tối đa ${tbl.capacity} chỗ, không đủ cho nhóm ${participantCount} người của bạn. Vui lòng chọn bàn có sức chứa từ ${participantCount} chỗ trở lên.`
-        );
-        return;
-      }
+  useEffect(() => {
+    if (step === 'DETAILS' && selectedItems.length === 0) {
+      setStep('SELECT');
+      setErrorMessage(`Vị trí vừa chọn không còn trống trong khung giờ mới. Vui lòng chọn lại ${isTableMode ? 'bàn' : 'ghế'}.`);
     }
+  }, [isTableMode, selectedItems.length, step]);
 
+  const selectItem = (code: string, isInactive = false) => {
+    if (hasMovedRef.current) return;
+    const normalized = code.toUpperCase();
+    if (isInactive || occupiedItems.has(normalized)) return;
     setErrorMessage(null);
-    setSelectedItems((prev) => {
-      if (prev.includes(code)) {
-        return prev.filter((item) => item !== code);
-      } else {
-        // Cả chế độ chọn bàn và chọn ghế đều chỉ chọn 1 vị trí (1 bàn hoặc 1 ghế cá nhân)
-        return [code];
-      }
-    });
+    setSelectedItems((current) => current.includes(code) ? [] : [code]);
   };
 
-  // Xác nhận tạo booking
+  const continueToDetails = () => {
+    if (!selectedItems.length) {
+      setErrorMessage(`Vui lòng chọn một ${isTableMode ? 'bàn' : 'ghế'} trên sơ đồ để tiếp tục.`);
+      return;
+    }
+    if (isTableMode && selectedTable && bookingParticipantCount > selectedTable.capacity) {
+      setBookingParticipantCount(selectedTable.capacity);
+    }
+    setErrorMessage(null);
+    setStep('DETAILS');
+  };
+
+  const validateDetails = () => {
+    if (!selectedItems.length) {
+      return `Vui lòng quay lại và chọn một ${isTableMode ? 'bàn' : 'ghế'} trước khi xác nhận.`;
+    }
+    if (!bookingDate || !bookingStartTime || !bookingEndTime) {
+      return 'Vui lòng nhập đầy đủ ngày và khung giờ đặt chỗ.';
+    }
+    if (bookingDate < today) return 'Không thể đặt chỗ vào ngày trong quá khứ.';
+    const start = toMinutes(bookingStartTime);
+    const end = toMinutes(bookingEndTime);
+    if (start >= end) return 'Giờ bắt đầu phải trước giờ kết thúc.';
+    if (start < toMinutes(openingHour) || end > toMinutes(closingHour)) {
+      return `Vui lòng chọn thời gian trong giờ mở cửa ${openingHour} – ${closingHour}.`;
+    }
+    if (end - start > maxDurationMinutes) {
+      return `Mỗi lượt đặt tối đa ${Math.floor(maxDurationMinutes / 60)} giờ.`;
+    }
+    if (new Date(startIso).getTime() <= Date.now()) {
+      return 'Thời gian bắt đầu phải lớn hơn thời điểm hiện tại.';
+    }
+    if (bookingParticipantCount < 1 || bookingParticipantCount > selectedCapacity) {
+      return `Số người tham gia phải từ 1 đến ${selectedCapacity} người.`;
+    }
+    if (requiresApproval && !bookingPurpose.trim()) {
+      return 'Vui lòng nhập mục đích sử dụng để gửi yêu cầu xét duyệt.';
+    }
+    return null;
+  };
+
   const handleConfirmBooking = async () => {
-    if (selectedItems.length === 0) {
-      setErrorMessage(`Vui lòng chọn ít nhất 1 ${isTableMode ? 'bàn' : 'chỗ ngồi'} trên sơ đồ.`);
+    const validationError = validateDetails();
+    if (validationError) {
+      setErrorMessage(validationError);
       return;
-    }
-
-    // Kiểm tra thời gian bắt đầu trong tương lai
-    const startDateTime = new Date(startIso);
-    if (startDateTime.getTime() <= Date.now()) {
-      setErrorMessage('Thời gian bắt đầu phải lớn hơn thời điểm hiện tại. Vui lòng đóng cửa sổ và chọn lại khung giờ trong tương lai.');
-      return;
-    }
-
-    const sortedItems = [...selectedItems].sort();
-    const selectedTable = isTableMode && selectedItems.length > 0
-      ? tablesList.find((t) => t.tableCode === selectedItems[0] || String(t.id) === selectedItems[0] || t.tableCode?.toUpperCase() === selectedItems[0]?.toUpperCase())
-      : null;
-
-    if (isTableMode && selectedTable) {
-      if (Number(participantCount) < 2) {
-        setErrorMessage('Bàn học nhóm yêu cầu tối thiểu từ 2 người trở lên. Nếu bạn đi 1 mình, vui lòng chọn đặt chỗ ngồi tại Khu tự học cá nhân.');
-        return;
-      }
-      if (Number(participantCount) > selectedTable.capacity) {
-        setErrorMessage(
-          `Bàn ${selectedTable.tableCode} chỉ có sức chứa tối đa ${selectedTable.capacity} chỗ, không đủ cho nhóm ${participantCount} người. Vui lòng chọn bàn lớn hơn.`
-        );
-        return;
-      }
     }
 
     setSubmitting(true);
     setErrorMessage(null);
-
     try {
-      const newBooking = await bookingService.createBooking({
+      const sortedItems = [...selectedItems].sort();
+      const booking = await bookingService.createBooking({
         spaceId: space.id,
         startTime: startIso,
         endTime: endIso,
-        participantCount: isTableMode ? Number(participantCount) : 1,
-        purpose: purpose.trim() || (isTableMode ? 'Thảo luận theo bàn' : 'Tự học tại chỗ ngồi'),
+        participantCount: isTableMode ? bookingParticipantCount : 1,
+        purpose: bookingPurpose.trim() || 'Tự học tại chỗ ngồi',
         selectedSeats: [sortedItems[0]],
         tableId: isTableMode && selectedTable ? selectedTable.id : undefined,
       });
-
-      onSuccess(newBooking.id, sortedItems);
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Có lỗi xảy ra khi tạo đặt chỗ. Vui lòng kiểm tra lại.';
-      setErrorMessage(formatMessageDatesVI(msg));
+      onSuccess(booking.id, sortedItems);
+    } catch (error: any) {
+      setErrorMessage(formatMessageDatesVI(
+        error?.response?.data?.message || 'Không thể hoàn tất đặt chỗ. Vui lòng kiểm tra lại thông tin.',
+      ));
       await loadData();
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Render từng bàn thảo luận (mô hình to hơn ghế một chút, hình khối bàn nhóm)
-  const renderTableCard = (tbl: SpaceTable) => {
-    const normCode = String(tbl.tableCode).trim().toUpperCase();
-    const isOccupied = occupiedItems.has(normCode);
-    const isInactive = tbl.status === 'INACTIVE';
-    const isSelected = selectedItems.includes(tbl.tableCode) || selectedItems.includes(normCode);
-    const isInsufficient = isTableMode && Number(participantCount) > tbl.capacity;
+  // Thống kê tài nguyên trong phòng
+  const currentStats = useMemo(() => {
+    let available = 0;
+    let occupied = 0;
+    let inactive = 0;
+
+    if (isTableMode) {
+      tablesList.forEach((t) => {
+        const code = t.tableCode.toUpperCase();
+        if (t.status === 'INACTIVE') inactive++;
+        else if (occupiedItems.has(code)) occupied++;
+        else available++;
+      });
+      return { available, occupied, inactive, total: tablesList.length };
+    } else {
+      seatsList.forEach((s) => {
+        const code = s.seatCode.toUpperCase();
+        if (s.status === 'INACTIVE') inactive++;
+        else if (occupiedItems.has(code)) occupied++;
+        else available++;
+      });
+      return { available, occupied, inactive, total: seatsList.length };
+    }
+  }, [isTableMode, tablesList, seatsList, occupiedItems]);
+
+  // Phân bổ các dãy ghế phòng học (Classroom Desks Layout - Không còn nhãn A, B, C...)
+  const seatClusters = useMemo(() => {
+    if (!seatsList.length) return [];
+    const sorted = [...seatsList].sort((a, b) =>
+      a.seatCode.localeCompare(b.seatCode, undefined, { numeric: true })
+    );
+    const count = sorted.length;
+    let perRow = 6;
+    if (count <= 6) perRow = count;
+    else if (count <= 10) perRow = 5;
+    else if (count <= 14) perRow = 6;
+    else if (count <= 20) perRow = 8;
+    else perRow = 10;
+
+    const clusters: SpaceSeat[][] = [];
+    for (let i = 0; i < sorted.length; i += perRow) {
+      clusters.push(sorted.slice(i, i + perRow));
+    }
+    return clusters;
+  }, [seatsList]);
+
+  // Render ghế học cá nhân (Per-Seat) phong cách sáng sủa, thanh lịch
+  const renderClassroomSeat = (seat: SpaceSeat) => {
+    const code = seat.seatCode.toUpperCase();
+    const occupied = occupiedItems.has(code);
+    const inactive = seat.status === 'INACTIVE';
+    const selected = selectedItems.includes(seat.seatCode);
+    const title = inactive
+      ? `Ghế ${seat.seatCode} (Tạm khóa)`
+      : occupied
+      ? `Ghế ${seat.seatCode} (Đã có người đặt)`
+      : selected
+      ? `Ghế ${seat.seatCode} (Đang chọn) - Bấm để bỏ chọn`
+      : `Ghế ${seat.seatCode} (Còn trống) - Bấm để chọn`;
+
+    return (
+      <button
+        key={seat.id || seat.seatCode}
+        type="button"
+        className={`classroom-seat-item ${inactive ? 'seat-inactive' : occupied ? 'seat-occupied' : selected ? 'seat-selected' : 'seat-available'}`}
+        onClick={() => selectItem(seat.seatCode, inactive)}
+        disabled={inactive || occupied || submitting}
+        title={title}
+      >
+        <span className="seat-icon-box">
+          <Armchair size={17} strokeWidth={selected ? 2.4 : 2} />
+        </span>
+        <span className="seat-code-label">{seat.seatCode}</span>
+      </button>
+    );
+  };
+
+  // Render bàn học nhóm (Per-Table) dạng sơ đồ phòng học trực quan
+  const renderClassroomTable = (table: SpaceTable) => {
+    const code = table.tableCode.toUpperCase();
+    const occupied = occupiedItems.has(code);
+    const inactive = table.status === 'INACTIVE';
+    const selected = selectedItems.includes(table.tableCode);
+    const title = inactive
+      ? `Bàn ${table.tableCode} (${table.capacity} chỗ) - Tạm khóa bảo trì`
+      : occupied
+      ? `Bàn ${table.tableCode} (${table.capacity} chỗ) - Đã có nhóm đặt`
+      : selected
+      ? `Bàn ${table.tableCode} (${table.capacity} chỗ) - Đang chọn`
+      : `Bàn ${table.tableCode} (${table.capacity} chỗ) - Sẵn sàng đặt chỗ`;
 
     return (
       <div
-        key={tbl.id || tbl.tableCode}
-        className={`cinema-table-card ${
-          isInactive
-            ? 'table-inactive'
-            : isOccupied
-            ? 'table-occupied'
-            : isInsufficient
-            ? 'table-insufficient'
-            : isSelected
-            ? 'table-selected'
-            : 'table-available'
-        }`}
-        onClick={() => handleItemClick(tbl.tableCode, isInactive)}
-        title={
-          isInactive
-            ? `Bàn ${tbl.tableCode}: Tạm khóa bảo trì`
-            : isOccupied
-            ? `Bàn ${tbl.tableCode}: Đã có người đặt trong khung giờ này`
-            : isInsufficient
-            ? `Bàn ${tbl.tableCode}: Sức chứa tối đa ${tbl.capacity} chỗ, không đủ cho nhóm ${participantCount} người`
-            : isSelected
-            ? `Bàn ${tbl.tableCode}: Bạn đang chọn`
-            : `Bàn ${tbl.tableCode}: Bàn trống sẵn sàng đặt (${tbl.capacity} chỗ)`
-        }
+        key={table.id || table.tableCode}
+        className={`classroom-table-unit ${inactive ? 'tbl-inactive' : occupied ? 'tbl-occupied' : selected ? 'tbl-selected' : 'tbl-available'}`}
+        onClick={() => selectItem(table.tableCode, inactive)}
+        title={title}
       >
-        <div className="table-card-top">
-          <div className="table-card-code">
-            <TableMeetingIcon size={16} strokeWidth={2.2} style={{ color: isSelected ? '#FFFFFF' : isInsufficient ? '#E11D48' : '#2563EB', marginRight: '6px' }} />
-            <span>Bàn {tbl.tableCode}</span>
+        {/* Mặt bàn học nhóm */}
+        <div className="table-top-surface">
+          <div className="table-badge-row">
+            <span className="table-icon-wrap">
+              <TableMeetingIcon size={18} />
+            </span>
+            <span className="table-name-bold">Bàn {table.tableCode}</span>
           </div>
-          <span className="table-card-capacity">
-            👥 {tbl.capacity} chỗ
+          <span className="table-capacity-tag">
+            <Users size={12} /> {table.capacity} chỗ
           </span>
-        </div>
-
-        <div className="table-card-desc">
-          {tbl.description || `Bàn học nhóm ${tbl.capacity} chỗ trang bị ổ cắm điện`}
-        </div>
-
-        <div className="table-card-status">
-          {isInactive ? (
-            <span style={{ color: '#EF4444' }}>🔒 Tạm khóa bảo trì</span>
-          ) : isOccupied ? (
-            <span style={{ color: '#64748B' }}>✕ Đã có người đặt</span>
-          ) : isInsufficient ? (
-            <span style={{ color: '#E11D48', fontWeight: 600 }}>⚠️ Không đủ chỗ ({tbl.capacity} &lt; {participantCount})</span>
-          ) : isSelected ? (
-            <span style={{ color: '#FFFFFF', fontWeight: 700 }}>✓ Bạn đang chọn</span>
-          ) : (
-            <span style={{ color: '#10B981' }}>● Bàn trống ({tbl.capacity} chỗ)</span>
-          )}
+          <span className="table-status-caption">
+            {inactive ? 'Tạm khóa' : occupied ? 'Đã có người đặt' : selected ? 'Đang chọn' : 'Còn trống'}
+          </span>
         </div>
       </div>
     );
   };
 
-  // Render từng ghế ngồi cá nhân
-  const renderSeatButton = (st: SpaceSeat) => {
-    const normCode = String(st.seatCode).trim().toUpperCase();
-    const isOccupied = occupiedItems.has(normCode);
-    const isInactive = st.status === 'INACTIVE';
-    const isSelected = selectedItems.includes(st.seatCode) || selectedItems.includes(normCode);
-    const isUnavailable = isOccupied || isInactive;
-
-    return (
-      <button
-        key={st.id || st.seatCode}
-        type="button"
-        className={`cinema-seat ${
-          isInactive ? 'seat-inactive' : isOccupied ? 'seat-occupied' : isSelected ? 'seat-selected' : 'seat-available'
-        }`}
-        onClick={() => handleItemClick(st.seatCode, isInactive)}
-        disabled={isUnavailable || submitting}
-        title={
-          isInactive
-            ? `Ghế ${st.seatCode}: ${st.description || 'Tạm khóa bảo dưỡng / Thay thiết bị'}`
-            : isOccupied
-            ? `Ghế ${st.seatCode}: Đã có người đặt trước trong khung giờ này`
-            : isSelected
-            ? `Ghế ${st.seatCode}: Bạn đang chọn`
-            : `Ghế ${st.seatCode}: Ghế trống sẵn sàng đặt`
-        }
-      >
-        <span>{st.seatCode}</span>
-      </button>
-    );
-  };
-
   return (
-    <div className="cinema-modal-overlay">
-      <div className="cinema-modal-container">
-        {/* Header Modal */}
-        <div className="cinema-modal-header">
+    <div className="cinema-modal-overlay" role="dialog" aria-modal="true">
+      <div className={`cinema-modal-container ${step === 'DETAILS' ? 'cinema-modal-details' : 'cinema-modal-interactive-mode'}`}>
+        <header className="cinema-modal-header">
           <div>
+            <div className="booking-flow-steps" aria-label="Tiến trình đặt chỗ">
+              <span className="flow-step active"><b>1</b> Chọn {isTableMode ? 'bàn' : 'ghế'}</span>
+              <span className="flow-line" />
+              <span className={`flow-step ${step === 'DETAILS' ? 'active' : ''}`}><b>2</b> Thông tin đặt chỗ</span>
+            </div>
             <h3 className="cinema-title">
-              <span style={{ display: 'inline-flex', alignItems: 'center', marginRight: '8px', color: '#2563EB' }}>
-                {isTableMode ? <TableMeetingIcon size={22} strokeWidth={2.2} /> : <Armchair size={22} strokeWidth={2.2} />}
-              </span>
-              {isTableMode ? 'Sơ đồ chọn bàn thảo luận nhóm' : 'Sơ đồ chọn vị trí chỗ ngồi cá nhân'}
+              {step === 'SELECT'
+                ? <> {isTableMode ? <TableMeetingIcon size={22} /> : <Armchair size={22} />} Chọn vị trí {isTableMode ? 'bàn học nhóm' : 'chỗ ngồi cá nhân'}</>
+                : <><CheckCircle2 size={22} /> Hoàn tất thông tin đặt chỗ</>}
             </h3>
             <div className="cinema-subtitle">
-              <strong style={{ color: '#0F172A' }}>{space.name}</strong>
+              <strong>{space.name}</strong>
               <span>•</span>
-              <span>{space.building} - {space.floor}</span>
+              <MapPin size={14} />
+              <span>{space.building} · {space.floor}</span>
               <span>•</span>
-              <span style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                backgroundColor: '#EFF6FF',
-                color: '#1D72FE',
-                padding: '2px 8px',
-                borderRadius: '6px',
-                fontWeight: 700,
-                fontSize: '0.775rem'
-              }}>
-                {isTableMode ? `👥 Sức chứa: ${space.capacity} chỗ (${tablesList.length} bàn)` : `👥 Sức chứa: ${space.capacity} chỗ (${seatsList.length} ghế)`}
+              <span className="badge-room-mode">
+                {isTableMode ? 'Chế độ đặt theo bàn' : 'Chế độ đặt theo ghế'}
               </span>
-              {loadingData && (
-                <span style={{ marginLeft: 6, color: '#1D72FE', fontSize: '0.8rem' }}>
-                  🔄 Đang đồng bộ...
-                </span>
-              )}
             </div>
           </div>
-          <button type="button" className="cinema-btn-close" onClick={onClose} disabled={submitting} title="Đóng">
-            ✕
+          <button type="button" className="cinema-btn-close" onClick={onClose} disabled={submitting} aria-label="Đóng">
+            <X size={18} />
           </button>
-        </div>
+        </header>
 
-        {/* Thông báo lỗi nếu có xung đột */}
-        {errorMessage && (
-          <div className="cinema-error-banner">
-            <span>⚠️ {errorMessage}</span>
+        {errorMessage && <div className="cinema-error-banner">⚠ {errorMessage}</div>}
+        {resourceError && (
+          <div className="cinema-error-banner" style={{ background: '#fef2f2', borderColor: '#fca5a5', color: '#991b1b' }}>
+            ⚠ {resourceError}
           </div>
         )}
 
-        {/* Khu vực sơ đồ tương tác */}
-        <div className="cinema-seats-area">
-          {isTableMode ? (
-            /* 1. HIỂN THỊ MÔ HÌNH BÀN THẢO LUẬN (PER_TABLE) */
-            <div>
-              <div style={{ textAlign: 'center', marginBottom: 14 }}>
-                <span style={{
-                  display: 'inline-block',
-                  background: '#F0F9FF',
-                  border: '1px solid #BAE6FD',
-                  color: '#0369A1',
-                  padding: '6px 16px',
-                  borderRadius: '20px',
-                  fontSize: '0.825rem',
-                  fontWeight: 600
-                }}>
-                  💡 Nhóm của bạn có <strong>{participantCount} người</strong>. Vui lòng chọn bàn có sức chứa từ {participantCount} chỗ trở lên.
-                </span>
-              </div>
-
-              <div className="cinema-tables-grid">
-                {tablesList.map((tbl) => renderTableCard(tbl))}
-              </div>
-            </div>
-          ) : (
-            /* 2. HIỂN THỊ MÔ HÌNH GHẾ NGỒI CÁ NHÂN (PER_SEAT) */
-            <div>
-              <div style={{ textAlign: 'center', marginBottom: 14 }}>
-                <span style={{
-                  display: 'inline-block',
-                  background: '#F0FDF4',
-                  border: '1px solid #BBF7D0',
-                  color: '#15803D',
-                  padding: '6px 16px',
-                  borderRadius: '20px',
-                  fontSize: '0.825rem',
-                  fontWeight: 600
-                }}>
-                  💡 Mỗi sinh viên chọn 1 chỗ ngồi cá nhân (Mã ghế S01 đến S10). Nhấp vào ghế trống để chọn hoặc đổi vị trí.
-                </span>
-              </div>
-
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(5, 54px)',
-                gap: 14,
-                justifyContent: 'center',
-                padding: '20px 0'
-              }}>
-                {seatsList.map((st) => renderSeatButton(st))}
-              </div>
-            </div>
-          )}
-
-          {/* Chú thích màu sắc (Legend) */}
-          <div className="cinema-legend" style={{ marginTop: 20 }}>
-            <div className="legend-item">
-              <span className="legend-box available" />
-              <span>{isTableMode ? 'Bàn trống' : 'Ghế trống'}</span>
-            </div>
-            <div className="legend-item">
-              <span className="legend-box occupied" />
-              <span>Đã có người đặt (Bận giờ này)</span>
-            </div>
-            {isTableMode && (
-              <div className="legend-item">
-                <span className="legend-box" style={{ background: '#FFF1F2', border: '1.5px solid #FECDD3' }} />
-                <span>Không đủ chỗ (&lt; {participantCount} người)</span>
-              </div>
-            )}
-            <div className="legend-item">
-              <span className="legend-box inactive" />
-              <span>Tạm khóa bảo trì</span>
-            </div>
-            <div className="legend-item">
-              <span className="legend-box selected" />
-              <span>{isTableMode ? 'Bàn đang chọn' : 'Ghế bạn đang chọn'}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer Modal */}
-        <div className="cinema-modal-footer">
-          <div className="footer-booking-info">
-            <div className="footer-meta-time">
-              📅 <strong>{formatDateVI(date)}</strong> • <strong>{startTime.substring(0, 5)} - {endTime.substring(0, 5)}</strong>
-            </div>
-            <div className="footer-seats-selected">
-              <span>{isTableMode ? 'Bàn đã chọn: ' : 'Chỗ ngồi đã chọn: '}</span>
-              {selectedItems.length > 0 ? (
-                <span className="selected-seats-badge">
-                  {isTableMode ? (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                      <TableMeetingIcon size={14} strokeWidth={2.2} /> Bàn {selectedItems.join(', ')} ({participantCount} người tham gia)
-                    </span>
-                  ) : (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                      <Armchair size={14} strokeWidth={2.2} /> Ghế {selectedItems[0]} (1 chỗ ngồi)
-                    </span>
+        {step === 'SELECT' ? (
+          <>
+            {/* ================== VÙNG SƠ ĐỒ PHÒNG HỌC TƯƠNG TÁC (PAN & ZOOM, SÁNG SỦA, KHÔNG SCROLL) ================== */}
+            <div className="classroom-interactive-workspace">
+              {/* Thanh điều hướng nhanh phía trên Canvas (Tối giản, sáng sủa) */}
+              <div className="classroom-top-toolbar">
+                {/* Chú thích trạng thái chuẩn kiểu cũ quen thuộc */}
+                <div className="classroom-legend-strip">
+                  <div className="legend-strip-item">
+                    <span className="legend-strip-box available" /> Còn trống ({currentStats.available})
+                  </div>
+                  <div className="legend-strip-item">
+                    <span className="legend-strip-box occupied" /> Đã được đặt ({currentStats.occupied})
+                  </div>
+                  {currentStats.inactive > 0 && (
+                    <div className="legend-strip-item">
+                      <span className="legend-strip-box inactive" /> Tạm khóa ({currentStats.inactive})
+                    </div>
                   )}
-                </span>
-              ) : (
-                <span className="no-seats-text">
-                  {isTableMode ? 'Chưa chọn bàn nào' : 'Chưa chọn chỗ ngồi'}
-                </span>
-              )}
-            </div>
-          </div>
+                  <div className="legend-strip-item">
+                    <span className="legend-strip-box selected" /> Đang chọn
+                  </div>
+                </div>
 
-          <div className="footer-actions">
-            <button
-              type="button"
-              className="btn-cinema-cancel"
-              onClick={onClose}
-              disabled={submitting}
-            >
-              Hủy bỏ
-            </button>
-            <button
-              type="button"
-              className="btn-cinema-confirm"
-              onClick={handleConfirmBooking}
-              disabled={submitting || selectedItems.length === 0}
-            >
-              {submitting ? 'Đang xác nhận...' : isTableMode ? 'Xác nhận đặt bàn' : 'Xác nhận đặt ghế'}
-            </button>
-          </div>
-        </div>
+                <div className="classroom-helper-hint">
+                  <Move size={13} style={{ color: '#2563EB' }} />
+                  <span>Kéo rê để di chuyển · Lăn chuột hoặc bấm +/- để phóng to</span>
+                </div>
+              </div>
+
+              {/* Viewport Canvas tương tác (Sáng sủa, không cuộn thanh cuộn trang) */}
+              <div
+                className={`classroom-canvas-viewport ${isPanning ? 'is-panning' : ''}`}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                onWheel={handleWheel}
+              >
+                {loadingData ? (
+                  <div className="selection-loading"><span className="portal-spinner" /> Đang đồng bộ sơ đồ phòng học...</div>
+                ) : (isTableMode ? tablesList.length === 0 : seatsList.length === 0) ? (
+                  <div className="selection-empty-state" style={{ padding: '60px 20px', textAlign: 'center', color: '#64748b' }}>
+                    {isTableMode ? <TableMeetingIcon size={44} style={{ margin: '0 auto 12px', color: '#94a3b8' }} /> : <Armchair size={44} style={{ margin: '0 auto 12px', color: '#94a3b8' }} />}
+                    <p style={{ fontWeight: 600, fontSize: '15px', color: '#334155' }}>
+                      Chưa có dữ liệu {isTableMode ? 'bàn' : 'ghế'} cho không gian này trong cơ sở dữ liệu.
+                    </p>
+                    <p style={{ fontSize: '13px', margin: '4px 0 0' }}>Vui lòng liên hệ quản trị viên để thiết lập sơ đồ.</p>
+                  </div>
+                ) : (
+                  <div
+                    className="classroom-canvas-stage"
+                    style={{
+                      transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
+                      transformOrigin: 'center 12%',
+                    }}
+                  >
+                    {isTableMode ? (
+                      /* Sơ đồ bàn thảo luận nhóm (Per-Table) */
+                      <div className="classroom-tables-layout">
+                        {tablesList.map(renderClassroomTable)}
+                      </div>
+                    ) : (
+                      /* Sơ đồ dãy ghế phòng học (Per-Seat) */
+                      <div className="classroom-seats-layout">
+                        {seatClusters.map((cluster, cIdx) => (
+                          <div key={`cluster-${cIdx}`} className="classroom-desk-row">
+                            <div className="desk-seats-group">
+                              {cluster.map(renderClassroomSeat)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Bộ điều khiển Phóng to / Thu nhỏ nổi phong cách sáng sủa (Floating Zoom Bar) */}
+                <div className="classroom-floating-zoom" onMouseDown={(e) => e.stopPropagation()}>
+                  <button
+                    type="button"
+                    className="btn-zoom-circle"
+                    onClick={handleZoomOut}
+                    title="Thu nhỏ (-)"
+                    disabled={zoomLevel <= 0.65}
+                  >
+                    <ZoomOut size={16} />
+                  </button>
+                  <span className="zoom-indicator">{Math.round(zoomLevel * 100)}%</span>
+                  <button
+                    type="button"
+                    className="btn-zoom-circle"
+                    onClick={handleZoomIn}
+                    title="Phóng to (+)"
+                    disabled={zoomLevel >= 2.2}
+                  >
+                    <ZoomIn size={16} />
+                  </button>
+                  <div className="zoom-bar-divider" />
+                  <button
+                    type="button"
+                    className="btn-zoom-reset"
+                    onClick={handleResetZoom}
+                    title="Căn vừa màn hình (Reset 100%)"
+                  >
+                    <RotateCcw size={14} />
+                    <span>Vừa vặn</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer cố định luôn nhìn thấy ở đáy, không bao giờ bị cuộn */}
+            <footer className="cinema-modal-footer">
+              <div className="footer-booking-info">
+                <div className="footer-selected-pill-box">
+                  {selectedItems.length > 0 ? (
+                    <div className="pill-selected-badge">
+                      {isTableMode ? <TableMeetingIcon size={16} /> : <Armchair size={16} />}
+                      <span className="pill-name">
+                        {isTableMode ? 'Bàn' : 'Ghế'} <strong>{selectedItems[0]}</strong>
+                      </span>
+                      <span className="pill-sub">
+                        {isTableMode && selectedTable ? `(${selectedTable.capacity} chỗ)` : 'Chỗ ngồi cá nhân'}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="pill-unselected-badge">
+                      <span className="pulse-dot" />
+                      <span>Chạm vào {isTableMode ? 'bàn' : 'ghế'} trên sơ đồ để chọn</span>
+                    </div>
+                  )}
+                </div>
+
+                <span className="footer-meta-time">
+                  <CalendarDays size={14} />
+                  {bookingDate && bookingStartTime && bookingEndTime
+                    ? `${formatDateVI(bookingDate)} · ${bookingStartTime}–${bookingEndTime}`
+                    : 'Khung giờ chọn ở bước 2'}
+                </span>
+              </div>
+
+              <div className="footer-actions">
+                <button type="button" className="btn-cinema-cancel" onClick={onClose}>Hủy</button>
+                <button
+                  type="button"
+                  className="btn-cinema-confirm"
+                  onClick={continueToDetails}
+                  disabled={!selectedItems.length}
+                >
+                  Tiếp tục đặt chỗ →
+                </button>
+              </div>
+            </footer>
+          </>
+        ) : (
+          /* ================== BƯỚC 2: NHẬP THÔNG TIN ĐẶT CHỖ ================== */
+          <main className="booking-details-step">
+            <div className={`selected-resource-summary ${isTableMode ? 'summary-compact-table' : ''}`}>
+              <div className="selected-resource-icon" aria-hidden="true">
+                {isTableMode ? <TableMeetingIcon size={20} strokeWidth={2.3} /> : <Armchair size={23} strokeWidth={2.3} />}
+              </div>
+              <div className="selected-resource-info">
+                <span className="resource-tag">VỊ TRÍ ĐÃ CHỌN</span>
+                <strong className="resource-name">{isTableMode ? 'Bàn' : 'Ghế'} {selectedItems[0]}</strong>
+                <span className="resource-sub">{isTableMode ? `Sức chứa tối đa ${selectedCapacity} người` : 'Chỗ ngồi học tập cá nhân'}</span>
+              </div>
+              <button
+                type="button"
+                className="btn-change-resource"
+                onClick={() => { setStep('SELECT'); setErrorMessage(null); }}
+              >
+                Đổi vị trí
+              </button>
+            </div>
+
+            <form className="selection-booking-form" onSubmit={(event) => { event.preventDefault(); handleConfirmBooking(); }}>
+              <div className="selection-form-field full-width">
+                <label><CalendarDays size={16} /> Ngày sử dụng</label>
+                <DateInputVI className="selection-form-control selection-date-input" value={bookingDate} min={today} onChange={setBookingDate} required />
+              </div>
+
+              <div className="selection-time-grid">
+                <div className="selection-form-field">
+                  <label><Clock3 size={16} /> Giờ bắt đầu</label>
+                  <TimeInput24H value={bookingStartTime} min={openingHour} max={closingHour} onChange={setBookingStartTime} required />
+                </div>
+                <div className="selection-form-field">
+                  <label><Clock3 size={16} /> Giờ kết thúc</label>
+                  <TimeInput24H value={bookingEndTime} min={openingHour} max={closingHour} onChange={setBookingEndTime} required />
+                </div>
+              </div>
+
+              <div className="selection-hours-note">
+                <Clock3 size={14} /> Giờ mở cửa toàn tòa: <strong>{openingHour} – {closingHour}</strong> · Tối đa {Math.floor(maxDurationMinutes / 60)} giờ/lượt
+              </div>
+
+              {isTableMode && (
+                <div className="selection-form-field full-width">
+                  <label>
+                    <Users size={16} /> Số người tham gia
+                    <span className="selection-capacity-hint">(Bàn {selectedItems[0]}: 1 đến tối đa {selectedCapacity} người)</span>
+                  </label>
+                  <input
+                    className="selection-form-control"
+                    type="number"
+                    min={1}
+                    max={selectedCapacity}
+                    value={bookingParticipantCount}
+                    onChange={(event) => setBookingParticipantCount(Math.max(1, Number(event.target.value) || 1))}
+                    required
+                  />
+                </div>
+              )}
+
+              <div className="selection-form-field full-width">
+                <label>Mục đích sử dụng {requiresApproval && <em>*</em>}</label>
+                <textarea
+                  className="selection-form-textarea"
+                  value={bookingPurpose}
+                  onChange={(event) => setBookingPurpose(event.target.value)}
+                  placeholder={isTableMode ? 'Ví dụ: Họp nhóm, thảo luận đồ án, làm bài tập chung...' : 'Ví dụ: Tự học, ôn thi, làm bài tập...'}
+                  required={requiresApproval}
+                />
+              </div>
+
+              <div className="selection-form-actions">
+                <button type="button" className="selection-back-button" onClick={() => { setStep('SELECT'); setErrorMessage(null); }} disabled={submitting}>
+                  <ArrowLeft size={16} /> Quay lại chọn vị trí
+                </button>
+                <button type="submit" className="selection-submit-button" disabled={submitting || loadingData}>
+                  {loadingData
+                    ? 'Đang kiểm tra vị trí...'
+                    : submitting
+                      ? 'Đang xác nhận...'
+                      : <><CheckCircle2 size={17} /> Xác nhận đặt {isTableMode ? 'bàn' : 'ghế'}</>}
+                </button>
+              </div>
+            </form>
+          </main>
+        )}
       </div>
     </div>
   );

@@ -106,6 +106,22 @@ public class CheckInTokenService {
         return checkInService.checkIn(bookingId);
     }
 
+    /**
+     * Resolves a scanned raw token to its booking, then runs the same verification path as the
+     * booking-scoped endpoint. Staff at the door only reads the QR code, so the booking id comes
+     * from the token hash instead of the request path.
+     */
+    @Transactional
+    public BookingResponse scan(String rawToken) {
+        if (rawToken == null || rawToken.isBlank()) {
+            throw invalidToken();
+        }
+        CheckInToken active = tokenRepository
+                .findByTokenHashAndStatus(hash(rawToken.trim()), CheckInTokenStatus.ACTIVE)
+                .orElseThrow(this::invalidToken);
+        return verify(active.getBookingId(), rawToken);
+    }
+
     private Booking lockBooking(Long bookingId) {
         return bookingRepository.findByIdForUpdate(bookingId)
                 .orElseThrow(() -> BusinessException.notFound("BOOKING_NOT_FOUND", "Không tìm thấy booking."));

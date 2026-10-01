@@ -79,6 +79,19 @@ public class DataSeeder implements CommandLineRunner {
             System.out.println("Đã khởi tạo thành công 3 tài khoản test!");
         }
 
+        userRepository.findByEmail("staff@eduspace.vn").ifPresent(user -> {
+            if (user.getUsername() == null || user.getUsername().isBlank()) {
+                user.setUsername("staff");
+                userRepository.save(user);
+            }
+        });
+        userRepository.findByEmail("admin@eduspace.vn").ifPresent(user -> {
+            if (user.getUsername() == null || user.getUsername().isBlank()) {
+                user.setUsername("admin");
+                userRepository.save(user);
+            }
+        });
+
         // Đảm bảo các tài khoản sinh viên mẫu khác luôn khả dụng để test chuyển đổi người dùng
         String defaultStudentPassword = passwordEncoder.encode("123456");
         if (userRepository.findByEmail("sv.anh@eduspace.vn").isEmpty()) {
@@ -123,13 +136,17 @@ public class DataSeeder implements CommandLineRunner {
         if (spaceRepository.count() == 0) {
             SpaceType defaultType = spaceTypeRepository.findAll().stream().findFirst().orElseThrow();
 
-            Space s1 = Space.builder().name("Phòng học nhóm A101").spaceType(defaultType).building("Tòa A").floor("1")
+            Space s1 = Space.builder().name("Phòng học nhóm A101").spaceCode("SP-A101")
+                    .spaceType(defaultType).building("Tòa A").floor("1")
                     .capacity(6).status(SpaceStatus.AVAILABLE).build();
-            Space s2 = Space.builder().name("Phòng học nhóm A102").spaceType(defaultType).building("Tòa A").floor("1")
+            Space s2 = Space.builder().name("Phòng học nhóm A102").spaceCode("SP-A102")
+                    .spaceType(defaultType).building("Tòa A").floor("1")
                     .capacity(8).status(SpaceStatus.AVAILABLE).build();
-            Space s3 = Space.builder().name("Phòng thuyết trình B201").spaceType(defaultType).building("Tòa B")
+            Space s3 = Space.builder().name("Phòng thuyết trình B201").spaceCode("SP-B201")
+                    .spaceType(defaultType).building("Tòa B")
                     .floor("2").capacity(20).status(SpaceStatus.AVAILABLE).build();
-            Space s4 = Space.builder().name("Phòng kỹ thuật C301").spaceType(defaultType).building("Tòa C").floor("3")
+            Space s4 = Space.builder().name("Phòng kỹ thuật C301").spaceCode("SP-C301")
+                    .spaceType(defaultType).building("Tòa C").floor("3")
                     .capacity(4).status(SpaceStatus.MAINTENANCE).build();
             spaceRepository.saveAll(List.of(s1, s2, s3, s4));
             System.out.println("Đã khởi tạo không gian mẫu!");

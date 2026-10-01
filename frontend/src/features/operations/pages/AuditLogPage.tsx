@@ -105,8 +105,8 @@ const UserBadge = ({ log }: { log: OperationsAuditLog }) => (
 
 const StatsCard = ({ icon, label, value, tone }: { icon: React.ReactNode; label: string; value: string; tone: string }) => (
   <div className="audit-stat-card">
+    <div className="audit-stat-info"><span>{label}</span><strong>{value}</strong></div>
     <div className={`audit-stat-icon ${tone}`}>{icon}</div>
-    <div><span>{label}</span><strong>{value}</strong></div>
   </div>
 );
 
@@ -249,8 +249,8 @@ export const AuditLogPage = ({ role }: AuditLogPageProps) => {
       )}
 
       <section className="operations-filter-card audit-filter-card" aria-label="Bộ lọc nhật ký kiểm toán">
-        <label className="operation-field"><span>Từ ngày</span><div className="operation-date-wrap"><input type="date" value={from} onChange={(event) => setFrom(event.target.value)} /></div></label>
-        <label className="operation-field"><span>Đến ngày</span><div className="operation-date-wrap"><input type="date" value={to} onChange={(event) => setTo(event.target.value)} /></div></label>
+        <label className="operation-field"><span>Từ ngày</span><div className="operation-date-wrap"><input type="date" value={from} onChange={(event) => setFrom(event.target.value)} onClick={(e) => { try { e.currentTarget.showPicker?.(); } catch {} }} /></div></label>
+        <label className="operation-field"><span>Đến ngày</span><div className="operation-date-wrap"><input type="date" value={to} onChange={(event) => setTo(event.target.value)} onClick={(e) => { try { e.currentTarget.showPicker?.(); } catch {} }} /></div></label>
         <label className="operation-field"><span>Loại hành động</span><div className="operation-select-wrap"><select value={action} onChange={(event) => setAction(event.target.value as AuditAction | '')}><option value="">Tất cả</option>{allAuditActions.map((item) => <option value={item} key={item}>{actionLabels[item]}</option>)}</select><ChevronDown size={15} /></div></label>
         <label className="operation-field"><span>Không gian</span><div className="operation-select-wrap"><select value={spaceName} onChange={(event) => setSpaceName(event.target.value)}><option value="">Tất cả</option>{spaces.map((space) => <option value={space.name} key={space.id}>{space.name}</option>)}</select><ChevronDown size={15} /></div></label>
         <label className="operation-field"><span>Loại đối tượng</span><div className="operation-select-wrap"><select value={targetType} onChange={(event) => setTargetType(event.target.value)}><option value="">Tất cả</option><option value="BOOKING">Booking</option><option value="MAINTENANCE">Bảo trì</option><option value="STUDENT">Sinh viên</option></select><ChevronDown size={15} /></div></label>

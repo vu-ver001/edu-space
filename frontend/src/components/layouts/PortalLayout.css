@@ -102,6 +102,7 @@
 .sidebar-toggle-btn:focus-visible,
 .brand-link:focus-visible,
 .sidebar-wide-item:focus-visible,
+.sidebar-group-trigger:focus-visible,
 .sidebar-bottom-profile:focus-visible,
 .dropdown-action-btn:focus-visible {
   outline: 2px solid var(--sb-blue, #1d72fe);
@@ -224,6 +225,66 @@
 }
 
 .collapsed .nav-item-text {
+  display: none;
+}
+
+/* ------------------------------------------------ */
+/* NHÓM MENU 2 CẤP (mục cha collapsible)            */
+/* ------------------------------------------------ */
+/* Không dùng gap: khoảng cách 6px được chuyển sang margin-top của container con
+   để lúc đóng không còn khoảng trống chết. */
+.sidebar-wide-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-group-trigger {
+  font-family: inherit;
+  text-align: left;
+  border: 0;
+}
+
+/* grid-template-rows: 0fr → 1fr animate height tới "auto" mà không cần đo scrollHeight.
+   visibility bị trễ lúc đóng để vẫn nhìn thấy nội dung trượt, và gỡ khỏi tab order khi đóng. */
+.sidebar-group-children {
+  display: grid;
+  grid-template-rows: 0fr;
+  margin-top: 0;
+  visibility: hidden;
+  transition: grid-template-rows 0.22s ease, margin-top 0.22s ease, visibility 0s linear 0.22s;
+}
+
+.sidebar-group-children.is-open {
+  grid-template-rows: 1fr;
+  margin-top: 6px;
+  visibility: visible;
+  transition: grid-template-rows 0.22s ease, margin-top 0.22s ease, visibility 0s linear 0s;
+}
+
+/* min-height: 0 bắt buộc — grid item mặc định min-height:auto sẽ không co về 0. */
+.sidebar-group-children-inner {
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 0.14s ease, transform 0.18s ease;
+}
+
+.sidebar-group-children.is-open .sidebar-group-children-inner {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.18s ease 0.08s, transform 0.22s ease 0.04s;
+}
+
+/* Thụt lề so với mục cha: icon cha ở 18px, icon con lùi thêm 18px. */
+.sidebar-wide-item-child {
+  padding-left: 36px;
+}
+
+.collapsed .sidebar-group-children {
   display: none;
 }
 
@@ -458,6 +519,8 @@
 @media (prefers-reduced-motion: reduce) {
   .portal-sidebar-wide,
   .sidebar-wide-item,
+  .sidebar-group-children,
+  .sidebar-group-children-inner,
   .sidebar-toggle-btn,
   .sidebar-bottom-profile,
   .dropdown-action-btn,

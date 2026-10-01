@@ -31,7 +31,7 @@ VALUES
      'Không gian mở, sinh viên lựa chọn từng ghế khi đặt chỗ.',
      'PER_SEAT', FALSE, NULL, DATE_SUB(NOW(), INTERVAL 5 DAY), NOW()),
     ('Study Booth cá nhân',
-     'Khoang học tập yên tĩnh dành cho đúng một sinh viên.',
+     'Khoang học tập yên tĩnh dành cho một hoặc hai sinh viên.',
      'WHOLE_SPACE', FALSE, NULL, DATE_SUB(NOW(), INTERVAL 4 DAY), NOW()),
     ('Phòng thảo luận theo bàn',
      'Phòng được chia thành nhiều bàn nhóm độc lập.',

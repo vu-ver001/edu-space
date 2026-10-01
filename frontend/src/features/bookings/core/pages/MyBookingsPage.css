@@ -608,6 +608,37 @@
   align-items: center;
   gap: 4px;
   margin-bottom: 8px;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.mb-location-icon,
+.mb-location-place,
+.mb-location-separator {
+  flex: 0 0 auto;
+}
+
+.mb-location-icon {
+  margin-right: 3px;
+}
+
+.mb-location-place {
+  white-space: nowrap;
+}
+
+.mb-location-separator {
+  margin: 0 4px;
+  color: #CBD5E1;
+}
+
+.mb-location-type {
+  min-width: 0;
+  overflow: hidden;
+  color: #475569;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mb-time-badge-row {

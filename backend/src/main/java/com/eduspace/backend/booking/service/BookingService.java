@@ -150,21 +150,6 @@ public class BookingService {
                     "Không gian loại [" + space.getSpaceTypeName() + "] chỉ áp dụng đặt trọn gói toàn bộ không gian, không hỗ trợ chọn vị trí ghế hoặc bàn riêng lẻ.");
         }
 
-        // RÀNG BUỘC SỐ LƯỢNG NGƯỜI THAM GIA THEO TỪNG LOẠI KHÔNG GIAN:
-        // 1. Nếu là không gian học nhóm (Bàn nhóm PER_TABLE hoặc Phòng trọn gói WHOLE_SPACE có sức chứa > 1 người):
-        //    Yêu cầu tối thiểu từ 2 người trở lên. Nghiêm cấm 1 người đặt nguyên bàn nhóm hoặc phòng lớn.
-        boolean isGroupSpace = isPerTable || (isWholeSpace && space.getCapacity() > 1);
-        if (isGroupSpace) {
-            if (request.getParticipantCount() == null || request.getParticipantCount() < 2) {
-                throw BusinessException.badRequest("MIN_PARTICIPANTS_REQUIRED", 
-                        "Không gian học nhóm / thảo luận yêu cầu tối thiểu từ 2 người trở lên. Nếu bạn đi 1 mình, vui lòng chọn đặt chỗ ngồi tại Khu tự học cá nhân.");
-            }
-            if (space.getCapacity() > 0 && request.getParticipantCount() > space.getCapacity()) {
-                throw BusinessException.badRequest("SPACE_CAPACITY_EXCEEDED", 
-                        "Số người tham gia (" + request.getParticipantCount() + ") vượt quá sức chứa tối đa của không gian (" + space.getCapacity() + " người).");
-            }
-        }
-
         if (!isWholeSpace && !isPerTable) {
             // PER_SEAT mode: Khu tự học chung
             if (request.getParticipantCount() != 1) {
