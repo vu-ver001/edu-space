@@ -68,6 +68,9 @@ export interface Space {
   allowSeatSelection?: boolean;
   allowTableSelection?: boolean;
   spaceType?: SpaceType;
+  activeSeatCount?: number;
+  activeTableCount?: number;
+  activeTableCapacity?: number;
   nextMaintenance?: MaintenanceSchedule | null;
   upcomingMaintenances?: MaintenanceSchedule[];
 }

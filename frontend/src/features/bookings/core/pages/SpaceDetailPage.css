@@ -682,6 +682,354 @@
   border-color: #86EFAC;
 }
 
+/* Làm mới phần trình bày chi tiết không gian theo phong cách sáng, sang trọng */
+.space-detail-page .space-hero-card {
+  border-color: rgba(203, 213, 225, 0.9);
+  border-radius: 20px;
+  box-shadow: 0 18px 42px -24px rgba(15, 23, 42, 0.35);
+}
+
+.space-detail-page .space-hero-image-box {
+  height: 270px;
+}
+
+.space-detail-page .space-hero-image-box::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.04) 44%, rgba(15, 23, 42, 0.42) 100%);
+}
+
+.space-detail-page .space-hero-img {
+  transition: transform 0.55s cubic-bezier(0.16, 1, 0.3, 1), filter 0.3s ease;
+}
+
+.space-detail-page .space-hero-image-box:hover .space-hero-img {
+  transform: scale(1.045);
+  filter: saturate(1.06) contrast(1.02);
+}
+
+.space-detail-page .hero-badge-pinned,
+.space-detail-page .carousel-dots-indicator,
+.space-detail-page .carousel-count-badge,
+.space-detail-page .carousel-zoom-hint,
+.space-detail-page .carousel-nav-btn {
+  z-index: 12;
+}
+
+.space-detail-page .space-hero-content {
+  padding: 20px 22px 22px;
+}
+
+.space-detail-page .facilities-compact-box {
+  position: relative;
+  padding: 14px 15px;
+  border: 1px solid #dbeafe;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #f8fbff 0%, #f0fdf9 100%);
+  overflow: hidden;
+}
+
+.space-detail-page .facilities-compact-box::after {
+  content: '';
+  position: absolute;
+  top: -35px;
+  right: -25px;
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: rgba(59, 130, 246, 0.07);
+}
+
+.space-detail-page .facilities-compact-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #1e3a8a;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.055em;
+}
+
+.space-detail-page .facilities-compact-label::before {
+  content: '✦';
+  color: #2563eb;
+  font-size: 0.9rem;
+}
+
+.space-detail-page .facility-pill-tag {
+  position: relative;
+  z-index: 1;
+  padding: 6px 11px;
+  border-color: #bbf7d0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 3px 9px rgba(15, 23, 42, 0.05);
+}
+
+/* Card hành động dành riêng cho PER_SEAT / PER_TABLE */
+.position-booking-card {
+  position: relative;
+  overflow: hidden;
+  padding: 28px;
+  border: 1px solid #dbeafe;
+  border-radius: 20px;
+  color: #0f172a;
+  background:
+    radial-gradient(circle at 92% 5%, rgba(96, 165, 250, 0.2), transparent 30%),
+    linear-gradient(160deg, #ffffff 0%, #f8fbff 72%, #eff6ff 100%);
+  box-shadow: 0 20px 48px -25px rgba(30, 64, 175, 0.4);
+}
+
+.position-card-glow {
+  position: absolute;
+  top: -55px;
+  right: -45px;
+  width: 150px;
+  height: 150px;
+  border: 1px solid rgba(147, 197, 253, 0.28);
+  border-radius: 50%;
+  box-shadow: 0 0 0 22px rgba(219, 234, 254, 0.22), 0 0 0 45px rgba(239, 246, 255, 0.32);
+  pointer-events: none;
+}
+
+.position-card-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 11px;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  color: #1d4ed8;
+  background: rgba(239, 246, 255, 0.9);
+  font-size: 0.75rem;
+  font-weight: 750;
+}
+
+.position-card-icon {
+  display: grid;
+  place-items: center;
+  width: 66px;
+  height: 66px;
+  margin: 24px 0 17px;
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  border-radius: 19px;
+  color: #fff;
+  background: linear-gradient(145deg, #60a5fa 0%, #2563eb 55%, #1e40af 100%);
+  box-shadow: 0 14px 28px rgba(37, 99, 235, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.position-booking-card h2 {
+  margin: 0 0 8px;
+  font-size: 1.45rem;
+  font-weight: 850;
+  letter-spacing: -0.025em;
+}
+
+.position-booking-card > p {
+  max-width: 460px;
+  margin: 0;
+  color: #64748b;
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.position-flow-preview {
+  margin: 24px 0 20px;
+  padding: 16px;
+  border: 1px solid rgba(203, 213, 225, 0.85);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+}
+
+.position-flow-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.position-flow-item > span {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  color: #64748b;
+  background: #e2e8f0;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.position-flow-item.active > span {
+  color: #fff;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  box-shadow: 0 5px 12px rgba(37, 99, 235, 0.24);
+}
+
+.position-flow-item div {
+  display: flex;
+  flex-direction: column;
+}
+
+.position-flow-item strong {
+  color: #1e293b;
+  font-size: 0.83rem;
+}
+
+.position-flow-item small {
+  margin-top: 1px;
+  color: #94a3b8;
+  font-size: 0.72rem;
+}
+
+.position-flow-connector {
+  width: 1px;
+  height: 14px;
+  margin: 3px 0 3px 14px;
+  background: #cbd5e1;
+}
+
+.position-card-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.position-card-meta span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 11px;
+  color: #64748b;
+  background: rgba(255, 255, 255, 0.75);
+  font-size: 0.7rem;
+}
+
+.position-card-meta strong {
+  color: #1e293b;
+  font-size: 0.8rem;
+}
+
+.position-card-schedule-prompt {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 14px;
+  padding: 12px 13px;
+  border: 1px dashed #93c5fd;
+  border-radius: 12px;
+  color: #1e3a8a;
+  background: rgba(239, 246, 255, 0.72);
+}
+
+.position-schedule-icon {
+  display: grid;
+  place-items: center;
+  width: 31px;
+  height: 31px;
+  flex: 0 0 auto;
+  border-radius: 9px;
+  color: #2563eb;
+  background: #dbeafe;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.position-card-schedule-prompt div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.position-card-schedule-prompt strong {
+  color: #1e293b;
+  font-size: 0.8rem;
+}
+
+.position-card-schedule-prompt p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.position-card-cta {
+  width: 100%;
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border: 0;
+  border-radius: 12px;
+  color: #fff;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.25);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.position-card-cta:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px rgba(37, 99, 235, 0.33);
+}
+
+.position-card-cta:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.position-card-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 14px;
+  color: #64748b;
+}
+
+.position-card-note > span {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  color: #047857;
+  background: #d1fae5;
+  font-size: 0.65rem;
+  font-weight: 900;
+}
+
+.position-card-note p {
+  margin: 0;
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 680px) {
+  .space-detail-page .space-hero-image-box {
+    height: 220px;
+  }
+
+  .position-booking-card {
+    padding: 21px;
+  }
+
+  .position-card-meta {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ========================================================
    CỘT PHẢI: CARD FORM ĐẶT CHỖ (Mở rộng chiều ngang, vừa vặn chiều cao)
    ======================================================== */

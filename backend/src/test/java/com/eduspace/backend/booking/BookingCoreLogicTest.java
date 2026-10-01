@@ -309,21 +309,34 @@ class BookingCoreLogicTest {
         }
 
         @Test
-        @DisplayName("1.6. Tìm cho 1 người trả PER_SEAT và Study Booth sức chứa 1")
-        void testSearch_OneParticipant_ReturnsIndividualSpaces() {
+        @DisplayName("1.6. WHOLE_SPACE và PER_TABLE xuất hiện khi tìm từ 1 người đến đúng sức chứa")
+        void testSearch_WholeSpaceAndPerTable_AcceptOneToCapacity() {
             Space wholeSpace = createDatabaseSpace(1L, "Phòng nhóm", BookingMode.WHOLE_SPACE, 6);
             Space perSeatSpace = createDatabaseSpace(4L, "Khu tự học", BookingMode.PER_SEAT, 10);
-            Space studyBooth = createDatabaseSpace(5L, "Study Booth", BookingMode.WHOLE_SPACE, 1);
+            Space studyBooth = createDatabaseSpace(5L, "Study Booth", BookingMode.WHOLE_SPACE, 3);
             Space perTableSpace = createDatabaseSpace(7L, "Phòng theo bàn", BookingMode.PER_TABLE, 24);
             when(spaceRepository.findAllByDeletedAtIsNull())
                     .thenReturn(List.of(wholeSpace, perSeatSpace, studyBooth, perTableSpace));
             when(seatRepository.findBySpaceIdAndDeletedAtIsNull(4L)).thenReturn(List.of(
                     Seat.builder().id(401L).space(perSeatSpace).seatCode("S01").status(SeatStatus.AVAILABLE).build()
             ));
+            when(spaceTableRepository.findBySpaceIdAndDeletedAtIsNull(7L)).thenReturn(List.of(
+                    SpaceTable.builder()
+                            .id(701L)
+                            .space(perTableSpace)
+                            .tableCode("T01")
+                            .capacity(4)
+                            .status(SpaceTableStatus.AVAILABLE)
+                            .build()
+            ));
 
-            List<SpaceResponse> result = availabilityService.searchAvailableSpaces(createSearchFilter(1));
+            List<SpaceResponse> oneParticipant = availabilityService.searchAvailableSpaces(createSearchFilter(1));
+            List<SpaceResponse> threeParticipants = availabilityService.searchAvailableSpaces(createSearchFilter(3));
+            List<SpaceResponse> fourParticipants = availabilityService.searchAvailableSpaces(createSearchFilter(4));
 
-            assertEquals(List.of(4L, 5L), result.stream().map(SpaceResponse::getId).toList());
+            assertEquals(List.of(1L, 4L, 5L, 7L), oneParticipant.stream().map(SpaceResponse::getId).toList());
+            assertTrue(threeParticipants.stream().map(SpaceResponse::getId).toList().contains(5L));
+            assertFalse(fourParticipants.stream().map(SpaceResponse::getId).toList().contains(5L));
         }
 
         @Test
@@ -460,6 +473,28 @@ class BookingCoreLogicTest {
         }
 
         @Test
+        @DisplayName("2.1b. [WHOLE_SPACE] Một sinh viên được đặt trọn phòng cho 1 người")
+        void testCreateBooking_WholeSpace_AllowsOneParticipant() {
+            Long spaceId = 1L;
+            when(bookingRepository.findOverlappingSpaceBookings(eq(spaceId), any(), any(), any()))
+                    .thenReturn(Collections.emptyList());
+
+            CreateBookingRequest request = CreateBookingRequest.builder()
+                    .spaceId(spaceId)
+                    .startTime(baseTime)
+                    .endTime(baseTime.plusHours(2))
+                    .participantCount(1)
+                    .purpose("Tự học cá nhân trong phòng")
+                    .build();
+
+            BookingResponse response = bookingService.createBooking(request, student.getEmail());
+
+            assertEquals(BookingStatus.PENDING_APPROVAL, response.getStatus());
+            assertTrue(response.isRequiresApproval());
+            assertEquals(1, response.getParticipantCount());
+        }
+
+        @Test
         @DisplayName("2.2. [PER_TABLE] Thiếu lý do sử dụng -> Báo lỗi PURPOSE_REQUIRED")
         void testCreateBooking_PerTable_MissingPurpose() {
             Long spaceId = 7L;
@@ -498,7 +533,7 @@ class BookingCoreLogicTest {
         }
 
         @Test
-        @DisplayName("2.4. [PER_TABLE] Hợp lệ -> Chờ duyệt PENDING_APPROVAL, requiresApproval = true")
+        @DisplayName("2.4. [PER_TABLE] Một người vẫn được chọn bàn và chờ duyệt")
         void testCreateBooking_PerTable_Success() {
             Long spaceId = 7L;
             Space space = Space.builder().id(spaceId).name("Phòng D-201").build();
@@ -512,8 +547,8 @@ class BookingCoreLogicTest {
                     .spaceId(spaceId)
                     .startTime(baseTime)
                     .endTime(baseTime.plusHours(2))
-                    .participantCount(4)
-                    .purpose("Thảo luận nhóm đề án môn học")
+                    .participantCount(1)
+                    .purpose("Tự học tại bàn thảo luận")
                     .tableId(2L)
                     .build();
 

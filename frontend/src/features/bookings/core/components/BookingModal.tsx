@@ -31,6 +31,9 @@ export const BookingModal: React.FC<Props> = ({
   onSuccess
 }) => {
   const today = toLocalDateString(new Date());
+  const isStudyBooth = `${space.spaceTypeName || ''} ${space.spaceType?.name || ''}`
+    .toLowerCase()
+    .includes('booth');
   const [date, setDate] = useState<string>(defaultDate || today);
   const [startTime, setStartTime] = useState<string>(
     defaultStartTime ? defaultStartTime.substring(0, 5) : '09:00'
@@ -38,7 +41,9 @@ export const BookingModal: React.FC<Props> = ({
   const [endTime, setEndTime] = useState<string>(
     defaultEndTime ? defaultEndTime.substring(0, 5) : '11:00'
   );
-  const [participantCount, setParticipantCount] = useState<number | string>(defaultCount || 2);
+  const [participantCount, setParticipantCount] = useState<number | string>(
+    defaultCount || (isStudyBooth ? 1 : 2)
+  );
   const [purpose, setPurpose] = useState<string>('');
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [errorInfo, setErrorInfo] = useState<{ code: string; message: string; details?: any[] } | null>(null);
@@ -51,7 +56,6 @@ export const BookingModal: React.FC<Props> = ({
   const isPerSeat = bookingMode === 'PER_SEAT';
   const isPerTable = bookingMode === 'PER_TABLE';
   const isWholeSpace = !isPerSeat && !isPerTable;
-  const isGroupSpace = isPerTable || (isWholeSpace && (space.capacity ?? 1) > 1);
   // LOGIC MỚI: PER_SEAT duyệt tức thì (false), PER_TABLE & WHOLE_SPACE chờ Staff duyệt (true)
   const requiresApproval = space.requiresApproval !== undefined ? space.requiresApproval : !isPerSeat;
 
@@ -64,14 +68,6 @@ export const BookingModal: React.FC<Props> = ({
       setErrorInfo({
         code: 'PURPOSE_REQUIRED',
         message: 'Vui lòng nhập mục đích sử dụng (bắt buộc đối với phòng trọn gói và đặt theo bàn).'
-      });
-      return;
-    }
-
-    if (isGroupSpace && Number(participantCount) < 2) {
-      setErrorInfo({
-        code: 'MIN_PARTICIPANTS_REQUIRED',
-        message: 'Không gian học nhóm / thảo luận yêu cầu tối thiểu từ 2 người trở lên. Nếu bạn đi 1 mình, vui lòng chọn đặt chỗ ngồi tại Khu tự học cá nhân.'
       });
       return;
     }
@@ -222,7 +218,15 @@ export const BookingModal: React.FC<Props> = ({
                 max={space.capacity}
                 required
               />
-              <small className="form-hint">Tối đa {space.capacity} người</small>
+              <small className="form-hint">
+                {isStudyBooth
+                  ? `Study Booth được đặt trọn cho từ 1 đến ${space.capacity} người`
+                  : isWholeSpace
+                  ? `Đặt trọn không gian cho từ 1 đến ${space.capacity} người`
+                  : isPerTable
+                  ? `Chọn bàn phù hợp cho từ 1 đến ${space.capacity} người`
+                  : `Tối đa ${space.capacity} người`}
+              </small>
             </div>
 
             <div className="form-group">

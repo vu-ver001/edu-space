@@ -499,13 +499,13 @@ export const MyBookingsPage: React.FC = () => {
                       </div>
 
                       <div className="mb-space-location">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 3 }}>
+                        <svg className="mb-location-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
                           <circle cx="12" cy="10" r="3"/>
                         </svg>
-                        <span>{b.building} • {b.floor}</span>
-                        <span style={{ margin: '0 4px', color: '#CBD5E1' }}>•</span>
-                        <span style={{ color: '#475569' }}>{b.spaceTypeName}</span>
+                        <span className="mb-location-place">{b.building} • {b.floor}</span>
+                        <span className="mb-location-separator">•</span>
+                        <span className="mb-location-type" title={b.spaceTypeName}>{b.spaceTypeName}</span>
                       </div>
 
                       <div className="mb-time-badge-row">
@@ -514,7 +514,7 @@ export const MyBookingsPage: React.FC = () => {
                             <circle cx="12" cy="12" r="10"/>
                             <polyline points="12 6 12 12 16 14"/>
                           </svg>
-                          {startInfo.timeStr} – {endInfo.timeStr} • {startInfo.fullDate}
+                          {startInfo.timeStr} – {endInfo.timeStr}
                         </span>
                         <span className="mb-participants-tag">
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4, verticalAlign: '-1px' }}>
@@ -523,7 +523,7 @@ export const MyBookingsPage: React.FC = () => {
                             <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
                             <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
                           </svg>
-                          {b.participantCount} người
+                          {b.participantCount}
                         </span>
                       </div>
                     </div>
