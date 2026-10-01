@@ -5,7 +5,7 @@ import { formatMaintenanceTime, TableMeetingIcon } from '../components/RoomCard'
 import { DateInputVI, formatMessageDatesVI } from '../components/DateInputVI';
 import { TimeInput24H } from '../components/TimeInput24H';
 import { Armchair, Building2 } from 'lucide-react';
-import type { Space, MaintenanceSchedule } from '../services/spaceService';
+import type { Space, SpaceSeat, SpaceTable, MaintenanceSchedule } from '../services/spaceService';
 import { spaceService } from '../services/spaceService';
 import { bookingService } from '../services/bookingService';
 import './SpaceDetailPage.css';
@@ -28,10 +28,18 @@ export const SpaceDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const presetDate = searchParams.get('date') || '';
+  const presetStartTime = searchParams.get('startTime')?.substring(0, 5) || '';
+  const presetEndTime = searchParams.get('endTime')?.substring(0, 5) || '';
+  const hasPresetDate = Boolean(presetDate);
+  const hasPresetTime = Boolean(presetStartTime || presetEndTime);
+  const hasAnyPresetSchedule = hasPresetDate || hasPresetTime;
 
   const [space, setSpace] = useState<Space | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [spaceSeats, setSpaceSeats] = useState<SpaceSeat[]>([]);
+  const [spaceTables, setSpaceTables] = useState<SpaceTable[]>([]);
 
   const normalizeTime = (t: string | null, fallback: string) => {
     if (!t) return fallback;
@@ -147,8 +155,10 @@ export const SpaceDetailPage: React.FC = () => {
   const isPerSeat = bookingMode === 'PER_SEAT'; // Khu tự học chung (Mở) -> Chọn theo ghế
   const isPerTable = bookingMode === 'PER_TABLE'; // Phòng thảo luận theo bàn -> Chọn theo bàn
   const isWholeSpace = !isPerSeat && !isPerTable;
-  // Không gian nhóm: Bàn nhóm (PER_TABLE) hoặc Không gian trọn gói (WHOLE_SPACE) có sức chứa > 1 người
-  const isGroupSpace = isPerTable || (isWholeSpace && (space?.capacity ?? 1) > 1);
+  const isStudyBooth = `${space?.spaceTypeName || ''} ${space?.spaceType?.name || ''}`
+    .toLowerCase()
+    .includes('booth');
+  // WHOLE_SPACE và PER_TABLE đều nhận từ 1 người đến đúng sức chứa.
 
   // LOGIC LIÊN KẾT CSDL: Lấy trực tiếp từ space.requiresApproval (cột space_types.requires_approval của Kim Tuyến)
   const requiresApproval = space?.requiresApproval ?? (space?.spaceType?.requiresApproval ?? !isPerSeat);
@@ -161,6 +171,11 @@ export const SpaceDetailPage: React.FC = () => {
       return;
     }
 
+    if (isWholeSpace && !searchParams.get('participantCount')) {
+      setParticipantCount(1);
+      return;
+    }
+
     if (space?.capacity) {
       setParticipantCount((current) => {
         const count = Number(current);
@@ -168,7 +183,7 @@ export const SpaceDetailPage: React.FC = () => {
         return Math.min(Math.trunc(count), space.capacity);
       });
     }
-  }, [isPerSeat, space?.capacity]);
+  }, [isPerSeat, isWholeSpace, searchParams, space?.capacity]);
 
   // Quản lý danh sách hình ảnh (lấy từ bảng space_images) & Slider/Carousel
   const [spaceImages, setSpaceImages] = useState<string[]>([]);
@@ -270,6 +285,8 @@ export const SpaceDetailPage: React.FC = () => {
         });
       }
     }).catch(() => {});
+    spaceService.getSeatsBySpace(Number(id)).then((res) => setSpaceSeats(res || [])).catch(() => setSpaceSeats([]));
+    spaceService.getTablesBySpace(Number(id)).then((res) => setSpaceTables(res || [])).catch(() => setSpaceTables([]));
   }, [id]);
 
   const hasMultipleImages = spaceImages.length > 1;
@@ -386,23 +403,12 @@ export const SpaceDetailPage: React.FC = () => {
       return;
     }
 
-    // Kiểm tra ràng buộc số người tham gia:
-    // Không gian nhóm (bàn nhóm PER_TABLE hoặc phòng trọn gói WHOLE_SPACE có sức chứa > 1) yêu cầu tối thiểu 2 người
-    if (isGroupSpace && Number(participantCount) < 2) {
-      setBookingError('Không gian học nhóm / thảo luận yêu cầu tối thiểu từ 2 người trở lên. Nếu bạn đi 1 mình, vui lòng chọn đặt chỗ ngồi tại Khu tự học cá nhân.');
-      return;
-    }
     if (space?.capacity && Number(participantCount) > space.capacity) {
       setBookingError(`Số người tham gia (${participantCount}) vượt quá sức chứa tối đa (${space.capacity} người) của không gian này.`);
       return;
     }
 
     // 1. Nếu là PER_SEAT hoặc PER_TABLE: Mở modal chọn chỗ ngồi hoặc chọn bàn
-    if (isPerSeat || isPerTable) {
-      setIsSeatModalOpen(true);
-      return;
-    }
-
     // 2. Nếu là WHOLE_SPACE (Study Booth, phòng nhóm, thuyết trình...): Đặt phòng như bình thường trực tiếp!
     if (!space) return;
     setSubmitting(true);
@@ -513,7 +519,10 @@ export const SpaceDetailPage: React.FC = () => {
         <button
           type="button"
           className="btn-back-link"
-          onClick={() => navigate('/student/spaces')}
+          onClick={() => {
+            const preservedFilter = searchParams.toString();
+            navigate(`/student/spaces${preservedFilter ? `?${preservedFilter}` : ''}`);
+          }}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <line x1="19" y1="12" x2="5" y2="12" />
@@ -722,7 +731,15 @@ export const SpaceDetailPage: React.FC = () => {
                   </span>
                   <div>
                     <span className="spec-compact-label">Sức chứa</span>
-                    <strong className="spec-compact-val">{space.capacity} người</strong>
+                    <strong className="spec-compact-val">
+                      {isPerSeat
+                        ? (spaceSeats.length > 0 ? `${spaceSeats.length} ghế` : (space.activeSeatCount ? `${space.activeSeatCount} ghế` : `${space.capacity} ghế`))
+                        : isPerTable
+                        ? (spaceTables.length > 0
+                            ? `${spaceTables.length} bàn (${spaceTables.reduce((s, t) => s + (t.capacity || 0), 0)} chỗ)`
+                            : (space.activeTableCount ? `${space.activeTableCount} bàn (${space.capacity} chỗ)` : `${space.capacity} người`))
+                        : `${space.capacity} người`}
+                    </strong>
                   </div>
                 </div>
 
@@ -801,6 +818,7 @@ export const SpaceDetailPage: React.FC = () => {
 
         {/* CỘT PHẢI: CARD FORM ĐẶT CHỖ (ẢNH 2) */}
         <div className="space-detail-right">
+          {isWholeSpace ? (
           <div className="booking-form-sticky-card">
             <div className="card-form-header">
               <h3 className="form-card-title">Đặt chỗ không gian này</h3>
@@ -945,13 +963,17 @@ export const SpaceDetailPage: React.FC = () => {
                   <span className="participant-capacity-hint">
                     Khu tự học cá nhân: Cố định <strong>1 sinh viên / 1 chỗ ngồi</strong>
                   </span>
-                ) : isGroupSpace ? (
+                ) : isStudyBooth ? (
                   <span className="participant-capacity-hint">
-                    Không gian nhóm: Tối thiểu <strong>2 người</strong>, tối đa <strong>{space.capacity} người</strong>
+                    Study Booth: Từ <strong>1 người</strong> đến tối đa <strong>{space.capacity} người</strong>; một lượt đặt giữ trọn booth
+                  </span>
+                ) : isPerTable ? (
+                  <span className="participant-capacity-hint">
+                    Bàn thảo luận: Từ <strong>1 người</strong> đến tối đa <strong>{space.capacity} người</strong>; chọn bàn đủ chỗ
                   </span>
                 ) : (
                   <span className="participant-capacity-hint">
-                    Sức chứa tối đa: <strong>{space.capacity} người</strong>
+                    Đặt trọn không gian: Từ <strong>1 người</strong> đến tối đa <strong>{space.capacity} người</strong>
                   </span>
                 )}
               </div>
@@ -1026,28 +1048,120 @@ export const SpaceDetailPage: React.FC = () => {
 
               <p className="form-step-hint">
                 {isPerSeat ? (
-                  <>💡 Bấm <strong>Chọn chỗ ngồi & Đặt chỗ</strong> để mở sơ đồ chọn ghế cá nhân (S01 - S10). Chế độ đặt theo chỗ ngồi được duyệt tự động ngay lập tức, không bắt buộc điền mục đích sử dụng.</>
+                  <>💡 Bấm <strong>Chọn chỗ ngồi & Đặt chỗ</strong> để mở sơ đồ chọn ghế cá nhân ({spaceSeats.length > 0 ? `${spaceSeats.length} ghế` : 'trực quan'}). Chế độ đặt theo chỗ ngồi được duyệt tự động ngay lập tức, không bắt buộc điền mục đích sử dụng.</>
                 ) : isPerTable ? (
-                  <>💡 Bàn thảo luận nhóm yêu cầu tối thiểu 2 người trở lên (chỉ chọn bàn có sức chứa đủ cho nhóm). Bắt buộc điền mục đích sử dụng và chờ Staff xét duyệt.</>
+                  <>💡 Một sinh viên có thể đặt bàn cho từ 1 người đến sức chứa của bàn đã chọn. Bắt buộc điền mục đích sử dụng và chờ Staff xét duyệt.</>
+                ) : isStudyBooth ? (
+                  <>💡 Một sinh viên đại diện đặt <strong>toàn bộ Study Booth</strong> cho nhóm từ 1 đến {space?.capacity} người. Bắt buộc điền mục đích sử dụng và chờ Staff xét duyệt.</>
                 ) : (
-                  <>💡 <strong>{space?.name}</strong> là phòng nhóm trọn không gian (tối thiểu 2 người, tối đa {space?.capacity} người). Bắt buộc điền mục đích sử dụng và chờ Staff xét duyệt.</>
+                  <>💡 Một sinh viên đại diện đặt <strong>toàn bộ {space?.name}</strong> cho từ 1 đến {space?.capacity} người. Bắt buộc điền mục đích sử dụng và chờ Staff xét duyệt.</>
                 )}
               </p>
             </form>
           </div>
+          ) : (
+            <div className="position-booking-card">
+              <div className="position-card-glow" />
+              <div className="position-card-badge">
+                {isPerTable ? <TableMeetingIcon size={16} /> : <Armchair size={16} />}
+                {isPerTable ? 'Đặt theo bàn' : 'Đặt theo ghế'}
+              </div>
+
+              <div className="position-card-icon">
+                {isPerTable ? <TableMeetingIcon size={34} strokeWidth={1.9} /> : <Armchair size={34} strokeWidth={1.9} />}
+              </div>
+              <h2>Chọn vị trí yêu thích</h2>
+              <p>
+                {isPerTable
+                  ? 'Xem sơ đồ bàn trực quan, chọn bàn phù hợp với nhóm rồi nhập thông tin đặt chỗ.'
+                  : 'Xem sơ đồ chỗ ngồi, chọn đúng vị trí bạn muốn rồi hoàn tất thông tin đặt chỗ.'}
+              </p>
+
+              <div className="position-flow-preview">
+                <div className="position-flow-item active">
+                  <span>1</span>
+                  <div><strong>Chọn {isPerTable ? 'bàn' : 'ghế'}</strong><small>Trên sơ đồ không gian</small></div>
+                </div>
+                <div className="position-flow-connector" />
+                <div className="position-flow-item">
+                  <span>2</span>
+                  <div><strong>Nhập thông tin</strong><small>Ngày, giờ và số người</small></div>
+                </div>
+                <div className="position-flow-connector" />
+                <div className="position-flow-item">
+                  <span>3</span>
+                  <div><strong>Xác nhận</strong><small>Gửi yêu cầu đặt chỗ</small></div>
+                </div>
+              </div>
+
+              {hasAnyPresetSchedule ? (
+                <div className="position-card-meta">
+                  <span>
+                    Ngày dự kiến
+                    <strong>{hasPresetDate ? presetDate.split('-').reverse().join('/') : 'Chưa chọn'}</strong>
+                  </span>
+                  <span>
+                    Khung giờ
+                    <strong>
+                      {hasPresetTime
+                        ? `${presetStartTime || 'Chưa chọn'} – ${presetEndTime || 'Chưa chọn'}`
+                        : 'Chưa chọn'}
+                    </strong>
+                  </span>
+                </div>
+              ) : (
+                <div className="position-card-schedule-prompt">
+                  <span className="position-schedule-icon">○</span>
+                  <div>
+                    <strong>Chưa chọn ngày và khung giờ</strong>
+                    <p>Bạn sẽ nhập thời gian sử dụng ở bước tiếp theo sau khi chọn vị trí.</p>
+                  </div>
+                </div>
+              )}
+
+              <button
+                type="button"
+                className="position-card-cta"
+                disabled={space?.status != null && space.status !== 'AVAILABLE'}
+                onClick={() => {
+                  setBookingError(null);
+                  setIsSeatModalOpen(true);
+                }}
+              >
+                {isPerTable ? <TableMeetingIcon size={20} /> : <Armchair size={20} />}
+                {space?.status === 'MAINTENANCE'
+                  ? 'Không gian đang bảo trì'
+                  : space?.status === 'INACTIVE'
+                    ? 'Không gian tạm ngưng'
+                    : `Chọn ${isPerTable ? 'bàn' : 'ghế'} để đặt chỗ`}
+              </button>
+
+              <div className="position-card-note">
+                <span>✓</span>
+                <p>
+                  {isPerTable
+                    ? 'Số người được kiểm tra theo sức chứa thực tế của bàn bạn chọn.'
+                    : 'Mỗi sinh viên chọn một ghế cá nhân cho mỗi lượt đặt.'}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Modal sơ đồ chọn Chỗ ngồi (PER_SEAT) hoặc Bàn thảo luận (PER_TABLE) */}
       {(isPerSeat || isPerTable) && isSeatModalOpen && (
-        <SeatSelectionModal
-          space={space}
-          date={date}
-          startTime={startTime}
-          endTime={endTime}
-          participantCount={isPerSeat ? 1 : (Number(participantCount) || 2)}
+          <SeatSelectionModal
+            space={space}
+            date={presetDate}
+            startTime={presetStartTime}
+            endTime={presetEndTime}
+          participantCount={isPerSeat ? 1 : (Number(participantCount) || 1)}
           purpose={purpose}
           mode={isPerTable ? 'TABLE' : 'SEAT'}
+          openingHour={operatingHours.openingHour}
+          closingHour={operatingHours.closingHour}
+          maxDurationMinutes={operatingHours.maxDurationMinutes}
           onClose={() => setIsSeatModalOpen(false)}
           onSuccess={handleBookingSuccess}
         />

@@ -143,6 +143,7 @@
 
 .modal-error-banner span {
   flex: 1;
+  white-space: pre-line;
 }
 
 @keyframes modalShake {

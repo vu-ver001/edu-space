@@ -27,3 +27,13 @@ export const readSpaceApiError = (
     details: [],
   };
 };
+
+/** Hiển thị đầy đủ từng nguyên nhân nghiệp vụ trong hộp thoại xóa không gian. */
+export const formatSpaceDeleteError = (error: SpaceApiErrorPayload): string => {
+  const detailMessages = error.details
+    .filter((detail): detail is string => typeof detail === 'string')
+    .map((detail) => detail.replace(/^[^:]+:\s*/, '').trim())
+    .filter(Boolean);
+
+  return detailMessages.length > 0 ? detailMessages.join('\n') : error.message;
+};

@@ -1,10 +1,13 @@
 package com.eduspace.backend.space.service;
 
+import com.eduspace.backend.booking.entity.BookingStatus;
+import com.eduspace.backend.booking.repository.BookingRepository;
 import com.eduspace.backend.space.dto.request.SpaceCreateRequestKT;
 import com.eduspace.backend.space.dto.request.SpaceUpdateRequestKT;
 import com.eduspace.backend.space.dto.response.SpaceResponseKT;
 import com.eduspace.backend.space.entity.*;
 import com.eduspace.backend.common.exception.AppException;
+import com.eduspace.backend.common.exception.BusinessException;
 import com.eduspace.backend.space.dto.response.SpaceImageResponseKT;
 import com.eduspace.backend.space.repository.FacilityRepository;
 import com.eduspace.backend.space.repository.SeatRepository;
@@ -12,12 +15,14 @@ import com.eduspace.backend.space.repository.SpaceImageRepository;
 import com.eduspace.backend.space.repository.SpaceRepository;
 import com.eduspace.backend.space.repository.SpaceTableRepository;
 import com.eduspace.backend.space.repository.SpaceTypeRepository;
+import com.eduspace.backend.staff.repository.MaintenanceBlockRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -27,12 +32,20 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SpaceService {
 
+    private static final Set<BookingStatus> DELETE_BLOCKING_BOOKING_STATUSES = Set.of(
+            BookingStatus.PENDING_APPROVAL,
+            BookingStatus.CONFIRMED,
+            BookingStatus.CHECKED_IN
+    );
+
     private final SpaceRepository spaceRepository;
     private final SpaceTypeRepository spaceTypeRepository;
     private final FacilityRepository facilityRepository;
     private final SeatRepository seatRepository;
     private final SpaceTableRepository spaceTableRepository;
     private final SpaceImageRepository spaceImageRepository;
+    private final BookingRepository bookingRepository;
+    private final MaintenanceBlockRepository maintenanceBlockRepository;
 
     @Transactional(readOnly = true)
     public List<SpaceResponseKT> getSpacesFiltered(
@@ -159,32 +172,34 @@ public class SpaceService {
             space.setSpaceCode(newCode);
         }
 
-        // Quy tắc 1: Nếu là PER_SEAT và giảm capacity dưới số active seats -> 409 CAPACITY_LOWER_THAN_ACTIVE_SEATS
+        // Kiểm tra toàn bộ ràng buộc sức chứa và loại không gian trước khi trả lỗi,
+        // để frontend có thể hiển thị đồng thời lỗi dưới tất cả trường liên quan.
         long activeSeatCount = seatRepository.countBySpaceIdAndDeletedAtIsNull(id);
+        String capacityErrorCode = null;
+        String capacityErrorMessage = null;
+
         if (space.getSpaceType() != null && space.getSpaceType().getBookingMode() == BookingMode.PER_SEAT) {
             if (request.getCapacity() < activeSeatCount) {
-                throw new AppException(
-                        HttpStatus.CONFLICT,
-                        "CAPACITY_LOWER_THAN_ACTIVE_SEATS",
-                        "Sức chứa mới (" + request.getCapacity() + ") không thể nhỏ hơn số chỗ ngồi đang hoạt động (" + activeSeatCount + " chỗ)."
-                );
+                capacityErrorCode = "CAPACITY_LOWER_THAN_ACTIVE_SEATS";
+                capacityErrorMessage = "Sức chứa mới (" + request.getCapacity()
+                        + ") không thể nhỏ hơn số chỗ ngồi đang hoạt động (" + activeSeatCount + " chỗ).";
             }
         }
 
-        // Quy tắc 1b: Nếu là PER_TABLE và giảm capacity dưới tổng capacity của active tables -> 409 CAPACITY_LOWER_THAN_ACTIVE_TABLE_CAPACITY
         if (space.getSpaceType() != null && space.getSpaceType().getBookingMode() == BookingMode.PER_TABLE) {
             int activeTableCapacity = spaceTableRepository.sumActiveCapacityBySpaceId(id);
             if (request.getCapacity() < activeTableCapacity) {
-                throw new AppException(
-                        HttpStatus.CONFLICT,
-                        "CAPACITY_LOWER_THAN_ACTIVE_TABLE_CAPACITY",
-                        "Sức chứa mới (" + request.getCapacity() + ") không thể nhỏ hơn tổng sức chứa của các bàn đang hoạt động (" + activeTableCapacity + " chỗ)."
-                );
+                capacityErrorCode = "CAPACITY_LOWER_THAN_ACTIVE_TABLE_CAPACITY";
+                capacityErrorMessage = "Sức chứa mới (" + request.getCapacity()
+                        + ") không thể nhỏ hơn tổng sức chứa của các bàn đang hoạt động ("
+                        + activeTableCapacity + " chỗ).";
             }
         }
 
-        // Quy tắc 2: Nếu đổi SpaceType
         SpaceType targetSpaceType = space.getSpaceType();
+        String spaceTypeErrorCode = null;
+        String spaceTypeErrorMessage = null;
+
         if (request.getSpaceTypeId() != null && !request.getSpaceTypeId().equals(space.getSpaceType().getId())) {
             targetSpaceType = spaceTypeRepository.findByIdAndDeletedAtIsNull(request.getSpaceTypeId())
                     .orElseThrow(() -> new AppException(
@@ -196,24 +211,42 @@ public class SpaceService {
             if (space.getSpaceType().getBookingMode() == BookingMode.PER_SEAT
                     && targetSpaceType.getBookingMode() != BookingMode.PER_SEAT
                     && activeSeatCount > 0) {
-                throw new AppException(
-                        HttpStatus.CONFLICT,
-                        "SPACE_HAS_ACTIVE_SEATS",
-                        "Không thể chuyển loại phòng vì không gian đang có " + activeSeatCount + " chỗ ngồi hoạt động."
-                );
+                spaceTypeErrorCode = "SPACE_HAS_ACTIVE_SEATS";
+                spaceTypeErrorMessage = "Không thể chuyển loại phòng vì không gian đang có "
+                        + activeSeatCount + " chỗ ngồi hoạt động.";
             }
 
             if (space.getSpaceType().getBookingMode() == BookingMode.PER_TABLE
                     && targetSpaceType.getBookingMode() != BookingMode.PER_TABLE) {
                 long activeTableCount = spaceTableRepository.countBySpaceIdAndDeletedAtIsNull(id);
                 if (activeTableCount > 0) {
-                    throw new AppException(
-                            HttpStatus.CONFLICT,
-                            "SPACE_HAS_ACTIVE_TABLES",
-                            "Không thể chuyển loại phòng vì không gian đang có " + activeTableCount + " bàn hoạt động."
-                    );
+                    spaceTypeErrorCode = "SPACE_HAS_ACTIVE_TABLES";
+                    spaceTypeErrorMessage = "Không thể chuyển loại phòng vì không gian đang có "
+                            + activeTableCount + " bàn hoạt động.";
                 }
             }
+        }
+
+        List<String> constraintDetails = new ArrayList<>();
+        if (capacityErrorMessage != null) {
+            constraintDetails.add("capacity: " + capacityErrorMessage);
+        }
+        if (spaceTypeErrorMessage != null) {
+            constraintDetails.add("spaceTypeId: " + spaceTypeErrorMessage);
+        }
+
+        if (constraintDetails.size() > 1) {
+            throw BusinessException.conflict(
+                    "SPACE_UPDATE_CONSTRAINT_VIOLATIONS",
+                    "Không thể cập nhật không gian vì có nhiều thông tin chưa phù hợp.",
+                    constraintDetails
+            );
+        }
+        if (capacityErrorMessage != null) {
+            throw new AppException(HttpStatus.CONFLICT, capacityErrorCode, capacityErrorMessage);
+        }
+        if (spaceTypeErrorMessage != null) {
+            throw new AppException(HttpStatus.CONFLICT, spaceTypeErrorCode, spaceTypeErrorMessage);
         }
 
         // Quy tắc 3: Cập nhật facilities (thay thế toàn bộ, báo lỗi nếu ID không tồn tại/đã xóa)
@@ -247,11 +280,12 @@ public class SpaceService {
      * Soft delete Space:
      * 1. Tìm Space có deleted_at IS NULL
      * 2. Nếu không có -> 404 SPACE_NOT_FOUND
-     * 3. set status = INACTIVE
-     * 4. set deleted_at = now
-     * 5. Soft delete toàn bộ Seat active thuộc Space (status = INACTIVE, deleted_at = now)
-     * 6. Soft delete toàn bộ SpaceTable active thuộc Space (status = INACTIVE, deleted_at = now)
-     * 7. save (Toàn bộ trong @Transactional)
+     * 3. Chặn xóa nếu còn booking chiếm chỗ chưa kết thúc hoặc lịch bảo trì chưa kết thúc
+     * 4. set status = INACTIVE
+     * 5. set deleted_at = now
+     * 6. Soft delete toàn bộ Seat active thuộc Space (status = INACTIVE, deleted_at = now)
+     * 7. Soft delete toàn bộ SpaceTable active thuộc Space (status = INACTIVE, deleted_at = now)
+     * 8. save (Toàn bộ trong @Transactional)
      */
     @Transactional
     public void deleteSpace(Long id) {
@@ -263,6 +297,40 @@ public class SpaceService {
                 ));
 
         LocalDateTime now = LocalDateTime.now();
+        long blockingBookingCount = bookingRepository.countBlockingBookingsForSpaceDeletion(
+                id,
+                DELETE_BLOCKING_BOOKING_STATUSES,
+                now
+        );
+        long blockingMaintenanceCount = maintenanceBlockRepository.countBlockingBlocksForSpaceDeletion(id, now);
+
+        List<String> deleteConstraintDetails = new ArrayList<>();
+        if (blockingBookingCount > 0) {
+            deleteConstraintDetails.add("bookings: Không gian đang có " + blockingBookingCount
+                    + " booking đang diễn ra hoặc sắp diễn ra.");
+        }
+        if (blockingMaintenanceCount > 0) {
+            deleteConstraintDetails.add("maintenances: Không gian đang có " + blockingMaintenanceCount
+                    + " lịch bảo trì đang diễn ra hoặc sắp diễn ra.");
+        }
+
+        if (!deleteConstraintDetails.isEmpty()) {
+            String errorCode;
+            String errorMessage;
+            if (blockingBookingCount > 0 && blockingMaintenanceCount > 0) {
+                errorCode = "SPACE_HAS_ACTIVE_BOOKINGS_AND_MAINTENANCES";
+                errorMessage = "Không thể xóa không gian vì còn booking và lịch bảo trì chưa kết thúc.";
+            } else if (blockingBookingCount > 0) {
+                errorCode = "SPACE_HAS_ACTIVE_BOOKINGS";
+                errorMessage = "Không thể xóa không gian vì còn booking chưa kết thúc.";
+            } else {
+                errorCode = "SPACE_HAS_ACTIVE_MAINTENANCES";
+                errorMessage = "Không thể xóa không gian vì còn lịch bảo trì chưa kết thúc.";
+            }
+
+            throw BusinessException.conflict(errorCode, errorMessage, deleteConstraintDetails);
+        }
+
         space.setStatus(SpaceStatus.INACTIVE);
         space.setDeletedAt(now);
 

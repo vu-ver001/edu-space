@@ -20,6 +20,16 @@ public interface MaintenanceBlockRepository extends JpaRepository<MaintenanceBlo
     List<MaintenanceBlock> findBySpaceIdAndDeletedAtIsNullOrderByStartTimeAsc(Long spaceId);
 
     /**
+     * Đếm lịch bảo trì hiện tại hoặc sắp tới còn hiệu lực của một không gian.
+     */
+    @Query("SELECT COUNT(m) FROM MaintenanceBlock m WHERE m.space.id = :spaceId " +
+           "AND m.deletedAt IS NULL AND m.endTime > :now")
+    long countBlockingBlocksForSpaceDeletion(
+            @Param("spaceId") Long spaceId,
+            @Param("now") LocalDateTime now
+    );
+
+    /**
      * Tìm các khoảng bảo trì đang hoạt động của một không gian giao nhau với [startTime, endTime].
      * Điều kiện giao nhau: m.startTime < endTime AND m.endTime > startTime.
      */

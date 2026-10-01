@@ -9,6 +9,7 @@ interface Props {
   onSearch: (filter: SearchFilter) => void;
   isLoading: boolean;
   availableCount?: number;
+  initialFilter?: SearchFilter;
 }
 
 const toLocalDateString = (date: Date): string => {
@@ -18,44 +19,17 @@ const toLocalDateString = (date: Date): string => {
   return `${year}-${month}-${day}`;
 };
 
-// Tự động tính toán khung giờ khả dụng tiếp theo (không bao giờ bị quá khứ)
-export const getNextAvailableSlot = () => {
-  const now = new Date();
-  const currentHour = now.getHours();
-  const nextHour = currentHour + 1;
-  
-  if (nextHour >= 21) {
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    return {
-      date: toLocalDateString(tomorrow),
-      startTime: '08:00',
-      endTime: '10:00',
-    };
-  }
-  
-  const startH = Math.max(8, nextHour);
-  const endH = Math.min(22, startH + 2);
-  const pad = (n: number) => n.toString().padStart(2, '0');
-  
-  return {
-    date: toLocalDateString(now),
-    startTime: `${pad(startH)}:00`,
-    endTime: `${pad(endH)}:00`,
-  };
-};
-
-export const FilterBar: React.FC<Props> = ({ onSearch, isLoading, availableCount }) => {
-  const defaultSlot = getNextAvailableSlot();
+export const FilterBar: React.FC<Props> = ({ onSearch, isLoading, availableCount, initialFilter }) => {
   const today = toLocalDateString(new Date());
-  const [date, setDate] = useState<string>(defaultSlot.date);
-  const [startTime, setStartTime] = useState<string>(defaultSlot.startTime);
-  const [endTime, setEndTime] = useState<string>(defaultSlot.endTime);
-  const [participantCount, setParticipantCount] = useState<number | string>(4);
-  const [selectedSpaceTypeId, setSelectedSpaceTypeId] = useState<number | undefined>(undefined);
-  const [selectedFacilityIds, setSelectedFacilityIds] = useState<number[]>([]);
+  const [date, setDate] = useState<string>(initialFilter?.date || '');
+  const [startTime, setStartTime] = useState<string>(initialFilter?.startTime?.substring(0, 5) || '');
+  const [endTime, setEndTime] = useState<string>(initialFilter?.endTime?.substring(0, 5) || '');
+  const [participantCount, setParticipantCount] = useState<number | string>(initialFilter?.participantCount || '');
+  const [selectedSpaceTypeId, setSelectedSpaceTypeId] = useState<number | undefined>(initialFilter?.spaceTypeId);
+  const [selectedFacilityIds, setSelectedFacilityIds] = useState<number[]>(initialFilter?.facilityIds || []);
   const [dateError, setDateError] = useState<string | null>(null);
   const [timeError, setTimeError] = useState<string | null>(null);
+  const [participantError, setParticipantError] = useState<string | null>(null);
 
   const [spaceTypes, setSpaceTypes] = useState<SpaceType[]>([]);
   const [facilities, setFacilities] = useState<Facility[]>([]);
@@ -236,12 +210,7 @@ export const FilterBar: React.FC<Props> = ({ onSearch, isLoading, availableCount
     const now = new Date();
     const todayStr = toLocalDateString(now);
 
-    if (!date) {
-      setDateError('Vui lòng chọn ngày sử dụng.');
-      return;
-    }
-
-    if (date < todayStr) {
+    if (date && date < todayStr) {
       setDateError('Không được nhập ngày trong quá khứ. Vui lòng chọn ngày hôm nay hoặc trong tương lai.');
       return;
     }
@@ -252,7 +221,7 @@ export const FilterBar: React.FC<Props> = ({ onSearch, isLoading, availableCount
     const openM = toMinutes(operatingHours.openingHour);
     const closeM = toMinutes(operatingHours.closingHour);
 
-    if (date === todayStr) {
+    if (date === todayStr && startTime) {
       const currentM = now.getHours() * 60 + now.getMinutes();
       if (startM < currentM) {
         setTimeError('Thời gian bắt đầu phải bằng hoặc lớn hơn thời điểm hiện tại khi tìm phòng cho ngày hôm nay.');
@@ -260,27 +229,40 @@ export const FilterBar: React.FC<Props> = ({ onSearch, isLoading, availableCount
       }
     }
 
-    if (startM >= endM) {
+    if (startTime && endTime && startM >= endM) {
       setTimeError(`Giờ bắt đầu (${startTime}) phải trước giờ kết thúc (${endTime}). Vui lòng chọn lại khung giờ.`);
       return;
     }
-    if (startM < openM || endM > closeM) {
+    if ((startTime && startM < openM) || (endTime && endM > closeM)) {
       setTimeError(`Không gian học tập chỉ mở cửa từ ${operatingHours.openingHour} đến ${operatingHours.closingHour} hàng ngày.`);
       return;
     }
     setTimeError(null);
+
+    if (participantCount !== '' && Number(participantCount) < 1) {
+      setParticipantError('Vui lòng nhập số người tham gia từ 1 người trở lên.');
+      return;
+    }
+    setParticipantError(null);
+
     onSearch({
       date,
       startTime: normalizeTime(startTime),
       endTime: normalizeTime(endTime),
-      participantCount: Number(participantCount) || 1,
+      participantCount: participantCount === '' ? undefined : Number(participantCount),
       spaceTypeId: selectedSpaceTypeId,
       facilityIds: selectedFacilityIds.length > 0 ? selectedFacilityIds : undefined
     });
   };
 
   return (
-    <div className="internal-search-card">
+    <form
+      className="internal-search-card"
+      onSubmit={(event) => {
+        event.preventDefault();
+        handleApplyFilter();
+      }}
+    >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
         <h3 className="internal-search-title" style={{ margin: 0 }}>Tìm không gian học tập</h3>
         <span style={{ fontSize: '12px', fontWeight: 600, color: '#1D4ED8', background: '#EFF6FF', border: '1px solid #BFDBFE', padding: '4px 10px', borderRadius: '16px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
@@ -306,7 +288,7 @@ export const FilterBar: React.FC<Props> = ({ onSearch, isLoading, availableCount
                 if (val === today) {
                   const nowCheck = new Date();
                   const curM = nowCheck.getHours() * 60 + nowCheck.getMinutes();
-                  if (toMinutes(startTime) < curM) {
+                  if (startTime && toMinutes(startTime) < curM) {
                     setTimeError('Thời gian bắt đầu phải bằng hoặc lớn hơn thời điểm hiện tại.');
                   } else {
                     setTimeError(null);
@@ -329,8 +311,13 @@ export const FilterBar: React.FC<Props> = ({ onSearch, isLoading, availableCount
             }
             max={operatingHours.closingHour}
             value={startTime}
+            placeholder="HH:mm"
             onChange={(val) => {
               setStartTime(val);
+              if (!val) {
+                setTimeError(null);
+                return;
+              }
               const valM = toMinutes(val);
               const endM = toMinutes(endTime);
               const openM = toMinutes(operatingHours.openingHour);
@@ -363,8 +350,13 @@ export const FilterBar: React.FC<Props> = ({ onSearch, isLoading, availableCount
             min={operatingHours.openingHour}
             max={operatingHours.closingHour}
             value={endTime}
+            placeholder="HH:mm"
             onChange={(val) => {
               setEndTime(val);
+              if (!val) {
+                setTimeError(null);
+                return;
+              }
               const valM = toMinutes(val);
               const startM = toMinutes(startTime);
               const closeM = toMinutes(operatingHours.closingHour);
@@ -388,24 +380,20 @@ export const FilterBar: React.FC<Props> = ({ onSearch, isLoading, availableCount
             onChange={(e) => {
               const val = e.target.value;
               setParticipantCount(val === '' ? '' : Math.max(1, parseInt(val) || 1));
-            }}
-            onBlur={() => {
-              if (!participantCount || Number(participantCount) < 1) {
-                setParticipantCount(1);
-              }
+              setParticipantError(null);
             }}
             min={1}
             max={500}
-            placeholder="VD: 4"
+            placeholder="Nhập số người"
           />
         </div>
       </div>
 
       {/* Hiển thị cảnh báo lỗi ngày hoặc thời gian */}
-      {(dateError || timeError) && (
+      {(dateError || timeError || participantError) && (
         <div className="internal-field-error-banner" role="alert" style={{ marginTop: '8px', marginBottom: '8px' }}>
           <span className="error-icon">⚠️</span>
-          <span>{dateError || timeError}</span>
+          <span>{dateError || timeError || participantError}</span>
         </div>
       )}
 
@@ -528,7 +516,7 @@ export const FilterBar: React.FC<Props> = ({ onSearch, isLoading, availableCount
           )}
         </div>
         <button
-          type="button"
+          type="submit"
           className="btn-internal-search"
           onClick={handleApplyFilter}
           disabled={isLoading}
@@ -675,6 +663,6 @@ export const FilterBar: React.FC<Props> = ({ onSearch, isLoading, availableCount
           </div>
         </div>
       )}
-    </div>
+    </form>
   );
 };
