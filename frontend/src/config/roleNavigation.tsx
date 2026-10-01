@@ -109,7 +109,7 @@ export const ROLE_NAV_ITEMS: Record<AppRole, NavEntry[]> = {
   STAFF: [
     { to: STAFF_BASE, label: 'Trang chủ', icon: <Home size={19} />, allowedRoles: ['STAFF', 'ADMIN'], exact: true },
     { to: `${STAFF_BASE}/approvals`, label: 'Duyệt đặt chỗ', icon: <CheckSquare size={19} />, allowedRoles: ['STAFF', 'ADMIN'] },
-    { to: `${STAFF_BASE}/checkin`, label: 'Hỗ trợ check-in', icon: <UserCheck size={19} />, allowedRoles: ['STAFF', 'ADMIN'] },
+    { to: `${STAFF_BASE}/qr`, label: 'Hỗ trợ check-in', icon: <UserCheck size={19} />, allowedRoles: ['STAFF', 'ADMIN'] },
     { to: `${STAFF_BASE}/timeline`, label: 'Timeline hoạt động', icon: <CalendarDays size={19} />, allowedRoles: ['STAFF', 'ADMIN'] },
     { to: `${STAFF_BASE}/maintenance`, label: 'Bảo trì', icon: <Wrench size={19} />, allowedRoles: ['STAFF', 'ADMIN'] },
     { to: `${STAFF_BASE}/audit-logs`, label: 'Nhật ký kiểm toán', icon: <FileText size={19} />, allowedRoles: ['STAFF', 'ADMIN'] },
