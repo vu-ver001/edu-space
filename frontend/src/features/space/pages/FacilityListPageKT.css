@@ -258,6 +258,12 @@
   overflow: hidden;
 }
 
+.facility-list-card > .table-pagination-footer-v2 {
+  width: auto;
+  margin: 0 -24px -24px;
+  padding: 16px 24px;
+}
+
 .facility-list-card-header {
   width: 100%;
   min-width: 0;
