@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Building2,
   Plus,
@@ -20,6 +20,8 @@ import { FacilityFormModalKT } from '../components/FacilityFormModalKT';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
 import { FilterSelect } from '../../../components/common/FilterSelect';
 import { Tooltip } from '../../../components/common/Tooltip';
+import { Pagination } from '../../../components/common/Pagination';
+import '../../../styles/kt-management-controls.css';
 import './FacilityListPageKT.css';
 
 export const FacilityListPageKT: React.FC = () => {
@@ -27,6 +29,10 @@ export const FacilityListPageKT: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'IN_USE' | 'UNUSED'>('ALL');
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // Detail panel selection
   const [selectedFacility, setSelectedFacility] = useState<Facility | null>(null);
@@ -74,11 +80,12 @@ export const FacilityListPageKT: React.FC = () => {
   }, []);
 
   // Filtered list
-  const filteredFacilities = facilities.filter((fac) => {
+  const filteredFacilities = useMemo(() => facilities.filter((fac) => {
+    const normalizedSearch = searchText.trim().toLowerCase();
     const matchSearch =
-      searchText.trim() === '' ||
-      fac.name.toLowerCase().includes(searchText.toLowerCase()) ||
-      (fac.description && fac.description.toLowerCase().includes(searchText.toLowerCase()));
+      normalizedSearch === '' ||
+      fac.name.toLowerCase().includes(normalizedSearch) ||
+      Boolean(fac.description?.toLowerCase().includes(normalizedSearch));
 
     const count = fac.spaceCount || 0;
     const matchStatus =
@@ -87,7 +94,19 @@ export const FacilityListPageKT: React.FC = () => {
       (statusFilter === 'UNUSED' && count === 0);
 
     return matchSearch && matchStatus;
-  });
+  }), [facilities, searchText, statusFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredFacilities.length / pageSize));
+  const paginatedFacilities = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return filteredFacilities.slice(startIndex, startIndex + pageSize);
+  }, [filteredFacilities, currentPage, pageSize]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   // Calculate stats
   const totalCount = facilities.length;
@@ -261,7 +280,10 @@ export const FacilityListPageKT: React.FC = () => {
                   className="facility-search-input"
                   placeholder="Tìm kiếm tiện ích theo tên, mô tả..."
                   value={searchText}
-                  onChange={(e) => setSearchText(e.target.value)}
+                  onChange={(e) => {
+                    setSearchText(e.target.value);
+                    setCurrentPage(1);
+                  }}
                 />
               </div>
 
@@ -274,7 +296,10 @@ export const FacilityListPageKT: React.FC = () => {
                   { value: 'IN_USE', label: 'Đang sử dụng' },
                   { value: 'UNUSED', label: 'Chưa sử dụng' },
                 ]}
-                onChange={(value) => setStatusFilter(value as 'ALL' | 'IN_USE' | 'UNUSED')}
+                onChange={(value) => {
+                  setStatusFilter(value as 'ALL' | 'IN_USE' | 'UNUSED');
+                  setCurrentPage(1);
+                }}
               />
 
               <button
@@ -283,6 +308,7 @@ export const FacilityListPageKT: React.FC = () => {
                 onClick={() => {
                   setSearchText('');
                   setStatusFilter('ALL');
+                  setCurrentPage(1);
                   void fetchFacilities();
                 }}
                 disabled={loading}
@@ -326,7 +352,7 @@ export const FacilityListPageKT: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredFacilities.map((fac, idx) => {
+                  {paginatedFacilities.map((fac, idx) => {
                     const isSelected = selectedFacility?.id === fac.id;
                     const inUse = (fac.spaceCount || 0) > 0;
                     return (
@@ -335,7 +361,9 @@ export const FacilityListPageKT: React.FC = () => {
                         className={isSelected ? 'selected' : ''}
                         onClick={() => setSelectedFacility(fac)}
                       >
-                        <td style={{ textAlign: 'center', color: '#64748b', fontWeight: 500 }}>{idx + 1}</td>
+                        <td style={{ textAlign: 'center', color: '#64748b', fontWeight: 500 }}>
+                          {(currentPage - 1) * pageSize + idx + 1}
+                        </td>
                         <td style={{ overflow: 'hidden' }}>
                           <Tooltip content={fac.name} maxWidth={320}>
                             <span className="facility-truncate-text name">{fac.name}</span>
@@ -465,6 +493,20 @@ export const FacilityListPageKT: React.FC = () => {
               </div>
             )}
           </div>
+
+          {filteredFacilities.length > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalItems={filteredFacilities.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={(newSize) => {
+                setPageSize(newSize);
+                setCurrentPage(1);
+              }}
+              itemLabel="tiện ích"
+            />
+          )}
         </div>
 
         {/* Floating Toast */}

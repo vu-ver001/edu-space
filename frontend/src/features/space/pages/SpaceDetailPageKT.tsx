@@ -19,14 +19,9 @@ import {
   Layers,
   X,
   ChevronLeft,
-  Wifi,
-  Tv,
   SquareCheck,
   ShieldCheck,
   Clock,
-  Snowflake,
-  Plug,
-  SquarePen,
   ChevronDown,
   ChevronUp,
   Plus,
@@ -74,9 +69,9 @@ export const SpaceDetailPageKT: React.FC = () => {
   const [spaceTypes, setSpaceTypes] = useState<SpaceType[]>([]);
   const [facilities, setFacilities] = useState<Facility[]>([]);
 
-  // Facilities expand/collapse state (trên 3 tiện ích là ấn xem thêm)
+  // Facilities expand/collapse state (trên 5 tiện ích là ấn xem thêm)
   const [showAllFacilities, setShowAllFacilities] = useState<boolean>(false);
-  const FACILITY_SHOW_LIMIT = 3;
+  const FACILITY_SHOW_LIMIT = 5;
 
   // Table expand/collapse state (Mặc định hiển thị đầy đủ bàn từ CSDL)
   const [showAllTables, setShowAllTables] = useState<boolean>(true);
@@ -103,11 +98,11 @@ export const SpaceDetailPageKT: React.FC = () => {
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  // Maintenance Schedule State (trên 3 lịch bảo trì là ấn xem thêm)
+  // Maintenance Schedule State (trên 5 lịch bảo trì là ấn xem thêm)
   const [maintenanceList, setMaintenanceList] = useState<MaintenanceBlock[]>([]);
   const [loadingMaintenance, setLoadingMaintenance] = useState<boolean>(false);
   const [showAllMaintenance, setShowAllMaintenance] = useState<boolean>(false);
-  const MAINT_SHOW_LIMIT = 3;
+  const MAINT_SHOW_LIMIT = 5;
 
   // Toast notification
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
@@ -761,26 +756,6 @@ export const SpaceDetailPageKT: React.FC = () => {
     );
   };
 
-  const renderFacilityIcon = (name: string) => {
-    const lower = name.toLowerCase();
-    if (lower.includes('wifi') || lower.includes('mạng') || lower.includes('wi-fi')) {
-      return <Wifi size={17} strokeWidth={2.2} />;
-    }
-    if (lower.includes('chiếu') || lower.includes('màn hình') || lower.includes('tv')) {
-      return <Tv size={17} strokeWidth={2.2} />;
-    }
-    if (lower.includes('điều hòa') || lower.includes('lạnh') || lower.includes('khí')) {
-      return <Snowflake size={17} strokeWidth={2.2} />;
-    }
-    if (lower.includes('điện') || lower.includes('sạc') || lower.includes('cắm') || lower.includes('ổ')) {
-      return <Plug size={17} strokeWidth={2.2} />;
-    }
-    if (lower.includes('bảng') || lower.includes('bút')) {
-      return <SquarePen size={17} strokeWidth={2.2} />;
-    }
-    return <Sparkles size={17} strokeWidth={2.2} />;
-  };
-
   const handleUpdate = async (
     data: SpaceUpdateRequest,
     images: SpaceFormImage[] = [],
@@ -1253,14 +1228,17 @@ export const SpaceDetailPageKT: React.FC = () => {
 
                   {facilitiesList.length > 0 ? (
                     <div className="facilities-clean-list">
-                      {displayedFacilities.map((fac) => (
-                        <div key={fac.id} className="facility-clean-row">
-                          <div className="facility-clean-icon-box">
-                            {renderFacilityIcon(fac.name)}
+                      <div
+                        className={`facilities-scroll-region ${
+                          showAllFacilities && shouldLimitFacilities ? 'is-expanded' : ''
+                        }`}
+                      >
+                        {displayedFacilities.map((fac) => (
+                          <div key={fac.id} className="facility-clean-row">
+                            <span className="facility-clean-name">{fac.name}</span>
                           </div>
-                          <span className="facility-clean-name">{fac.name}</span>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
 
                       {shouldLimitFacilities && (
                         <button
@@ -1600,7 +1578,12 @@ export const SpaceDetailPageKT: React.FC = () => {
                         className="btn-maint-view-all"
                         onClick={() => setShowAllMaintenance(!showAllMaintenance)}
                       >
-                        {showAllMaintenance ? 'Thu gọn' : 'Xem tất cả'}
+                        <span>
+                          {showAllMaintenance
+                            ? 'Thu gọn'
+                            : `Xem thêm (${maintenanceList.length - MAINT_SHOW_LIMIT})`}
+                        </span>
+                        {showAllMaintenance ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                       </button>
                     )}
                   </div>
@@ -1608,7 +1591,11 @@ export const SpaceDetailPageKT: React.FC = () => {
                   {loadingMaintenance ? (
                     <div className="maint-table-loading">Đang tải lịch bảo trì...</div>
                   ) : maintenanceList.length > 0 ? (
-                    <div className="maint-table-container">
+                    <div
+                      className={`maint-table-container ${
+                        showAllMaintenance && shouldLimitMaint ? 'is-expanded' : ''
+                      }`}
+                    >
                       <table className="maint-mini-table">
                         <thead>
                           <tr>
