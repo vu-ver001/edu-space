@@ -19,14 +19,9 @@ import {
   Layers,
   X,
   ChevronLeft,
-  Wifi,
-  Tv,
   SquareCheck,
   ShieldCheck,
   Clock,
-  Snowflake,
-  Plug,
-  SquarePen,
   ChevronDown,
   ChevronUp,
   Plus,
@@ -761,26 +756,6 @@ export const SpaceDetailPageKT: React.FC = () => {
     );
   };
 
-  const renderFacilityIcon = (name: string) => {
-    const lower = name.toLowerCase();
-    if (lower.includes('wifi') || lower.includes('mạng') || lower.includes('wi-fi')) {
-      return <Wifi size={17} strokeWidth={2.2} />;
-    }
-    if (lower.includes('chiếu') || lower.includes('màn hình') || lower.includes('tv')) {
-      return <Tv size={17} strokeWidth={2.2} />;
-    }
-    if (lower.includes('điều hòa') || lower.includes('lạnh') || lower.includes('khí')) {
-      return <Snowflake size={17} strokeWidth={2.2} />;
-    }
-    if (lower.includes('điện') || lower.includes('sạc') || lower.includes('cắm') || lower.includes('ổ')) {
-      return <Plug size={17} strokeWidth={2.2} />;
-    }
-    if (lower.includes('bảng') || lower.includes('bút')) {
-      return <SquarePen size={17} strokeWidth={2.2} />;
-    }
-    return <Sparkles size={17} strokeWidth={2.2} />;
-  };
-
   const handleUpdate = async (
     data: SpaceUpdateRequest,
     images: SpaceFormImage[] = [],
@@ -1255,9 +1230,6 @@ export const SpaceDetailPageKT: React.FC = () => {
                     <div className="facilities-clean-list">
                       {displayedFacilities.map((fac) => (
                         <div key={fac.id} className="facility-clean-row">
-                          <div className="facility-clean-icon-box">
-                            {renderFacilityIcon(fac.name)}
-                          </div>
                           <span className="facility-clean-name">{fac.name}</span>
                         </div>
                       ))}
