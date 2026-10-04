@@ -13,6 +13,7 @@ import type {
   SpaceTableUpdateRequest,
 } from '../types/space';
 import type { SpaceActionResponse } from '../types/api';
+import type { MaintenanceBlock, StaffTimeline } from '../../staff/types/staff';
 
 export const spaceApi = {
   // Lấy danh sách không gian công khai / bộ lọc
@@ -35,6 +36,23 @@ export const spaceApi = {
   // Chi tiết một không gian
   getSpaceById: async (id: number): Promise<Space> => {
     const res = await api.get<Space>(`/api/spaces/${id}`);
+    return res.data;
+  },
+
+  // Dữ liệu vận hành chỉ đọc dành riêng cho trang chi tiết không gian của Admin
+  getMaintenanceBySpace: async (spaceId: number): Promise<MaintenanceBlock[]> => {
+    const res = await api.get<MaintenanceBlock[]>(`/api/admin/spaces/${spaceId}/maintenance`);
+    return res.data;
+  },
+
+  getSpaceTimeline: async (
+    spaceId: number,
+    from: string,
+    to: string,
+  ): Promise<StaffTimeline> => {
+    const res = await api.get<StaffTimeline>(`/api/admin/spaces/${spaceId}/timeline`, {
+      params: { from, to },
+    });
     return res.data;
   },
 

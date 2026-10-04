@@ -379,14 +379,6 @@ export const SpaceTypeDetailPageKT: React.FC = () => {
                 <div className="banner-meta-group">
                   <span className="banner-label-sub">Loại không gian</span>
                   <h2 className="banner-title-main">{spaceType.name}</h2>
-                  <div className="banner-badges-row">
-                    <span className="pill-badge-mode">
-                      {getVietnameseModeName(spaceType.bookingMode)}
-                    </span>
-                    <span className="pill-badge-active">
-                      Đang hoạt động
-                    </span>
-                  </div>
                 </div>
               </div>
 

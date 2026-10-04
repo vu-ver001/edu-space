@@ -20,7 +20,7 @@ import java.util.ArrayList;
 @RestController
 @RequestMapping("/api/staff")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")
+@PreAuthorize("hasRole('STAFF')")
 public class StaffMaintenanceControllerKT {
 
     private final MaintenanceService maintenanceService;
@@ -37,7 +37,7 @@ public class StaffMaintenanceControllerKT {
     }
 
     /**
-     * Tạo khoảng bảo trì không gian (Staff/Admin).
+     * Tạo khoảng bảo trì không gian (Staff).
      * POST /api/staff/spaces/{spaceId}/maintenance
      */
     @PostMapping("/spaces/{spaceId}/maintenance")
