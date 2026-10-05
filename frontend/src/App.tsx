@@ -18,6 +18,7 @@ import { AuditLogPage } from './features/operations/pages/AuditLogPage';
 import { StatisticsDashboardPage } from './features/admin/statistics';
 import { SearchSpacesPage, SpaceDetailPage, MyBookingsPage } from './features/bookings/core';
 import { UserManagementPage } from './features/admin/auth/UserManagementPage.tsx';
+import {ProfilePage} from "./pages/ProfilePage.tsx";
 
 const ADMIN_BASE = import.meta.env.VITE_ROUTE_ADMIN || '/admin';
 const STAFF_BASE = import.meta.env.VITE_ROUTE_STAFF || '/staff';
@@ -74,6 +75,8 @@ export default function App() {
                 <Route element={<PortalLayout />}>
                     {/* ROOT ROUTE */}
                     <Route path="/" element={<RootRedirect />} />
+
+                    <Route path="/profile" element={<ProfilePage />} />
 
                     {/* ADMIN */}
                     <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
