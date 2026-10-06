@@ -121,6 +121,7 @@ class BookingCoreLogicTest {
                 spaceTableRepository,
                 userRepository,
                 fixedClock,
+                mock(com.eduspace.backend.notification.service.NotificationService.class),
                 maintenanceBlockRepo
         );
 

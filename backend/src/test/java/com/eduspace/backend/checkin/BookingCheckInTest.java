@@ -54,6 +54,7 @@ class BookingCheckInTest {
         var bookingService = new BookingService(bookings, audits, mock(StudentScheduleRepository.class),
                 availability, mock(com.eduspace.backend.space.repository.SpaceTableRepository.class), users,
                 Clock.fixed(now.toInstant(ZoneOffset.UTC), ZoneOffset.UTC),
+                mock(com.eduspace.backend.notification.service.NotificationService.class),
                 mock(com.eduspace.backend.staff.repository.MaintenanceBlockRepository.class));
         service = new CheckInService(bookings, audits, availability, users,
                 Clock.fixed(now.toInstant(ZoneOffset.UTC), ZoneOffset.UTC), bookingService);
