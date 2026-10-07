@@ -6,13 +6,13 @@ import { ROLE_NAV_ITEMS, isNavActive, isNavGroup, isNavGroupActive, ADMIN_BASE, 
 import type { AppRole, NavEntry, NavGroup } from '../../config/roleNavigation.tsx';
 import './PortalLayout.css';
 import { ChangePasswordModal } from '../../features/admin/components/ChangePasswordModal.tsx';
+import NotificationBubble from '../NotificationBubble';
 
 const VALID_ROLES: AppRole[] = ['ADMIN', 'STAFF', 'STUDENT'];
 
 // Lưu trạng thái thu gọn sidebar để không bị bung ra khi tải lại trang.
 const SIDEBAR_COLLAPSED_KEY = 'eduspace_sidebar_collapsed';
 
-// Key tùy biến UI theo role → route, dùng để override nhãn/icon mà không phụ thuộc text label.
 const UI_OVERRIDES: Record<AppRole, { to: string; labelKey?: string; iconKey?: string }[]> = {
   ADMIN: [
     { to: `${ADMIN_BASE}/stats`, labelKey: 'adminStatsLabel', iconKey: 'adminStatsIcon' },
@@ -32,7 +32,6 @@ export const PortalLayout = () => {
   const [user, setUser] = useState<{ id: number, email: string, fullName: string, role: string } | null>(null);
   const [uiSettings, setUiSettings] = useState<any>({});
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  // Đọc đồng bộ ngay trong initializer để lần render đầu đã đúng, không nháy layout khi reload.
   const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
     try {
       return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1';
@@ -41,7 +40,6 @@ export const PortalLayout = () => {
     }
   });
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
-  // Ghi đè thủ công của trạng thái nhóm; undefined = suy ra từ route (đang ở mục con thì mở).
   const [groupOpenOverrides, setGroupOpenOverrides] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -99,29 +97,26 @@ export const PortalLayout = () => {
     return customIcon;
   };
 
-  // Menu lấy từ nguồn dùng chung theo role; lọc theo allowedRoles để tự ẩn khi config lệch.
   const getNavItems = (): NavEntry[] => {
     const role = (user.role || '').replace(/^ROLE_/, '').toUpperCase() as AppRole;
     const overrides = UI_OVERRIDES[role] ?? [];
     return (ROLE_NAV_ITEMS[role] || [])
-      .filter((item) => item.allowedRoles.includes(role))
-      .map((item) => {
-        // Nhóm không có route riêng nên không tham gia UI_OVERRIDES.
-        if (isNavGroup(item)) return item;
-        const override = overrides.find((o) => o.to === item.to);
-        if (!override) return item;
-        const label = override.labelKey ? uiSettings[override.labelKey] : undefined;
-        const iconKey = override.iconKey ? uiSettings[override.iconKey] : undefined;
-        if (!label && !iconKey) return item;
-        return {
-          ...item,
-          label: label || item.label,
-          icon: renderIcon(iconKey, item.icon),
-        };
-      });
+        .filter((item) => item.allowedRoles.includes(role))
+        .map((item) => {
+          if (isNavGroup(item)) return item;
+          const override = overrides.find((o) => o.to === item.to);
+          if (!override) return item;
+          const label = override.labelKey ? uiSettings[override.labelKey] : undefined;
+          const iconKey = override.iconKey ? uiSettings[override.iconKey] : undefined;
+          if (!label && !iconKey) return item;
+          return {
+            ...item,
+            label: label || item.label,
+            icon: renderIcon(iconKey, item.icon),
+          };
+        });
   };
 
-  // Ở chế độ sidebar thu gọn chữ bị ẩn nên bấm nhóm phải bung sidebar ra rồi mới thấy mục con.
   const handleGroupToggle = (group: NavGroup, isOpen: boolean) => {
     if (isCollapsed) {
       setIsCollapsed(false);
@@ -169,51 +164,50 @@ export const PortalLayout = () => {
                   const isOpen = groupOpenOverrides[group.id] ?? isNavGroupActive(group, pathname);
                   const childrenId = `sidebar-group-${group.id}`;
                   return (
-                    <div className="sidebar-wide-group" key={group.id}>
-                      <button
-                        type="button"
-                        className="sidebar-wide-item sidebar-group-trigger"
-                        aria-expanded={isOpen}
-                        aria-controls={childrenId}
-                        title={isCollapsed ? group.label : undefined}
-                        onClick={() => handleGroupToggle(group, isOpen)}
-                      >
-                        <span className="nav-item-icon">{group.icon}</span>
-                        <span className="nav-item-text">{group.label}</span>
-                      </button>
-                      {/* Luôn render để có animation thu; khi đóng container ở cao 0 + ẩn hoàn toàn. */}
-                      <div className={`sidebar-group-children ${isOpen ? 'is-open' : ''}`} id={childrenId}>
-                        <div className="sidebar-group-children-inner">
-                          {group.children.map((child) => (
-                            <NavLink
-                              key={child.to}
-                              to={child.to}
-                              end={child.exact}
-                              aria-label={child.label}
-                              className={() => `sidebar-wide-item sidebar-wide-item-child ${isNavActive(child, pathname) ? 'active' : ''}`}
-                            >
-                              <span className="nav-item-icon">{child.icon}</span>
-                              <span className="nav-item-text">{child.label}</span>
-                            </NavLink>
-                          ))}
+                      <div className="sidebar-wide-group" key={group.id}>
+                        <button
+                            type="button"
+                            className="sidebar-wide-item sidebar-group-trigger"
+                            aria-expanded={isOpen}
+                            aria-controls={childrenId}
+                            title={isCollapsed ? group.label : undefined}
+                            onClick={() => handleGroupToggle(group, isOpen)}
+                        >
+                          <span className="nav-item-icon">{group.icon}</span>
+                          <span className="nav-item-text">{group.label}</span>
+                        </button>
+                        <div className={`sidebar-group-children ${isOpen ? 'is-open' : ''}`} id={childrenId}>
+                          <div className="sidebar-group-children-inner">
+                            {group.children.map((child) => (
+                                <NavLink
+                                    key={child.to}
+                                    to={child.to}
+                                    end={child.exact}
+                                    aria-label={child.label}
+                                    className={() => `sidebar-wide-item sidebar-wide-item-child ${isNavActive(child, pathname) ? 'active' : ''}`}
+                                >
+                                  <span className="nav-item-icon">{child.icon}</span>
+                                  <span className="nav-item-text">{child.label}</span>
+                                </NavLink>
+                            ))}
+                          </div>
                         </div>
                       </div>
-                    </div>
                   );
                 }
 
                 return (
-                  <NavLink
-                    key={entry.to}
-                    to={entry.to}
-                    end={entry.exact}
-                    aria-label={entry.label}
-                    className={() => `sidebar-wide-item ${isNavActive(entry, pathname) ? 'active' : ''}`}
-                    title={isCollapsed ? entry.label : undefined}
-                  >
-                    <span className="nav-item-icon">{entry.icon}</span>
-                    <span className="nav-item-text">{entry.label}</span>
-                  </NavLink>
+                    <NavLink
+                        key={entry.to}
+                        to={entry.to}
+                        end={entry.exact}
+                        aria-label={entry.label}
+                        className={() => `sidebar-wide-item ${isNavActive(entry, pathname) ? 'active' : ''}`}
+                        title={isCollapsed ? entry.label : undefined}
+                    >
+                      <span className="nav-item-icon">{entry.icon}</span>
+                      <span className="nav-item-text">{entry.label}</span>
+                    </NavLink>
                 );
               })}
             </nav>
@@ -234,7 +228,6 @@ export const PortalLayout = () => {
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
             )}
 
-            {/* POPUP DROPDOWN (Bật sang phải) */}
             {showProfileMenu && (
                 <div className="profile-dropdown-menu" onClick={(e) => e.stopPropagation()}>
                   <div className="dropdown-profile-header">
@@ -247,8 +240,20 @@ export const PortalLayout = () => {
                     </div>
                   </div>
                   <div className="dropdown-actions">
-                    <button className="dropdown-action-btn" onClick={handleChangePassword}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>Thay đổi mật khẩu</button>
-                    <button className="dropdown-action-btn" onClick={handleLogout}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Đăng xuất</button>
+                    <button className="dropdown-action-btn" onClick={() => { navigate('/profile'); setShowProfileMenu(false); }}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                      Hồ sơ cá nhân
+                    </button>
+
+                    <button className="dropdown-action-btn" onClick={handleChangePassword}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+                      Thay đổi mật khẩu
+                    </button>
+
+                    <button className="dropdown-action-btn" onClick={handleLogout}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                      Đăng xuất
+                    </button>
                   </div>
                 </div>
             )}
@@ -266,6 +271,8 @@ export const PortalLayout = () => {
             isOpen={isChangePasswordOpen}
             onClose={() => setIsChangePasswordOpen(false)}
         />
+
+        <NotificationBubble />
       </div>
   );
 };

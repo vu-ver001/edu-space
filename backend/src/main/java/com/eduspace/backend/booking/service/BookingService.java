@@ -1,5 +1,6 @@
 package com.eduspace.backend.booking.service;
 
+import com.eduspace.backend.auth.entity.Role;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -38,6 +39,7 @@ import com.eduspace.backend.auth.repository.UserRepository;
 import com.eduspace.backend.auth.entity.User;
 import com.eduspace.backend.space.entity.SpaceTable;
 import com.eduspace.backend.space.repository.SpaceTableRepository;
+import com.eduspace.backend.notification.type.NotificationType;
 /**
  * Phân hệ Quản lý Đặt chỗ Lõi (Module M04).
  * Phụ trách: Nguyễn Thị Khánh Vân (Lead kỹ thuật).
@@ -58,6 +60,7 @@ public class BookingService {
     private final SpaceTableRepository spaceTableRepository;
     private final UserRepository userRepository;
     private final java.time.Clock checkInClock;
+    private final com.eduspace.backend.notification.service.NotificationService notificationService;
     // ================= BEGIN KT =================
     private final com.eduspace.backend.staff.repository.MaintenanceBlockRepository maintenanceBlockRepository;
     // ================= END KT =================
@@ -417,6 +420,30 @@ public class BookingService {
         log.info("Tạo booking #{} thành công cho sinh viên {} tại phòng {} với trạng thái {}", 
                 booking.getId(), userEmail, space.getName(), initialStatus);
 
+        // === BẮN THÔNG BÁO TỰ ĐỘNG SAU KHI TẠO BOOKING ===
+        if (requiresApproval) {
+            // Nếu cần duyệt, gửi thông báo cho tất cả tài khoản STAFF
+            List<User> staffUsers = userRepository.findByRole(Role.STAFF);
+            for (User staff : staffUsers) {
+                notificationService.sendNotification(
+                        staff.getId(),
+                        NotificationType.PENDING_APPROVAL,
+                        "Yêu cầu đặt phòng mới cần duyệt",
+                        "Sinh viên " + userEmail + " vừa tạo yêu cầu đặt phòng tại " + space.getName() + " cần được phê duyệt.",
+                        booking.getId()
+                );
+            }
+        } else {
+            // Nếu duyệt tự động (CONFIRMED), gửi thông báo xác nhận cho sinh viên
+            notificationService.sendNotification(
+                    studentId,
+                    NotificationType.BOOKING_CONFIRMED,
+                    "Đặt phòng thành công",
+                    "Lịch đặt phòng " + space.getName() + " của bạn đã được xác nhận.",
+                    booking.getId()
+            );
+        }
+
         return toBookingResponse(booking, now);
     }
 
@@ -539,6 +566,17 @@ public class BookingService {
                 .build();
         auditLogRepository.save(audit);
 
+        AvailabilityService.SpaceCatalogItem space = availabilityService.getSpaceCatalogItem(booking.getSpaceId());
+        String spaceName = space != null ? space.getName() : "Phòng #" + booking.getSpaceId();
+
+        notificationService.sendNotification(
+                booking.getStudentId(),
+                NotificationType.CANCELLED,
+                "Hủy đặt phòng thành công",
+                "Lịch đặt phòng " + spaceName + " của bạn đã được hủy theo yêu cầu.",
+                booking.getId()
+        );
+
         log.info("Booking #{} đã bị hủy bởi {}", booking.getId(), userEmail);
         return toBookingResponse(booking, now);
     }
@@ -586,6 +624,15 @@ public class BookingService {
         log.info("Booking #{} đã được duyệt thành công bởi Staff {}", booking.getId(), staffEmail);
         BookingResponse response = toBookingResponse(booking, now);
         response.setMessage("Duyệt đặt phòng thành công");
+
+        notificationService.sendNotification(
+                booking.getStudentId(),
+                NotificationType.APPROVED,
+                "Đơn đặt phòng đã được duyệt",
+                "Yêu cầu đặt phòng của bạn đã được nhân viên vận hành phê duyệt.",
+                booking.getId()
+        );
+
         return response;
     }
 
@@ -631,6 +678,15 @@ public class BookingService {
         log.info("Booking #{} đã bị từ chối bởi Staff {}. Lý do: {}", booking.getId(), staffEmail, rejectReason);
         BookingResponse response = toBookingResponse(booking, now);
         response.setMessage("Từ chối đặt phòng thành công");
+
+        notificationService.sendNotification(
+                booking.getStudentId(),
+                NotificationType.REJECTED,
+                "Đơn đặt phòng bị từ chối",
+                "Lý do từ chối: " + rejectReason.trim(),
+                booking.getId()
+        );
+
         return response;
     }
 
