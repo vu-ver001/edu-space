@@ -6,5 +6,8 @@ public enum NotificationType {
     APPROVED, REJECTED,    // kết quả duyệt (gửi cho Sinh viên)
     CANCELLED,             // bị hủy
     REMINDER,              // nhắc nhở sắp đến giờ
-    SYSTEM                 // thông báo chung
+    SYSTEM,                 // thông báo chung
+    CHECKED_IN,        // <-- Bổ sung
+    EXPIRED,           // <-- Bổ sung
+    MAINTENANCE_ALERT
 }

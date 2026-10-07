@@ -1,5 +1,6 @@
 package com.eduspace.backend.auth.repository;
 
+import com.eduspace.backend.auth.entity.Role;
 import com.eduspace.backend.auth.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -12,5 +13,5 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByEmailOrUsername(String email, String username);
 
-    List<User> findByRole(String role);
+    List<User> findByRole(Role role);
 }

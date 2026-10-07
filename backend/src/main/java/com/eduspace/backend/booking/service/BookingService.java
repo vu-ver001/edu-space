@@ -1,5 +1,6 @@
 package com.eduspace.backend.booking.service;
 
+import com.eduspace.backend.auth.entity.Role;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -422,7 +423,7 @@ public class BookingService {
         // === BẮN THÔNG BÁO TỰ ĐỘNG SAU KHI TẠO BOOKING ===
         if (requiresApproval) {
             // Nếu cần duyệt, gửi thông báo cho tất cả tài khoản STAFF
-            List<User> staffUsers = userRepository.findByRole("STAFF");
+            List<User> staffUsers = userRepository.findByRole(Role.STAFF);
             for (User staff : staffUsers) {
                 notificationService.sendNotification(
                         staff.getId(),
@@ -564,6 +565,17 @@ public class BookingService {
                 .note("Giải phóng phòng cho sinh viên khác")
                 .build();
         auditLogRepository.save(audit);
+
+        AvailabilityService.SpaceCatalogItem space = availabilityService.getSpaceCatalogItem(booking.getSpaceId());
+        String spaceName = space != null ? space.getName() : "Phòng #" + booking.getSpaceId();
+
+        notificationService.sendNotification(
+                booking.getStudentId(),
+                NotificationType.CANCELLED,
+                "Hủy đặt phòng thành công",
+                "Lịch đặt phòng " + spaceName + " của bạn đã được hủy theo yêu cầu.",
+                booking.getId()
+        );
 
         log.info("Booking #{} đã bị hủy bởi {}", booking.getId(), userEmail);
         return toBookingResponse(booking, now);
