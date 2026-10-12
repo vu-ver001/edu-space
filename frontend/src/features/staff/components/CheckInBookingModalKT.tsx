@@ -18,6 +18,9 @@ interface CheckInBookingModalKTProps {
   isLoading?: boolean;
   onClose: () => void;
   onConfirm: () => void;
+  instructionNote?: string;
+  cancelLabel?: string;
+  confirmLabel?: string;
 }
 
 const formatDate = (value: string) => new Intl.DateTimeFormat('vi-VN', {
@@ -61,6 +64,9 @@ export const CheckInBookingModalKT = ({
   isLoading = false,
   onClose,
   onConfirm,
+  instructionNote,
+  cancelLabel,
+  confirmLabel,
 }: CheckInBookingModalKTProps) => {
   if (!isOpen || !booking) return null;
 
@@ -125,14 +131,16 @@ export const CheckInBookingModalKT = ({
 
           <div className="booking-approve-note booking-checkin-note">
             <UserRound size={20} />
-            <span>Thao tác này xác nhận sinh viên đã có mặt và bắt đầu sử dụng không gian.</span>
+            <span>{instructionNote || 'Thao tác này xác nhận sinh viên đã có mặt và bắt đầu sử dụng không gian.'}</span>
           </div>
         </div>
 
         <footer className="booking-approve-footer">
-          <button type="button" className="cancel" onClick={onClose} disabled={isLoading}>Hủy bỏ</button>
+          <button type="button" className="cancel" onClick={onClose} disabled={isLoading}>
+            {cancelLabel || 'Hủy bỏ'}
+          </button>
           <button type="button" className="confirm" onClick={onConfirm} disabled={isLoading}>
-            <CheckCircle2 size={18} /> {isLoading ? 'Đang check-in...' : 'Xác nhận check-in'}
+            <CheckCircle2 size={18} /> {isLoading ? 'Đang check-in...' : (confirmLabel || 'Xác nhận check-in')}
           </button>
         </footer>
       </section>

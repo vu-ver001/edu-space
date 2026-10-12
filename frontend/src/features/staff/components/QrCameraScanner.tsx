@@ -9,6 +9,10 @@ type Props = {
   cooldownMs?: number;
   /** Khoá mã vừa quét trong khoảng này để QR còn nằm trước camera không lặp vô hạn. */
   duplicateLockMs?: number;
+  /** Tạm dừng từ component cha (ví dụ khi popup đối chiếu thông tin đang mở). */
+  isPausedExternal?: boolean;
+  /** Token cần khóa sau khi đóng popup để tránh camera đọc lặp lại ngay lập tức. */
+  lockedToken?: string | null;
 };
 
 const ERROR_MESSAGES: Record<ScannerErrorKind, string> = {
@@ -33,13 +37,15 @@ const describeError = (error: IScannerError): string =>
 /**
  * Nguồn nhập token thứ ba bên cạnh máy quét USB và dán tay.
  *
- * Thư viện khởi tạo lại tập mã đã đọc mỗi lần bật/tắt `paused`, nên việc khoá theo
- * giá trị và khoá theo thời gian phải tự quản lý ở đây.
+ * Ưu tiên webcam laptop (facingMode ideal: 'user'). Tạm dừng khi component cha
+ * yêu cầu (mở popup đối chiếu) và khóa trùng lặp để tránh quét lại cùng một mã.
  */
 export default function QrCameraScanner({
   onToken,
   cooldownMs = 2000,
-  duplicateLockMs = 5000,
+  duplicateLockMs = 6000,
+  isPausedExternal = false,
+  lockedToken = null,
 }: Props) {
   const [paused, setPaused] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -52,6 +58,14 @@ export default function QrCameraScanner({
   const errorShownRef = useRef(false);
   const resumeTimerRef = useRef<number | null>(null);
 
+  // Khóa token cụ thể khi component cha yêu cầu
+  useEffect(() => {
+    if (lockedToken) {
+      lastValueRef.current = lockedToken;
+      lockedUntilRef.current = Date.now() + duplicateLockMs;
+    }
+  }, [lockedToken, duplicateLockMs]);
+
   // Dọn timer để không setState sau khi component đã unmount.
   useEffect(() => {
     return () => {
@@ -63,7 +77,7 @@ export default function QrCameraScanner({
 
   const handleScan = useCallback(
     async (detectedCodes: IDetectedBarcode[]) => {
-      if (scanningRef.current) return;
+      if (isPausedExternal || scanningRef.current) return;
       const token = detectedCodes[0]?.rawValue?.trim();
       if (!token) return;
       if (token === lastValueRef.current && Date.now() < lockedUntilRef.current) return;
@@ -76,11 +90,8 @@ export default function QrCameraScanner({
       try {
         await onToken(token);
       } catch {
-        // onToken tự hiển thị lỗi; nuốt tại đây vì thư viện không await onScan,
-        // nếu không sẽ thành unhandled rejection.
+        // onToken tự hiển thị lỗi; nuốt tại đây vì thư viện không await onScan.
       } finally {
-        // Chỉ mở lại camera khi request đã xong VÀ đã đủ cooldown, để không bắn
-        // trùng khi API chậm hơn thời gian chờ.
         const wait = Math.max(0, cooldownMs - (Date.now() - startedAt));
         resumeTimerRef.current = window.setTimeout(() => {
           lockedUntilRef.current = Date.now() + duplicateLockMs;
@@ -90,7 +101,7 @@ export default function QrCameraScanner({
         }, wait);
       }
     },
-    [onToken, cooldownMs, duplicateLockMs],
+    [onToken, cooldownMs, duplicateLockMs, isPausedExternal],
   );
 
   const handleError = useCallback((error: IScannerError) => {
@@ -101,14 +112,16 @@ export default function QrCameraScanner({
     setCameraError(describeError(error));
   }, []);
 
+  const isActuallyPaused = paused || failed || isPausedExternal;
+
   return (
     <div className="qr-camera">
       <div className="qr-camera__frame">
         <Scanner
           onScan={handleScan}
           onError={handleError}
-          paused={paused || failed}
-          constraints={{ facingMode: 'environment' }}
+          paused={isActuallyPaused}
+          constraints={{ facingMode: { ideal: 'user' } }}
           formats={['qr_code']}
           sound={false}
         />
@@ -121,9 +134,11 @@ export default function QrCameraScanner({
       )}
 
       <p className="qr-camera__hint">
-        {paused && !failed
-          ? 'Đã nhận mã, đang xác minh…'
-          : 'Đưa màn hình QR của sinh viên vào khung hình.'}
+        {isPausedExternal
+          ? 'Đang mở popup đối chiếu thông tin với thẻ sinh viên…'
+          : isActuallyPaused && !failed
+            ? 'Đã nhận mã, đang kiểm tra…'
+            : 'Đưa màn hình QR của sinh viên vào khung webcam laptop.'}
       </p>
     </div>
   );
