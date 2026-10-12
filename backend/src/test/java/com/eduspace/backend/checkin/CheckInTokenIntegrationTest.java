@@ -327,4 +327,49 @@ class CheckInTokenIntegrationTest {
         org.junit.jupiter.api.Assertions.assertEquals(BookingStatus.CONFIRMED,
                 bookings.findById(booking.getId()).orElseThrow().getStatus());
     }
+
+    ResultActions inspectReq(String jwtValue, String body) throws Exception {
+        return mvc.perform(post("/api/staff/check-in/inspect")
+                .header("Authorization", "Bearer " + jwtValue)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body));
+    }
+
+    @Test
+    void inspectReturnsBookingDetailsWithoutConsumingTokenOrCheckingIn() throws Exception {
+        String raw = issueTokenFor(booking);
+
+        // 1. Staff calls inspect: returns full details and status is still CONFIRMED
+        inspectReq(staffToken(), objectMapper.writeValueAsString(java.util.Map.of("token", raw)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("id").value(booking.getId()))
+                .andExpect(jsonPath("status").value("CONFIRMED"))
+                .andExpect(jsonPath("studentName").value("Token owner"));
+
+        // Verify database: Booking is NOT checked in, token is still ACTIVE, no audit log
+        Booking unchanged = bookings.findById(booking.getId()).orElseThrow();
+        org.junit.jupiter.api.Assertions.assertEquals(BookingStatus.CONFIRMED, unchanged.getStatus());
+        org.junit.jupiter.api.Assertions.assertNull(unchanged.getCheckedInAt());
+        long activeTokensCount = tokens.findAll().stream()
+                .filter(t -> t.getBookingId().equals(booking.getId()) && t.getStatus() == CheckInTokenStatus.ACTIVE)
+                .count();
+        org.junit.jupiter.api.Assertions.assertEquals(1L, activeTokensCount);
+        org.junit.jupiter.api.Assertions.assertEquals(0, audits.count());
+
+        // 2. Student cannot call inspect -> 403 Forbidden
+        inspectReq(token(), objectMapper.writeValueAsString(java.util.Map.of("token", raw)))
+                .andExpect(status().isForbidden());
+
+        // 3. Afterward, Staff calls scan -> checks in and marks token USED
+        scan(staffToken(), objectMapper.writeValueAsString(java.util.Map.of("token", raw)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("status").value("CHECKED_IN"));
+
+        Booking checkedIn = bookings.findById(booking.getId()).orElseThrow();
+        org.junit.jupiter.api.Assertions.assertEquals(BookingStatus.CHECKED_IN, checkedIn.getStatus());
+        long remainingActiveTokens = tokens.findAll().stream()
+                .filter(t -> t.getBookingId().equals(booking.getId()) && t.getStatus() == CheckInTokenStatus.ACTIVE)
+                .count();
+        org.junit.jupiter.api.Assertions.assertEquals(0L, remainingActiveTokens);
+    }
 }

@@ -29,4 +29,11 @@ public class CheckInScanController {
         String token = request != null ? request.getToken() : null;
         return ResponseEntity.ok(checkInTokenService.scan(token));
     }
+
+    /** Inspects a scanned one-time code and returns booking details for identity verification without checking in. */
+    @PostMapping("/inspect")
+    public ResponseEntity<BookingResponse> inspect(@RequestBody(required = false) VerifyCheckInTokenRequest request) {
+        String token = request != null ? request.getToken() : null;
+        return ResponseEntity.ok(checkInTokenService.inspect(token));
+    }
 }

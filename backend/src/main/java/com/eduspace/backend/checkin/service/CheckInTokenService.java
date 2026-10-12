@@ -8,6 +8,7 @@ import com.eduspace.backend.booking.dto.response.BookingResponse;
 import com.eduspace.backend.booking.entity.Booking;
 import com.eduspace.backend.booking.entity.BookingStatus;
 import com.eduspace.backend.booking.repository.BookingRepository;
+import com.eduspace.backend.booking.service.BookingService;
 import com.eduspace.backend.checkin.dto.response.CheckInTokenResponse;
 import com.eduspace.backend.checkin.entity.CheckInToken;
 import com.eduspace.backend.checkin.entity.CheckInTokenStatus;
@@ -37,6 +38,7 @@ public class CheckInTokenService {
     private final CheckInTokenRepository tokenRepository;
     private final UserRepository userRepository;
     private final CheckInService checkInService;
+    private final BookingService bookingService;
     private final Clock checkInClock;
 
     @Transactional
@@ -120,6 +122,47 @@ public class CheckInTokenService {
                 .findByTokenHashAndStatus(hash(rawToken.trim()), CheckInTokenStatus.ACTIVE)
                 .orElseThrow(this::invalidToken);
         return verify(active.getBookingId(), rawToken);
+    }
+
+    /**
+     * Inspects a scanned raw token and returns booking details for identity verification.
+     * Validates expiration, booking status, and check-in window without consuming the token
+     * or changing the booking status.
+     */
+    @Transactional(readOnly = true)
+    public BookingResponse inspect(String rawToken) {
+        if (rawToken == null || rawToken.isBlank()) {
+            throw invalidToken();
+        }
+        User actor = currentActor();
+        Role role = actor.getRole();
+        if (role != Role.STAFF && role != Role.ADMIN) {
+            throw BusinessException.forbidden("CHECKIN_FORBIDDEN", "Bạn không có quyền xác minh check-in.");
+        }
+
+        CheckInToken active = tokenRepository
+                .findByTokenHashAndStatus(hash(rawToken.trim()), CheckInTokenStatus.ACTIVE)
+                .orElseThrow(this::invalidToken);
+
+        Booking booking = bookingRepository.findById(active.getBookingId())
+                .orElseThrow(() -> BusinessException.notFound("BOOKING_NOT_FOUND", "Không tìm thấy booking."));
+
+        requireConfirmed(booking);
+
+        LocalDateTime now = LocalDateTime.now(checkInClock);
+        if (now.isAfter(active.getExpiresAt())) {
+            throw invalidToken();
+        }
+
+        CheckInWindow window = checkInService.getCheckInWindow(booking, now);
+        if (now.isBefore(window.openAt())) {
+            throw BusinessException.badRequest("CHECKIN_TOO_EARLY", "Chưa đến thời gian check-in.");
+        }
+        if (now.isAfter(window.closeAt())) {
+            throw BusinessException.badRequest("CHECKIN_WINDOW_EXPIRED", "Đã quá thời hạn check-in.");
+        }
+
+        return bookingService.toBookingResponse(booking, now);
     }
 
     private Booking lockBooking(Long bookingId) {
