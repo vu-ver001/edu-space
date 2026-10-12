@@ -75,6 +75,7 @@ class BookingCoreLogicTest {
     private UserRepository userRepository;
     private PolicyService policyService;
     private MaintenanceBlockRepository maintenanceBlockRepository;
+    private com.eduspace.backend.staff.service.StaffAuditService staffAuditService;
 
     private AvailabilityService availabilityService;
     private BookingService bookingService;
@@ -95,6 +96,7 @@ class BookingCoreLogicTest {
         userRepository = mock(UserRepository.class);
         policyService = mock(PolicyService.class);
         maintenanceBlockRepository = mock(MaintenanceBlockRepository.class);
+        staffAuditService = mock(com.eduspace.backend.staff.service.StaffAuditService.class);
 
         baseTime = LocalDateTime.of(2026, 9, 20, 8, 0, 0);
         Clock fixedClock = Clock.fixed(baseTime.minusHours(1).toInstant(ZoneOffset.UTC), ZoneOffset.UTC);
@@ -122,6 +124,7 @@ class BookingCoreLogicTest {
                 userRepository,
                 fixedClock,
                 mock(com.eduspace.backend.notification.service.NotificationService.class),
+                staffAuditService,
                 maintenanceBlockRepo
         );
 
@@ -815,6 +818,9 @@ class BookingCoreLogicTest {
 
             assertEquals(BookingStatus.CONFIRMED, res.getStatus());
             assertEquals("Duyệt đặt phòng thành công", res.getMessage());
+            verify(staffAuditService).logAction(eq(staff.getId()), eq(staff.getEmail()),
+                    eq(com.eduspace.backend.staff.entity.StaffAuditAction.BOOKING_APPROVED),
+                    eq("BOOKING"), eq(bookingId), eq(2L), anyString());
         }
 
         @Test
@@ -845,6 +851,9 @@ class BookingCoreLogicTest {
 
             assertEquals(BookingStatus.REJECTED, res.getStatus());
             assertEquals("Phòng cần sửa chữa đột xuất", res.getRejectReason());
+            verify(staffAuditService).logAction(eq(staff.getId()), eq(staff.getEmail()),
+                    eq(com.eduspace.backend.staff.entity.StaffAuditAction.BOOKING_REJECTED),
+                    eq("BOOKING"), eq(bookingId), isNull(), anyString());
             assertEquals("Từ chối đặt phòng thành công", res.getMessage());
         }
 
@@ -865,6 +874,42 @@ class BookingCoreLogicTest {
                     bookingService.getBookingById(bookingId, otherStudent.getEmail())
             );
             assertEquals("BOOKING_FORBIDDEN", ex.getCode());
+        }
+
+        @Test
+        @DisplayName("3.6b. Sinh viên khác không thể xem audit log của booking")
+        void testGetBookingAuditLogs_ForbiddenForOtherUser() {
+            Long bookingId = 43L;
+            Booking bookingOfStudent = Booking.builder()
+                    .id(bookingId)
+                    .studentId(student.getId())
+                    .build();
+            when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(bookingOfStudent));
+
+            BusinessException ex = assertThrows(BusinessException.class, () ->
+                    bookingService.getBookingAuditLogs(bookingId, otherStudent.getEmail()));
+
+            assertEquals("BOOKING_FORBIDDEN", ex.getCode());
+            verify(auditLogRepository, never()).findByBookingIdOrderByPerformedAtDesc(bookingId);
+        }
+
+        @Test
+        @DisplayName("3.6c. Chủ booking xem được lịch sử thao tác")
+        void testGetBookingAuditLogs_OwnerCanRead() {
+            Long bookingId = 44L;
+            when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(
+                    Booking.builder().id(bookingId).studentId(student.getId()).build()));
+            when(auditLogRepository.findByBookingIdOrderByPerformedAtDesc(bookingId))
+                    .thenReturn(List.of(BookingAuditLog.builder()
+                            .id(1L).bookingId(bookingId).action(AuditAction.CREATE_BOOKING)
+                            .performedBy(student.getId()).performedByEmail(student.getEmail())
+                            .performedAt(baseTime).build()));
+
+            var history = bookingService.getBookingAuditLogs(bookingId, student.getEmail());
+
+            assertEquals(1, history.size());
+            assertEquals(AuditAction.CREATE_BOOKING, history.get(0).getAction());
+            assertEquals(student.getEmail(), history.get(0).getPerformedByEmail());
         }
 
         @Test

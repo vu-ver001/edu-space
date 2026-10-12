@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 
 import com.eduspace.backend.booking.dto.request.CreateBookingRequest;
 import com.eduspace.backend.booking.dto.response.BookingResponse;
+import com.eduspace.backend.booking.dto.response.BookingAuditLogResponse;
 import com.eduspace.backend.booking.dto.response.BulkBookingFailureItem;
 import com.eduspace.backend.booking.dto.response.BulkBookingOperationResponse;
 import com.eduspace.backend.booking.dto.response.ConflictDetail;
@@ -40,6 +41,8 @@ import com.eduspace.backend.auth.entity.User;
 import com.eduspace.backend.space.entity.SpaceTable;
 import com.eduspace.backend.space.repository.SpaceTableRepository;
 import com.eduspace.backend.notification.type.NotificationType;
+import com.eduspace.backend.staff.entity.StaffAuditAction;
+import com.eduspace.backend.staff.service.StaffAuditService;
 /**
  * Phân hệ Quản lý Đặt chỗ Lõi (Module M04).
  * Phụ trách: Nguyễn Thị Khánh Vân (Lead kỹ thuật).
@@ -61,6 +64,7 @@ public class BookingService {
     private final UserRepository userRepository;
     private final java.time.Clock checkInClock;
     private final com.eduspace.backend.notification.service.NotificationService notificationService;
+    private final StaffAuditService staffAuditService;
     // ================= BEGIN KT =================
     private final com.eduspace.backend.staff.repository.MaintenanceBlockRepository maintenanceBlockRepository;
     // ================= END KT =================
@@ -526,6 +530,30 @@ public class BookingService {
         return toBookingResponse(booking, LocalDateTime.now());
     }
 
+    @Transactional(readOnly = true)
+    public List<BookingAuditLogResponse> getBookingAuditLogs(Long id, String userEmail) {
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> BusinessException.notFound("BOOKING_NOT_FOUND", "Không tìm thấy booking với ID: " + id));
+        requireOwnerOrStaff(booking, userEmail);
+        return auditLogRepository.findByBookingIdOrderByPerformedAtDesc(id).stream()
+                .map(audit -> {
+                    String actorName = audit.getPerformedBy() == null ? null
+                            : userRepository.findById(audit.getPerformedBy())
+                                    .map(User::getFullName).orElse(null);
+                    return BookingAuditLogResponse.builder()
+                            .id(audit.getId())
+                            .bookingId(audit.getBookingId())
+                            .action(audit.getAction())
+                            .actionDescription(audit.getAction().getDescription())
+                            .performedByName(actorName)
+                            .performedByEmail(audit.getPerformedByEmail())
+                            .performedAt(audit.getPerformedAt())
+                            .reason(audit.getReason())
+                            .note(audit.getNote())
+                            .build();
+                }).toList();
+    }
+
     /**
      * Hủy booking trước giờ bắt đầu.
      */
@@ -621,6 +649,10 @@ public class BookingService {
                 .build();
         auditLogRepository.save(audit);
 
+        staffAuditService.logAction(audit.getPerformedBy(), staffEmail,
+                StaffAuditAction.BOOKING_APPROVED, "BOOKING", booking.getId(),
+                booking.getSpaceId(), "Staff phê duyệt đặt chỗ #" + booking.getId());
+
         log.info("Booking #{} đã được duyệt thành công bởi Staff {}", booking.getId(), staffEmail);
         BookingResponse response = toBookingResponse(booking, now);
         response.setMessage("Duyệt đặt phòng thành công");
@@ -674,6 +706,10 @@ public class BookingService {
                 .note("Từ chối yêu cầu và giải phóng phòng")
                 .build();
         auditLogRepository.save(audit);
+
+        staffAuditService.logAction(audit.getPerformedBy(), staffEmail,
+                StaffAuditAction.BOOKING_REJECTED, "BOOKING", booking.getId(),
+                booking.getSpaceId(), "Lý do: " + rejectReason.trim());
 
         log.info("Booking #{} đã bị từ chối bởi Staff {}. Lý do: {}", booking.getId(), staffEmail, rejectReason);
         BookingResponse response = toBookingResponse(booking, now);
@@ -855,9 +891,7 @@ public class BookingService {
         }
 
         LocalDateTime now = LocalDateTime.now();
-        List<Booking> bookings = bookingRepository.findTimelineBookings(
-                spaceId, fromTime, toTime, AvailabilityService.OCCUPYING_STATUSES
-        );
+        List<Booking> bookings = bookingRepository.findTimelineBookings(spaceId, fromTime, toTime);
 
         return bookings.stream()
                 .map(b -> toBookingResponse(b, now))
