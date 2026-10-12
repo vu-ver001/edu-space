@@ -28,7 +28,7 @@ public interface StaffAuditLogRepository extends JpaRepository<StaffAuditLog, Lo
             "AND (:spaceId IS NULL OR s.spaceId = :spaceId) " +
             "AND (:actorUserId IS NULL OR s.actorUserId = :actorUserId) " +
             "AND (:from IS NULL OR s.createdAt >= :from) " +
-            "AND (:to IS NULL OR s.createdAt <= :to) " +
+            "AND (:to IS NULL OR s.createdAt < :to) " +
             "ORDER BY s.createdAt DESC")
     List<StaffAuditLog> search(
             @Param("action") StaffAuditAction action,

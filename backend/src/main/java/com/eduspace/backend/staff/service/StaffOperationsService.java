@@ -18,7 +18,6 @@ import com.eduspace.backend.staff.dto.request.BookingRejectRequestKT;
 import com.eduspace.backend.staff.dto.response.PendingBookingResponseKT;
 import com.eduspace.backend.staff.dto.response.StaffTimelineEventResponseKT;
 import com.eduspace.backend.staff.dto.response.StaffTimelineResponseKT;
-import com.eduspace.backend.staff.entity.StaffAuditAction;
 import com.eduspace.backend.staff.repository.MaintenanceBlockRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,7 +42,6 @@ public class StaffOperationsService {
     private final CheckInService checkInService;
     private final MaintenanceBlockRepository maintenanceBlockRepository;
     private final SpaceRepository spaceRepository;
-    private final StaffAuditService staffAuditService;
     private final UserRepository userRepository;
 
     /**
@@ -181,13 +179,7 @@ public class StaffOperationsService {
     public BookingResponse approveBooking(Long bookingId) {
         User staff = requireCurrentUser();
         String staffEmail = staff.getEmail();
-        Long staffId = staff.getId();
-
         BookingResponse response = bookingService.approveBooking(bookingId, staffEmail);
-
-        // Ghi Staff Audit Log khi duyệt thành công
-        staffAuditService.logAction(staffId, staffEmail, StaffAuditAction.BOOKING_APPROVED,
-                "BOOKING", bookingId, response.getSpaceId(), "Staff phê duyệt đặt chỗ #" + bookingId);
 
         log.info("Staff {} đã duyệt thành công booking #{}", staffEmail, bookingId);
         return response;
@@ -206,13 +198,7 @@ public class StaffOperationsService {
 
         User staff = requireCurrentUser();
         String staffEmail = staff.getEmail();
-        Long staffId = staff.getId();
-
         BookingResponse response = bookingService.rejectBooking(bookingId, staffEmail, request.getReason().trim());
-
-        // Ghi Staff Audit Log khi từ chối thành công
-        staffAuditService.logAction(staffId, staffEmail, StaffAuditAction.BOOKING_REJECTED,
-                "BOOKING", bookingId, response.getSpaceId(), "Lý do: " + request.getReason().trim());
 
         log.info("Staff {} đã từ chối booking #{}. Lý do: {}", staffEmail, bookingId, request.getReason().trim());
         return response;
@@ -226,13 +212,7 @@ public class StaffOperationsService {
     public BookingResponse staffAssistedCheckIn(Long bookingId) {
         User staff = requireCurrentUser();
         String staffEmail = staff.getEmail();
-        Long staffId = staff.getId();
-
         BookingResponse response = checkInService.checkIn(bookingId);
-
-        // Ghi Staff Audit Log
-        staffAuditService.logAction(staffId, staffEmail, StaffAuditAction.STAFF_CHECKED_IN_BOOKING,
-                "BOOKING", bookingId, response.getSpaceId(), "Nhân viên hỗ trợ check-in tại quầy cho sinh viên");
 
         log.info("Staff {} đã hỗ trợ check-in thành công cho booking #{}", staffEmail, bookingId);
         return response;
