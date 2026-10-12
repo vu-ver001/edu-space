@@ -27,5 +27,6 @@ Thumbs.db
 data/
 docs/
 test/
+!backend/src/test/
 docker-compose.yml
 .env
