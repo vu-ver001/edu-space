@@ -259,10 +259,6 @@ export default function PolicyManagementPage() {
   const loadPolicy = async () => {
     setIsLoading(true);
     try {
-      if (!localStorage.getItem('eduspace_token')) {
-        await policyService.quickAdminLogin();
-      }
-
       const policy: PolicyResponse = await policyService.getPolicy();
       const hours = Math.round((policy.maxDurationMinutes || 240) / 60) || 4;
       const bookings = policy.maxBookingsPerDay || 2;

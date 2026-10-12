@@ -6,8 +6,8 @@ type Props = { title: string; owner: string };
 
 export default function Placeholder({ title, owner }: Props) {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('admin@eduspace.vn');
-  const [password, setPassword] = useState('123456');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -134,93 +134,6 @@ export default function Placeholder({ title, owner }: Props) {
           </div>
         )}
 
-        {/* Quick 1-Click Login for development testing */}
-        <div style={{ marginBottom: '20px' }}>
-          <span
-            style={{
-              display: 'block',
-              fontSize: '12px',
-              fontWeight: 600,
-              textTransform: 'uppercase',
-              color: '#64748b',
-              marginBottom: '10px',
-              letterSpacing: '0.04em',
-            }}
-          >
-            Đăng nhập nhanh 1 chạm (Test Account):
-          </span>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <button
-              type="button"
-              onClick={() => handleLogin('admin@eduspace.vn', '123456', '/space-types')}
-              disabled={isLoading}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '10px 14px',
-                borderRadius: '8px',
-                border: '1px solid #bfdbfe',
-                backgroundColor: '#eff6ff',
-                color: '#1e40af',
-                fontSize: '13.5px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                textAlign: 'left',
-              }}
-            >
-              <span>👑 Quản Trị Viên (Admin)</span>
-              <span style={{ fontSize: '12px', opacity: 0.8 }}>→ Vào Loại Không Gian</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleLogin('staff@eduspace.vn', '123456', '/staff')}
-              disabled={isLoading}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '10px 14px',
-                borderRadius: '8px',
-                border: '1px solid #bbf7d0',
-                backgroundColor: '#f0fdf4',
-                color: '#166534',
-                fontSize: '13.5px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                textAlign: 'left',
-              }}
-            >
-              <span>🛡️ Nhân Viên Quầy (Staff)</span>
-              <span style={{ fontSize: '12px', opacity: 0.8 }}>→ Vào Vận Hành Staff</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleLogin('student@eduspace.vn', '123456', '/spaces')}
-              disabled={isLoading}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '10px 14px',
-                borderRadius: '8px',
-                border: '1px solid #e2e8f0',
-                backgroundColor: '#f8fafc',
-                color: '#334155',
-                fontSize: '13.5px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                textAlign: 'left',
-              }}
-            >
-              <span>🎓 Sinh Viên (Student)</span>
-              <span style={{ fontSize: '12px', opacity: 0.8 }}>→ Vào Tra Cứu Phòng</span>
-            </button>
-          </div>
-        </div>
-
         <div
           style={{
             position: 'relative',
@@ -241,7 +154,7 @@ export default function Placeholder({ title, owner }: Props) {
               color: '#94a3b8',
             }}
           >
-            hoặc nhập tài khoản
+            Nhập tài khoản
           </span>
         </div>
 

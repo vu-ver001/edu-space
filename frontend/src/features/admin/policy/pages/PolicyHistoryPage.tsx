@@ -33,18 +33,7 @@ export default function PolicyHistoryPage() {
     try {
       const data = await policyService.getAuditLogs();
       setLogs(data);
-    } catch (err: any) {
-      // Tự động đăng nhập test admin nếu gặp 401
-      if (err.response?.status === 401) {
-        try {
-          await policyService.quickAdminLogin();
-          const retryData = await policyService.getAuditLogs();
-          setLogs(retryData);
-          return;
-        } catch {
-          // Bỏ qua lỗi login thử
-        }
-      }
+    } catch {
       setError('Không thể tải lịch sử thay đổi chính sách. Vui lòng thử lại sau.');
     } finally {
       setIsLoading(false);
@@ -248,7 +237,7 @@ export default function PolicyHistoryPage() {
           <div className="history-card-list">
             {filteredLogs.map((log, index) => {
               const newItems = parsePolicyText(log.newValue);
-              const actorEmail = log.performedBy || 'admin@eduspace.vn';
+              const actorEmail = log.performedBy || 'Không rõ người thực hiện';
 
               return (
                 <article key={log.id} className="history-card-item">
@@ -268,7 +257,7 @@ export default function PolicyHistoryPage() {
                           <span>
                             {log.performedAt
                               ? formatHistoryTimestamp(log.performedAt)
-                              : '22:04:46 19/09/2026'}
+                              : 'Không rõ thời gian'}
                           </span>
                         </div>
                       </div>

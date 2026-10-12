@@ -19,7 +19,6 @@ const UI_OVERRIDES: Record<AppRole, { to: string; labelKey?: string; iconKey?: s
     { to: `${ADMIN_BASE}/users`, labelKey: 'adminUsersLabel', iconKey: 'adminUsersIcon' },
   ],
   STAFF: [
-    { to: STAFF_BASE, labelKey: 'staffHomeLabel', iconKey: 'staffHomeIcon' },
     { to: `${STAFF_BASE}/approvals`, labelKey: 'staffApproveLabel', iconKey: 'staffApproveIcon' },
   ],
   STUDENT: [{ to: STUDENT_SPACES_PATH, labelKey: 'stuSpaceLabel', iconKey: 'stuSpaceIcon' }],
