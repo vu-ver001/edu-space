@@ -14,6 +14,7 @@ import {
   Info,
   CalendarClock,
   Sparkles,
+  Building2,
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
@@ -394,6 +395,24 @@ export default function StatisticsDashboardPage() {
         {/* Secondary Metrics Strip */}
         <section className="stats-secondary-strip">
           <div className="sub-metric-item">
+            <div className="sub-metric-icon emerald">
+              <Building2 size={18} />
+            </div>
+            <div className="sub-metric-data">
+              <span className="sub-metric-val">
+                {stats?.availableSpacesCount ?? 0}
+                {stats?.totalSpacesCount != null && (
+                  <small style={{ fontSize: '13px', fontWeight: 600, color: '#64748b' }}>
+                    /{stats.totalSpacesCount}
+                  </small>
+                )}{' '}
+                <small style={{ fontSize: '11px', fontWeight: 600, color: '#64748b' }}>phòng</small>
+              </span>
+              <span className="sub-metric-title">Không gian khả dụng</span>
+            </div>
+          </div>
+
+          <div className="sub-metric-item">
             <div className="sub-metric-icon red">
               <Wrench size={18} />
             </div>
@@ -527,7 +546,7 @@ export default function StatisticsDashboardPage() {
             <div className="pipeline-bars-list">
               <div className="pipeline-item">
                 <div className="pipeline-item-header">
-                  <span style={{ color: '#16a34a' }}>Đã hoàn thành tốt đẹp</span>
+                  <span style={{ color: '#16a34a' }}>Đã hoàn thành</span>
                   <span>
                     {stats?.completedCount ?? 0} / {stats?.totalBookings ?? 0} (
                     {stats?.totalBookings ? Math.round(((stats.completedCount || 0) / stats.totalBookings) * 100) : 0}%)

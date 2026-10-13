@@ -38,6 +38,10 @@ public class DashboardStatisticsResponse {
     private Long maintenanceSeatsCount;
     private Long totalMaintenanceCount;
 
+    // Thống kê số lượng không gian (phòng) khả dụng và tổng số không gian
+    private Long availableSpacesCount;
+    private Long totalSpacesCount;
+
     // Chi tiết số lượng theo từng trạng thái để giao diện dễ vẽ biểu đồ
     private Long confirmedCount;
     private Long checkedInCount;

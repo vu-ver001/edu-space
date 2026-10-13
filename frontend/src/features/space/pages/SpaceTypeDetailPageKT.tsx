@@ -26,14 +26,16 @@ import { readSpaceApiError } from '../api/spaceApiError';
 import { SpaceTypeFormModalKT } from '../components/SpaceTypeFormModalKT';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
 import { Tooltip } from '../../../components/common/Tooltip';
+import { formatImageUrl } from '../../../utils/imageUrl';
 import './SpaceTypeDetailPageKT.css';
 
 const DEFAULT_SPACE_IMAGES = [
-  'https://images.unsplash.com/photo-1517502884422-41eaead166d4?w=300&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1497366216548-37526070297c?w=300&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=300&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=300&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=300&auto=format&fit=crop&q=80',
+  formatImageUrl('/uploads/spaces/room-g101-main.jpg') || '/uploads/spaces/room-g101-main.jpg',
+  formatImageUrl('/uploads/spaces/room-g102-main.jpg') || '/uploads/spaces/room-g102-main.jpg',
+  formatImageUrl('/uploads/spaces/room-p201-main.jpg') || '/uploads/spaces/room-p201-main.jpg',
+  formatImageUrl('/uploads/spaces/study-s201-main.jpg') || '/uploads/spaces/study-s201-main.jpg',
+  formatImageUrl('/uploads/spaces/booth-b01-main.jpg') || '/uploads/spaces/booth-b01-main.jpg',
+  formatImageUrl('/uploads/spaces/table-d201-main.jpg') || '/uploads/spaces/table-d201-main.jpg',
 ];
 
 export const SpaceTypeDetailPageKT: React.FC = () => {

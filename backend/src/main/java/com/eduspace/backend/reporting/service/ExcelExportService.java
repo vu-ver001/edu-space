@@ -8,7 +8,7 @@ import java.util.List;
 public interface ExcelExportService {
 
     /**
-     * Xuất báo cáo thống kê vận hành sang định dạng file Excel (.xlsx) chuẩn, khoa học.
+     * Xuất báo cáo thống kê vận hành
      */
     byte[] generateStatisticsExcel(DashboardStatisticsResponse stats, List<DailyBookingSummary> dailySummaries);
 }

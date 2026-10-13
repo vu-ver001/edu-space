@@ -30,6 +30,8 @@ public interface SpaceRepository extends JpaRepository<Space, Long> {
 
     List<Space> findAllBySpaceTypeIdAndDeletedAtIsNull(Long spaceTypeId);
 
+    long countByDeletedAtIsNull();
+
     long countByStatusAndDeletedAtIsNull(SpaceStatus status);
 
     List<Space> findAllByStatusAndDeletedAtIsNull(SpaceStatus status);

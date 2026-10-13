@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Armchair, Building2 } from 'lucide-react';
+import { formatImageUrl } from '../../../../utils/imageUrl';
 import type { Space } from '../services/spaceService';
 import '../pages/SearchSpacesPage.css';
 import './MaintenanceModal.css';
@@ -18,16 +19,17 @@ interface Props {
   onBook?: (space: Space) => void;
 }
 
-// Fallback high-res photos for university study & meeting spaces
+// Fallback high-res photos accurately representing each room type
 const ROOM_IMAGES: Record<number, string> = {
-  1: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&auto=format&fit=crop&q=80',
-  2: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&auto=format&fit=crop&q=80',
-  3: 'https://images.unsplash.com/photo-1577495508048-b635879837f1?w=800&auto=format&fit=crop&q=80',
-  4: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=800&auto=format&fit=crop&q=80',
-  5: 'https://images.unsplash.com/photo-1531482615713-2afd69097998?w=800&auto=format&fit=crop&q=80',
-  6: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&auto=format&fit=crop&q=80',
+  1: '/uploads/spaces/room-g101-main.jpg',
+  2: '/uploads/spaces/room-g102-main.jpg',
+  3: '/uploads/spaces/room-p201-main.jpg',
+  4: '/uploads/spaces/study-s201-main.jpg',
+  5: '/uploads/spaces/booth-b01-main.jpg',
+  6: '/uploads/spaces/room-g103-main.jpg',
+  7: '/uploads/spaces/table-d201-main.jpg',
 };
-const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&auto=format&fit=crop&q=80';
+const DEFAULT_IMAGE = '/uploads/spaces/room-g101-main.jpg';
 
 export const formatMaintenanceTime = (startStr: string, endStr: string): string => {
   try {
@@ -98,8 +100,11 @@ export const TableMeetingIcon = ({ size = 14, strokeWidth = 2.2, style }: { size
 export const RoomCard: React.FC<Props> = ({ space, searchParams }) => {
   const navigate = useNavigate();
   const isAvailable = space.isAvailable ?? (space.status === 'AVAILABLE');
-  // Ưu tiên ảnh có is_primary = true từ bảng space_images
-  const imageUrl = space.primaryImageUrl || space.imageUrl || ROOM_IMAGES[space.id] || DEFAULT_IMAGE;
+  // Ưu tiên ảnh có is_primary = true từ bảng space_images, lọc bỏ domain chết catbox
+  const validPrimary = space.primaryImageUrl && !space.primaryImageUrl.includes('catbox.moe') ? space.primaryImageUrl : null;
+  const validImage = space.imageUrl && !space.imageUrl.includes('catbox.moe') ? space.imageUrl : null;
+  const rawUrl = validPrimary || validImage || ROOM_IMAGES[space.id] || DEFAULT_IMAGE;
+  const imageUrl = formatImageUrl(rawUrl) || rawUrl;
 
   // Đo đạc để tiện ích luôn hiển thị đúng 1 dòng, nếu không đủ chỗ thì +N ở cuối dòng
   const amenitiesContainerRef = useRef<HTMLDivElement>(null);
@@ -197,7 +202,13 @@ export const RoomCard: React.FC<Props> = ({ space, searchParams }) => {
           src={imageUrl} 
           alt={space.name} 
           className="room-card-img" 
-          loading="lazy" 
+          loading="lazy"
+          onError={(e) => {
+            const fallback = formatImageUrl(ROOM_IMAGES[space.id] || DEFAULT_IMAGE) || DEFAULT_IMAGE;
+            if (e.currentTarget.src !== fallback) {
+              e.currentTarget.src = fallback;
+            }
+          }}
         />
         <div className="room-card-badge-pinned">
           {space.status === 'MAINTENANCE' ? (

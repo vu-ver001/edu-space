@@ -6,6 +6,7 @@
 export const formatImageUrl = (url?: string | null): string | null => {
   if (!url || !url.trim()) return null;
   const trimmed = url.trim();
+  if (trimmed.includes('catbox.moe')) return null;
   if (
     trimmed.startsWith('http://') ||
     trimmed.startsWith('https://') ||

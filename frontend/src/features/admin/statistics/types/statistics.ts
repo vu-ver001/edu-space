@@ -23,6 +23,8 @@ export interface DashboardStatisticsResponse {
   maintenanceTablesCount?: number;
   maintenanceSeatsCount?: number;
   totalMaintenanceCount?: number;
+  availableSpacesCount?: number;
+  totalSpacesCount?: number;
   confirmedCount: number;
   checkedInCount: number;
   completedCount: number;

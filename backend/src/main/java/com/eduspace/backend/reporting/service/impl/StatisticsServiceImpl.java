@@ -131,6 +131,17 @@ public class StatisticsServiceImpl implements StatisticsService {
 
         // Phòng bảo trì theo lịch khóa (maintenance_blocks)
         java.util.List<com.eduspace.backend.space.entity.MaintenanceBlock> activeBlocks = maintenanceBlockRepository.findActiveMaintenanceBlocks();
+
+        // Thống kê không gian (phòng) khả dụng và tổng số không gian
+        java.util.List<com.eduspace.backend.space.entity.Space> allSpaces = spaceRepository.findAllByDeletedAtIsNull();
+        long totalSpacesCount = allSpaces.size();
+        java.util.Set<Long> blockedSpaceIds = activeBlocks.stream()
+                .map(mb -> mb.getSpace().getId())
+                .collect(java.util.stream.Collectors.toSet());
+        long availableSpacesCount = allSpaces.stream()
+                .filter(s -> s.getStatus() == SpaceStatus.AVAILABLE && !blockedSpaceIds.contains(s.getId()))
+                .count();
+
         for (com.eduspace.backend.space.entity.MaintenanceBlock mb : activeBlocks) {
             com.eduspace.backend.space.entity.Space s = mb.getSpace();
             boolean alreadyInList = maintenanceSpaces.stream().anyMatch(ms -> ms.getId().equals(s.getId()));
@@ -194,6 +205,8 @@ public class StatisticsServiceImpl implements StatisticsService {
                 .maintenanceTablesCount(maintenanceTablesCount)
                 .maintenanceSeatsCount(maintenanceSeatsCount)
                 .totalMaintenanceCount(totalMaintenanceCount)
+                .availableSpacesCount(availableSpacesCount)
+                .totalSpacesCount(totalSpacesCount)
                 .confirmedCount(confirmedCount)
                 .checkedInCount(checkedInCount)
                 .completedCount(completedCount)

@@ -8,21 +8,23 @@ import { Armchair, Building2 } from 'lucide-react';
 import type { Space, SpaceSeat, SpaceTable, MaintenanceSchedule } from '../services/spaceService';
 import { spaceService } from '../services/spaceService';
 import { bookingService } from '../services/bookingService';
+import { formatImageUrl } from '../../../../utils/imageUrl';
 import './SpaceDetailPage.css';
 import '../components/SeatSelectionModal.css';
 import '../components/MaintenanceModal.css';
 
 // Default photos fallback
 const ROOM_IMAGES: Record<number, string> = {
-  1: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=1200&auto=format&fit=crop&q=80',
-  2: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&auto=format&fit=crop&q=80',
-  3: 'https://images.unsplash.com/photo-1577495508048-b635879837f1?w=1200&auto=format&fit=crop&q=80',
-  4: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=1200&auto=format&fit=crop&q=80',
-  5: 'https://images.unsplash.com/photo-1531482615713-2afd69097998?w=1200&auto=format&fit=crop&q=80',
-  6: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1200&auto=format&fit=crop&q=80',
+  1: '/uploads/spaces/room-g101-main.jpg',
+  2: '/uploads/spaces/room-g102-main.jpg',
+  3: '/uploads/spaces/room-p201-main.jpg',
+  4: '/uploads/spaces/study-s201-main.jpg',
+  5: '/uploads/spaces/booth-b01-main.jpg',
+  6: '/uploads/spaces/room-g103-main.jpg',
+  7: '/uploads/spaces/table-d201-main.jpg',
 };
 
-const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&auto=format&fit=crop&q=80';
+const DEFAULT_IMAGE = '/uploads/spaces/room-g101-main.jpg';
 
 export const SpaceDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -254,21 +256,35 @@ export const SpaceDetailPage: React.FC = () => {
               if (b.isPrimary) return 1;
               return (a.sortOrder || 0) - (b.sortOrder || 0);
             });
-            setSpaceImages(sorted.map((item) => item.imageUrl));
+            setSpaceImages(sorted.map((item) => formatImageUrl(item.imageUrl) || item.imageUrl));
           } else if (data.images && data.images.length > 0) {
             const sorted = [...data.images].sort((a, b) => {
               if (a.isPrimary) return -1;
               if (b.isPrimary) return 1;
               return (a.sortOrder || 0) - (b.sortOrder || 0);
             });
-            setSpaceImages(sorted.map((item) => item.imageUrl));
+            const validImages = sorted
+              .map((item) => formatImageUrl(item.imageUrl) || item.imageUrl)
+              .filter((url): url is string => Boolean(url && !url.includes('catbox.moe')));
+            if (validImages.length > 0) {
+              setSpaceImages(validImages);
+            } else {
+              const rawFallback = (data.primaryImageUrl && !data.primaryImageUrl.includes('catbox.moe') ? data.primaryImageUrl : null)
+                || (data.imageUrl && !data.imageUrl.includes('catbox.moe') ? data.imageUrl : null)
+                || ROOM_IMAGES[data.id] || DEFAULT_IMAGE;
+              setSpaceImages([formatImageUrl(rawFallback) || rawFallback]);
+            }
           } else {
-            const fallback = data.primaryImageUrl || data.imageUrl || ROOM_IMAGES[data.id] || DEFAULT_IMAGE;
-            setSpaceImages([fallback]);
+            const rawFallback = (data.primaryImageUrl && !data.primaryImageUrl.includes('catbox.moe') ? data.primaryImageUrl : null)
+              || (data.imageUrl && !data.imageUrl.includes('catbox.moe') ? data.imageUrl : null)
+              || ROOM_IMAGES[data.id] || DEFAULT_IMAGE;
+            setSpaceImages([formatImageUrl(rawFallback) || rawFallback]);
           }
         } catch {
-          const fallback = data.primaryImageUrl || data.imageUrl || ROOM_IMAGES[data.id] || DEFAULT_IMAGE;
-          setSpaceImages([fallback]);
+          const rawFallback = (data.primaryImageUrl && !data.primaryImageUrl.includes('catbox.moe') ? data.primaryImageUrl : null)
+            || (data.imageUrl && !data.imageUrl.includes('catbox.moe') ? data.imageUrl : null)
+            || ROOM_IMAGES[data.id] || DEFAULT_IMAGE;
+          setSpaceImages([formatImageUrl(rawFallback) || rawFallback]);
         }
       })
       .catch((err) => {
@@ -550,9 +566,15 @@ export const SpaceDetailPage: React.FC = () => {
               style={{ cursor: 'pointer' }}
             >
               <img
-                src={spaceImages[currentImageIndex] || space.primaryImageUrl || space.imageUrl || ROOM_IMAGES[space.id] || DEFAULT_IMAGE}
+                src={formatImageUrl(spaceImages[currentImageIndex] || space.primaryImageUrl || space.imageUrl || ROOM_IMAGES[space.id] || DEFAULT_IMAGE) || DEFAULT_IMAGE}
                 alt={`${space.name} - Ảnh ${currentImageIndex + 1}`}
                 className="space-hero-img"
+                onError={(e) => {
+                  const fallback = formatImageUrl(ROOM_IMAGES[space.id] || DEFAULT_IMAGE) || DEFAULT_IMAGE;
+                  if (e.currentTarget.src !== fallback) {
+                    e.currentTarget.src = fallback;
+                  }
+                }}
               />
 
               {/* Hint badge nhấp xem ảnh chi tiết khi di chuột */}
@@ -1181,9 +1203,15 @@ export const SpaceDetailPage: React.FC = () => {
             <div className="image-lightbox-left">
               <div className="modal-main-image-wrap">
                 <img
-                  src={spaceImages[modalImageIndex] || space.primaryImageUrl || space.imageUrl || DEFAULT_IMAGE}
+                  src={formatImageUrl(spaceImages[modalImageIndex] || space.primaryImageUrl || space.imageUrl || DEFAULT_IMAGE) || DEFAULT_IMAGE}
                   alt={`${space.name} - Ảnh ${modalImageIndex + 1}`}
                   className="modal-main-img"
+                  onError={(e) => {
+                    const fallback = formatImageUrl(DEFAULT_IMAGE) || DEFAULT_IMAGE;
+                    if (e.currentTarget.src !== fallback) {
+                      e.currentTarget.src = fallback;
+                    }
+                  }}
                 />
 
                 {/* Badge số thứ tự ảnh góc trên trái (vd: 7/7) */}
@@ -1288,7 +1316,7 @@ export const SpaceDetailPage: React.FC = () => {
                     title={`Xem ảnh ${idx + 1}`}
                   >
                     <img
-                      src={imgUrl}
+                      src={formatImageUrl(imgUrl) || imgUrl}
                       alt={`Thumbnail ${idx + 1}`}
                       className="modal-thumbnail-img"
                     />

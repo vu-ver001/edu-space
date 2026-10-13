@@ -208,7 +208,11 @@ public class ExcelExportServiceImpl implements ExcelExportService {
                     { 5, "Yêu cầu chờ duyệt bị quá hạn (Expired)", stats.getExpiredPendingCount(), "yêu cầu",
                             "Hết hạn trước khi được duyệt (cần cải thiện tốc độ duyệt)" },
                     { 6, "Tổng tài nguyên bảo trì / ngừng phục vụ", stats.getTotalMaintenanceCount(), "tài nguyên",
-                            "Bao gồm Phòng học, Bàn nhóm và Ghế ngồi" }
+                            "Bao gồm Phòng học, Bàn nhóm và Ghế ngồi" },
+                    { 7, "Số không gian khả dụng (Available)",
+                            (stats.getAvailableSpacesCount() != null ? stats.getAvailableSpacesCount() : 0) + "/" +
+                            (stats.getTotalSpacesCount() != null ? stats.getTotalSpacesCount() : 0),
+                            "không gian", "Số lượng phòng/không gian sẵn sàng phục vụ sinh viên" }
             };
 
             for (int i = 0; i < kpiData.length; i++) {
