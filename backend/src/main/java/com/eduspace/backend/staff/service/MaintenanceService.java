@@ -45,25 +45,30 @@ public class MaintenanceService {
      * 3. Hard-block: Không gian không có bất kỳ booking occupying nào giao thời gian (WHOLE_SPACE, PER_SEAT, PER_TABLE).
      * 4. Chống trùng lặp: Không gian không có khoảng bảo trì active nào khác giao thời gian.
      */
+    // Tạo mới khoảng bảo trì cho phòng (kiểm tra xung đột với lịch đặt của sinh viên)
     @Transactional
     public MaintenanceResponseKT createMaintenance(Long spaceId, MaintenanceCreateRequestKT request) {
+        // 1. Kiểm tra không gian (phòng) có tồn tại và chưa bị xóa mềm
         Space space = spaceRepository.findByIdAndDeletedAtIsNull(spaceId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "SPACE_NOT_FOUND",
                         "Không tìm thấy không gian yêu cầu."));
 
+        // 2. Validate thời gian hợp lệ (bắt đầu trước kết thúc, bắt đầu không ở quá khứ)
         validateTimeRange(request.getStartTime(), request.getEndTime());
         validateStartTimeNotInPast(request.getStartTime(), LocalDateTime.now());
 
-        // 1. Kiểm tra Hard-block: Booking đang chiếm chỗ (WHOLE_SPACE, PER_SEAT, PER_TABLE)
+        // 3. HARD-BLOCK: Kiểm tra xung đột với Booking của sinh viên (WHOLE_SPACE, PER_SEAT, PER_TABLE)
         checkOccupyingBookingConflict(spaceId, request.getStartTime(), request.getEndTime());
 
-        // 2. Kiểm tra trùng lặp với khoảng bảo trì khác đang active
+        // 4. Chống trùng lặp: Kiểm tra có khoảng bảo trì nào khác đang chạy cùng giờ không
         checkMaintenanceOverlap(spaceId, null, request.getStartTime(), request.getEndTime());
 
+        // 5. Lấy thông tin Staff đang thực hiện thao tác
         User currentUser = requireCurrentUser();
         Long actorId = currentUser.getId();
         String actorEmail = currentUser.getEmail();
 
+        // 6. Tạo Entity MaintenanceBlock và lưu vào database
         MaintenanceBlock block = MaintenanceBlock.builder()
                 .space(space)
                 .startTime(request.getStartTime())
@@ -74,7 +79,7 @@ public class MaintenanceService {
 
         MaintenanceBlock saved = maintenanceBlockRepository.save(block);
 
-        // Ghi Staff Audit Log
+        // 7. Ghi nhận vào nhật ký kiểm toán Staff Audit Log
         staffAuditService.logAction(actorId, actorEmail, StaffAuditAction.MAINTENANCE_CREATED,
                 "MAINTENANCE", saved.getId(), spaceId, "Tạo bảo trì: " + request.getReason().trim());
 
@@ -84,15 +89,15 @@ public class MaintenanceService {
         return toResponse(saved, currentUser);
     }
 
-    /**
-     * Cập nhật khoảng bảo trì.
-     */
+    // Cập nhật thông tin khoảng bảo trì (kiểm tra lại xung đột theo khung giờ mới)
     @Transactional
     public MaintenanceResponseKT updateMaintenance(Long maintenanceId, MaintenanceUpdateRequestKT request) {
+        // 1. Tìm khoảng bảo trì cần sửa
         MaintenanceBlock block = maintenanceBlockRepository.findByIdAndDeletedAtIsNull(maintenanceId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "MAINTENANCE_NOT_FOUND",
                         "Không tìm thấy khoảng bảo trì yêu cầu."));
 
+        // 2. Chặn sửa nếu lịch bảo trì đã kết thúc trong quá khứ
         LocalDateTime now = LocalDateTime.now();
         if (!now.isBefore(block.getEndTime())) {
             throw new AppException(HttpStatus.CONFLICT, "MAINTENANCE_ALREADY_COMPLETED",
@@ -116,23 +121,24 @@ public class MaintenanceService {
 
         Long spaceId = block.getSpace().getId();
 
-        // 1. Kiểm tra Hard-block với booking trong khoảng thời gian mới
+        // 3. Kiểm tra Hard-block: Khung giờ mới có xung đột với booking nào của sinh viên không
         checkOccupyingBookingConflict(spaceId, effectiveStartTime, request.getEndTime());
 
-        // 2. Kiểm tra trùng lặp với các khoảng bảo trì khác (loại trừ chính nó)
+        // 4. Kiểm tra trùng lặp với các khoảng bảo trì khác (trừ chính nó)
         checkMaintenanceOverlap(spaceId, maintenanceId, effectiveStartTime, request.getEndTime());
 
         User currentUser = requireCurrentUser();
         Long actorId = currentUser.getId();
         String actorEmail = currentUser.getEmail();
 
+        // 5. Cập nhật dữ liệu mới và lưu database
         block.setStartTime(effectiveStartTime);
         block.setEndTime(request.getEndTime());
         block.setReason(effectiveReason);
 
         MaintenanceBlock updated = maintenanceBlockRepository.save(block);
 
-        // Ghi Staff Audit Log
+        // 6. Ghi nhận vào Staff Audit Log
         staffAuditService.logAction(actorId, actorEmail, StaffAuditAction.MAINTENANCE_UPDATED,
                 "MAINTENANCE", updated.getId(), spaceId,
                 inProgress
@@ -144,15 +150,15 @@ public class MaintenanceService {
         return toResponse(updated);
     }
 
-    /**
-     * Xóa mềm khoảng bảo trì (Soft delete).
-     */
+    // Xóa mềm khoảng bảo trì (chặn xóa nếu bảo trì đang diễn ra)
     @Transactional
     public String deleteMaintenance(Long maintenanceId) {
+        // 1. Tìm khoảng bảo trì cần xóa
         MaintenanceBlock block = maintenanceBlockRepository.findByIdAndDeletedAtIsNull(maintenanceId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "MAINTENANCE_NOT_FOUND",
                         "Không tìm thấy khoảng bảo trì yêu cầu."));
 
+        // 2. Chặn xóa nếu lịch bảo trì đang diễn ra (in-progress)
         LocalDateTime now = LocalDateTime.now();
         boolean inProgress = !now.isBefore(block.getStartTime()) && now.isBefore(block.getEndTime());
         if (inProgress) {
@@ -165,10 +171,11 @@ public class MaintenanceService {
         Long actorId = currentUser.getId();
         String actorEmail = currentUser.getEmail();
 
+        // 3. Xóa mềm (gán deleted_at = now)
         block.setDeletedAt(now);
         maintenanceBlockRepository.save(block);
 
-        // Ghi Staff Audit Log
+        // 4. Ghi nhận hành động hủy/xóa vào Staff Audit Log
         staffAuditService.logAction(actorId, actorEmail, StaffAuditAction.MAINTENANCE_CANCELLED,
                 "MAINTENANCE", block.getId(), block.getSpace().getId(),
                 completed
@@ -181,6 +188,7 @@ public class MaintenanceService {
                 : "Đã hủy lịch bảo trì thành công.";
     }
 
+    // Lấy toàn bộ danh sách lịch bảo trì chưa bị xóa mềm
     @Transactional(readOnly = true)
     public List<MaintenanceResponseKT> getAllMaintenance() {
         List<MaintenanceBlock> blocks = maintenanceBlockRepository
@@ -199,6 +207,7 @@ public class MaintenanceService {
                 .toList();
     }
 
+    // Lấy danh sách lịch bảo trì riêng của một không gian cụ thể
     @Transactional(readOnly = true)
     public List<MaintenanceResponseKT> getMaintenanceBySpace(Long spaceId) {
         spaceRepository.findByIdAndDeletedAtIsNull(spaceId)
@@ -210,6 +219,7 @@ public class MaintenanceService {
                 .collect(Collectors.toList());
     }
 
+    // Lấy chi tiết một khoảng bảo trì theo ID
     @Transactional(readOnly = true)
     public MaintenanceResponseKT getMaintenanceById(Long maintenanceId) {
         MaintenanceBlock block = maintenanceBlockRepository.findByIdAndDeletedAtIsNull(maintenanceId)
@@ -218,6 +228,7 @@ public class MaintenanceService {
         return toResponse(block);
     }
 
+    // Kiểm tra tính hợp lệ của khoảng thời gian (start phải trước end)
     private void validateTimeRange(LocalDateTime start, LocalDateTime end) {
         if (start == null || end == null) {
             throw new AppException(HttpStatus.BAD_REQUEST, "INVALID_MAINTENANCE_TIME",
@@ -229,6 +240,7 @@ public class MaintenanceService {
         }
     }
 
+    // Kiểm tra thời gian bắt đầu không được nằm trong quá khứ
     private void validateStartTimeNotInPast(LocalDateTime start, LocalDateTime now) {
         if (start.isBefore(now)) {
             throw new AppException(HttpStatus.BAD_REQUEST, "MAINTENANCE_START_TIME_IN_PAST",
@@ -236,6 +248,7 @@ public class MaintenanceService {
         }
     }
 
+    // Kiểm tra xung đột với booking: Nếu có sinh viên đã đặt phòng trong giờ này -> Bắn ngoại lệ xung đột
     private void checkOccupyingBookingConflict(Long spaceId, LocalDateTime startTime, LocalDateTime endTime) {
         List<BookingResponse> occupyingBookings = bookingService.getSpaceTimeline(spaceId, startTime, endTime);
         if (!occupyingBookings.isEmpty()) {
@@ -243,6 +256,7 @@ public class MaintenanceService {
         }
     }
 
+    // Kiểm tra trùng lặp với khoảng bảo trì khác đang hoạt động
     private void checkMaintenanceOverlap(Long spaceId, Long excludeId, LocalDateTime startTime, LocalDateTime endTime) {
         List<MaintenanceBlock> overlaps = (excludeId != null)
                 ? maintenanceBlockRepository.findOverlappingBlocksExcluding(spaceId, excludeId, startTime, endTime)
