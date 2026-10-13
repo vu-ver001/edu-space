@@ -77,6 +77,7 @@ public class SpaceService {
                 .collect(Collectors.toList());
     }
 
+    // Lấy thông tin chi tiết một phòng theo ID
     @Transactional(readOnly = true)
     public SpaceResponseKT getSpaceById(Long id) {
         Space space = spaceRepository.findByIdAndDeletedAtIsNull(id)
@@ -88,8 +89,10 @@ public class SpaceService {
         return toResponseDto(space);
     }
 
+    // Tạo mới không gian (phòng) kèm tiện ích và kiểm tra trùng mã phòng
     @Transactional
     public SpaceResponseKT createSpace(SpaceCreateRequestKT request) {
+        // 1. Kiểm tra loại phòng có tồn tại và chưa bị xóa mềm
         SpaceType spaceType = spaceTypeRepository.findByIdAndDeletedAtIsNull(request.getSpaceTypeId())
                 .orElseThrow(() -> new AppException(
                         HttpStatus.NOT_FOUND,
@@ -97,6 +100,7 @@ public class SpaceService {
                         "Không tìm thấy loại phòng với id: " + request.getSpaceTypeId()
                 ));
 
+        // 2. Tìm và nạp danh sách tiện ích hợp lệ từ facilityIds
         Set<Facility> facilities = new HashSet<>();
         if (request.getFacilityIds() != null && !request.getFacilityIds().isEmpty()) {
             for (Long facId : request.getFacilityIds()) {
@@ -110,6 +114,7 @@ public class SpaceService {
             }
         }
 
+        // 3. Kiểm tra mã phòng không được để trống
         String spaceCode = request.getSpaceCode() != null ? request.getSpaceCode().trim() : "";
         if (spaceCode.isEmpty()) {
             throw new AppException(
@@ -119,6 +124,7 @@ public class SpaceService {
             );
         }
 
+        // 4. Kiểm tra trùng mã phòng trong hệ thống (không phân biệt hoa thường)
         if (spaceRepository.existsBySpaceCodeIgnoreCaseAndDeletedAtIsNull(spaceCode)) {
             throw new AppException(
                     HttpStatus.CONFLICT,
@@ -127,6 +133,7 @@ public class SpaceService {
             );
         }
 
+        // 5. Tạo đối tượng Space mới từ dữ liệu gửi lên
         Space space = Space.builder()
                 .name(request.getName().trim())
                 .spaceCode(spaceCode)
@@ -139,12 +146,15 @@ public class SpaceService {
                 .facilities(facilities)
                 .build();
 
+        // 6. Lưu vào database và chuyển đổi sang DTO trả về cho client
         Space savedSpace = spaceRepository.save(space);
         return toResponseDto(savedSpace);
     }
 
+    // Cập nhật thông tin phòng (kiểm tra trùng mã phòng, ràng buộc sức chứa bàn/ghế)
     @Transactional
     public SpaceResponseKT updateSpace(Long id, SpaceUpdateRequestKT request) {
+        // 1. Tìm phòng cần sửa theo ID (phải chưa bị xóa mềm)
         Space space = spaceRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new AppException(
                         HttpStatus.NOT_FOUND,
@@ -152,6 +162,7 @@ public class SpaceService {
                         "Không tìm thấy không gian với id: " + id
                 ));
 
+        // 2. Kiểm tra mã phòng không được để trống
         String newCode = request.getSpaceCode() != null ? request.getSpaceCode().trim() : "";
         if (newCode.isEmpty()) {
             throw new AppException(
@@ -161,6 +172,7 @@ public class SpaceService {
             );
         }
 
+        // 3. Nếu đổi sang mã phòng mới, kiểm tra xem mã mới có trùng với phòng khác không
         if (!newCode.equalsIgnoreCase(space.getSpaceCode())) {
             if (spaceRepository.existsBySpaceCodeIgnoreCaseAndIdNotAndDeletedAtIsNull(newCode, id)) {
                 throw new AppException(
@@ -172,12 +184,12 @@ public class SpaceService {
             space.setSpaceCode(newCode);
         }
 
-        // Kiểm tra toàn bộ ràng buộc sức chứa và loại không gian trước khi trả lỗi,
-        // để frontend có thể hiển thị đồng thời lỗi dưới tất cả trường liên quan.
+        // 4. Lấy số ghế đang hoạt động trong phòng để kiểm tra ràng buộc
         long activeSeatCount = seatRepository.countBySpaceIdAndDeletedAtIsNull(id);
         String capacityErrorCode = null;
         String capacityErrorMessage = null;
 
+        // Ràng buộc 1: Phòng theo ghế thì Sức chứa mới KHÔNG ĐƯỢC nhỏ hơn số ghế đang có
         if (space.getSpaceType() != null && space.getSpaceType().getBookingMode() == BookingMode.PER_SEAT) {
             if (request.getCapacity() < activeSeatCount) {
                 capacityErrorCode = "CAPACITY_LOWER_THAN_ACTIVE_SEATS";
@@ -186,6 +198,7 @@ public class SpaceService {
             }
         }
 
+        // Ràng buộc 2: Phòng theo bàn thì Sức chứa mới KHÔNG ĐƯỢC nhỏ hơn tổng sức chứa các bàn
         if (space.getSpaceType() != null && space.getSpaceType().getBookingMode() == BookingMode.PER_TABLE) {
             int activeTableCapacity = spaceTableRepository.sumActiveCapacityBySpaceId(id);
             if (request.getCapacity() < activeTableCapacity) {
@@ -196,6 +209,7 @@ public class SpaceService {
             }
         }
 
+        // 5. Kiểm tra ràng buộc khi đổi sang Loại phòng mới
         SpaceType targetSpaceType = space.getSpaceType();
         String spaceTypeErrorCode = null;
         String spaceTypeErrorMessage = null;
@@ -208,6 +222,7 @@ public class SpaceService {
                             "Không tìm thấy loại phòng với id: " + request.getSpaceTypeId()
                     ));
 
+            // Nếu đang có ghế hoạt động thì không cho đổi sang loại phòng không hỗ trợ ghế
             if (space.getSpaceType().getBookingMode() == BookingMode.PER_SEAT
                     && targetSpaceType.getBookingMode() != BookingMode.PER_SEAT
                     && activeSeatCount > 0) {
@@ -216,6 +231,7 @@ public class SpaceService {
                         + activeSeatCount + " chỗ ngồi hoạt động.";
             }
 
+            // Nếu đang có bàn hoạt động thì không cho đổi sang loại phòng không hỗ trợ bàn
             if (space.getSpaceType().getBookingMode() == BookingMode.PER_TABLE
                     && targetSpaceType.getBookingMode() != BookingMode.PER_TABLE) {
                 long activeTableCount = spaceTableRepository.countBySpaceIdAndDeletedAtIsNull(id);
@@ -227,6 +243,7 @@ public class SpaceService {
             }
         }
 
+        // Tổng hợp các lỗi ràng buộc để báo cho client
         List<String> constraintDetails = new ArrayList<>();
         if (capacityErrorMessage != null) {
             constraintDetails.add("capacity: " + capacityErrorMessage);
@@ -249,7 +266,7 @@ public class SpaceService {
             throw new AppException(HttpStatus.CONFLICT, spaceTypeErrorCode, spaceTypeErrorMessage);
         }
 
-        // Quy tắc 3: Cập nhật facilities (thay thế toàn bộ, báo lỗi nếu ID không tồn tại/đã xóa)
+        // 6. Cập nhật danh sách tiện ích mới cho phòng
         if (request.getFacilityIds() != null) {
             Set<Facility> newFacilities = new HashSet<>();
             for (Long facId : request.getFacilityIds()) {
@@ -264,6 +281,7 @@ public class SpaceService {
             space.setFacilities(newFacilities);
         }
 
+        // 7. Cập nhật các thông số cơ bản và lưu vào database
         space.setName(request.getName().trim());
         space.setSpaceType(targetSpaceType);
         space.setBuilding(request.getBuilding().trim());
@@ -287,8 +305,10 @@ public class SpaceService {
      * 7. Soft delete toàn bộ SpaceTable active thuộc Space (status = INACTIVE, deleted_at = now)
      * 8. save (Toàn bộ trong @Transactional)
      */
+    // Xóa mềm phòng (chặn xóa nếu còn booking/bảo trì, tự động xóa mềm cả bàn và ghế con)
     @Transactional
     public void deleteSpace(Long id) {
+        // 1. Tìm phòng cần xóa (phải chưa bị xóa mềm)
         Space space = spaceRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new AppException(
                         HttpStatus.NOT_FOUND,
@@ -296,6 +316,7 @@ public class SpaceService {
                         "Không tìm thấy không gian với id: " + id
                 ));
 
+        // 2. Đếm số lượng booking và lịch bảo trì chưa kết thúc
         LocalDateTime now = LocalDateTime.now();
         long blockingBookingCount = bookingRepository.countBlockingBookingsForSpaceDeletion(
                 id,
@@ -314,6 +335,7 @@ public class SpaceService {
                     + " lịch bảo trì đang diễn ra hoặc sắp diễn ra.");
         }
 
+        // 3. Nếu còn booking hoặc lịch bảo trì -> CHẶN XÓA và ném lỗi 409 Conflict
         if (!deleteConstraintDetails.isEmpty()) {
             String errorCode;
             String errorMessage;
@@ -331,10 +353,11 @@ public class SpaceService {
             throw BusinessException.conflict(errorCode, errorMessage, deleteConstraintDetails);
         }
 
+        // 4. Đổi trạng thái phòng sang INACTIVE và set thời gian xóa mềm
         space.setStatus(SpaceStatus.INACTIVE);
         space.setDeletedAt(now);
 
-        // Soft delete toàn bộ seat active thuộc space
+        // 5. Cascade soft-delete: Tự động xóa mềm toàn bộ Ghế (Seat) đang hoạt động thuộc phòng này
         List<Seat> activeSeats = seatRepository.findBySpaceIdAndDeletedAtIsNull(id);
         for (Seat seat : activeSeats) {
             seat.setStatus(SeatStatus.INACTIVE);
@@ -342,7 +365,7 @@ public class SpaceService {
         }
         seatRepository.saveAll(activeSeats);
 
-        // Soft delete toàn bộ table active thuộc space
+        // 6. Cascade soft-delete: Tự động xóa mềm toàn bộ Bàn (SpaceTable) đang hoạt động thuộc phòng này
         List<SpaceTable> activeTables = spaceTableRepository.findBySpaceIdAndDeletedAtIsNull(id);
         for (SpaceTable table : activeTables) {
             table.setStatus(SpaceTableStatus.INACTIVE);
@@ -350,14 +373,17 @@ public class SpaceService {
         }
         spaceTableRepository.saveAll(activeTables);
 
+        // 7. Lưu lại phòng vào database
         spaceRepository.save(space);
     }
 
+    // Chuyển đổi Entity Space sang DTO Response (kèm đếm số bàn/ghế hoạt động và lấy ảnh đại diện)
     private SpaceResponseKT toResponseDto(Space space) {
         long activeSeatCount = 0;
         long activeTableCount = 0;
         int activeTableCapacity = 0;
 
+        // 1. Đếm số ghế hoặc số bàn đang hoạt động tùy theo hình thức đặt phòng
         if (space.getSpaceType() != null) {
             if (space.getSpaceType().getBookingMode() == BookingMode.PER_SEAT) {
                 activeSeatCount = seatRepository.countBySpaceIdAndDeletedAtIsNull(space.getId());
@@ -366,16 +392,21 @@ public class SpaceService {
                 activeTableCapacity = spaceTableRepository.sumActiveCapacityBySpaceId(space.getId());
             }
         }
+
+        // 2. Lấy danh sách hình ảnh của phòng (xếp theo thứ tự hiển thị)
         List<SpaceImage> spaceImages = spaceImageRepository.findBySpaceIdOrderBySortOrderAscIdAsc(space.getId());
         List<SpaceImageResponseKT> imageDtos = spaceImages.stream()
                 .map(SpaceImageResponseKT::fromEntity)
                 .collect(Collectors.toList());
+
+        // 3. Tìm link ảnh đại diện chính (isPrimary = true)
         String primaryImageUrl = spaceImages.stream()
                 .filter(SpaceImage::isPrimary)
                 .findFirst()
                 .map(SpaceImage::getImageUrl)
                 .orElse(null);
 
+        // 4. Đóng gói tất cả vào DTO Response trả về
         return SpaceResponseKT.fromEntity(
                 space,
                 activeSeatCount,
