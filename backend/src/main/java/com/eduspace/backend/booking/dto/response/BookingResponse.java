@@ -51,4 +51,6 @@ public class BookingResponse {
     private java.util.List<String> selectedSeats;
     private Long tableId;
     private String tableCode;
+    private Long checkInEarlyOpenMinutes;
+    private Long checkInGraceMinutes;
 }

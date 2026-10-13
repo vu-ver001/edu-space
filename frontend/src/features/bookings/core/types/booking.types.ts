@@ -39,6 +39,8 @@ export interface Booking {
   tableId?: number;
   tableCode?: string;
   selectedSeats?: string[];
+  checkInEarlyOpenMinutes?: number;
+  checkInGraceMinutes?: number;
 }
 
 

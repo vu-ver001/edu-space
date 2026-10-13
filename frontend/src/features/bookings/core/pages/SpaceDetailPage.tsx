@@ -1,3 +1,4 @@
+// Trang chi tiết không gian học tập, trực quan hóa ảnh, lịch bảo trì và đặt chỗ (Module M03 & M04 - Khánh Vân).
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { SeatSelectionModal } from '../components/SeatSelectionModal';
@@ -12,7 +13,7 @@ import './SpaceDetailPage.css';
 import '../components/SeatSelectionModal.css';
 import '../components/MaintenanceModal.css';
 
-// Default photos fallback
+// Danh sách ảnh dự phòng chất lượng cao cho không gian học tập.
 const ROOM_IMAGES: Record<number, string> = {
   1: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=1200&auto=format&fit=crop&q=80',
   2: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&auto=format&fit=crop&q=80',
@@ -24,9 +25,11 @@ const ROOM_IMAGES: Record<number, string> = {
 
 const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&auto=format&fit=crop&q=80';
 
+// Component SpaceDetailPage quản lý chi tiết phòng, thư viện ảnh và quy trình đặt chỗ.
 export const SpaceDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  // Đọc các thông tin ngày giờ tìm kiếm đã chọn trước đó từ URL.
   const [searchParams] = useSearchParams();
   const presetDate = searchParams.get('date') || '';
   const presetStartTime = searchParams.get('startTime')?.substring(0, 5) || '';
@@ -35,18 +38,21 @@ export const SpaceDetailPage: React.FC = () => {
   const hasPresetTime = Boolean(presetStartTime || presetEndTime);
   const hasAnyPresetSchedule = hasPresetDate || hasPresetTime;
 
+  // Quản lý trạng thái thông tin phòng, danh sách ghế, bàn và trạng thái tải dữ liệu.
   const [space, setSpace] = useState<Space | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [spaceSeats, setSpaceSeats] = useState<SpaceSeat[]>([]);
   const [spaceTables, setSpaceTables] = useState<SpaceTable[]>([]);
 
+  // Chuẩn hóa chuỗi thời gian về định dạng HH:mm.
   const normalizeTime = (t: string | null, fallback: string) => {
     if (!t) return fallback;
     const parts = t.trim().split(':');
     return `${(parts[0] || '08').padStart(2, '0')}:${(parts[1] || '00').padStart(2, '0')}`;
   };
 
+  // Ghép ngày và giờ thành chuỗi thời gian chuẩn ISO 8601.
   const toIsoDateTime = (dateStr: string, timeStr: string) => {
     const parts = (timeStr || '').trim().split(':');
     const h = (parts[0] || '08').padStart(2, '0');
@@ -55,11 +61,11 @@ export const SpaceDetailPage: React.FC = () => {
     return `${dateStr}T${h}:${m}:${s}`;
   };
 
-  // Form booking state initialized from URL params
+  // Lấy ngày hiện tại làm mốc giới hạn chọn ngày đặt phòng.
   const now = new Date();
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   
-  // Tính toán giờ khởi tạo thông minh để tránh rơi vào quá khứ khi mở trang
+  // Tự động tính toán khung giờ mặc định khả dụng gần nhất trong ngày để tránh chọn giờ trong quá khứ.
   const getSmartInitialTimes = () => {
     const paramStart = searchParams.get('startTime');
     const paramEnd = searchParams.get('endTime');
@@ -86,6 +92,7 @@ export const SpaceDetailPage: React.FC = () => {
     return { initStart: '08:00', initEnd: '10:00' };
   };
 
+  // Khởi tạo các giá trị ban đầu cho form đặt chỗ.
   const { initStart, initEnd } = getSmartInitialTimes();
   const [date, setDate] = useState<string>(searchParams.get('date') || today);
   const [startTime, setStartTime] = useState<string>(
@@ -99,7 +106,7 @@ export const SpaceDetailPage: React.FC = () => {
   );
   const [purpose, setPurpose] = useState<string>('');
 
-  // Tự động đồng bộ khi searchParams thay đổi (ví dụ bấm từ Lịch đặt của tôi hoặc Tìm kiếm)
+  // Tự động đồng bộ các tham số URL khi chuyển trang hoặc quay lại.
   useEffect(() => {
     const qDate = searchParams.get('date');
     const qStart = searchParams.get('startTime');
@@ -111,11 +118,13 @@ export const SpaceDetailPage: React.FC = () => {
     if (qCount) setParticipantCount(Number(qCount));
   }, [searchParams]);
 
-  // Modal chọn chỗ ngồi / chọn bàn
+  // Quản lý trạng thái hộp thoại sơ đồ chỗ ngồi, thông báo toast và tiến trình gửi form.
   const [isSeatModalOpen, setIsSeatModalOpen] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
+
+  // Định dạng giờ hiển thị theo kiểu HH:mm.
   const formatTimeHHmm = (timeStr?: string, defaultVal: string = '07:00'): string => {
     if (!timeStr) return defaultVal;
     const trimmed = String(timeStr).trim();
@@ -130,12 +139,14 @@ export const SpaceDetailPage: React.FC = () => {
     return defaultVal;
   };
 
+  // Đổi chuỗi giờ HH:mm sang tổng số phút.
   const toMinutes = (timeStr: string): number => {
     if (!timeStr) return 0;
     const [h, m] = timeStr.split(':').map(Number);
     return (h || 0) * 60 + (m || 0);
   };
 
+  // Lưu trữ chính sách giờ mở cửa và thời lượng đặt tối đa lấy từ CSDL.
   const [operatingHours, setOperatingHours] = useState<{
     openingHour: string;
     closingHour: string;
@@ -146,25 +157,24 @@ export const SpaceDetailPage: React.FC = () => {
     maxDurationMinutes: 180
   });
 
+  // Xác định chế độ đặt phòng theo ghế (PER_SEAT), theo bàn (PER_TABLE) hoặc trọn phòng.
   const bookingMode = space?.bookingMode || space?.spaceType?.bookingMode || (
     space?.spaceTypeName?.toLowerCase().includes('bàn') ? 'PER_TABLE' :
     space?.spaceTypeName?.toLowerCase().includes('ghế') || space?.spaceTypeName?.toLowerCase().includes('mở') ? 'PER_SEAT' :
     'WHOLE_SPACE'
   );
 
-  const isPerSeat = bookingMode === 'PER_SEAT'; // Khu tự học chung (Mở) -> Chọn theo ghế
-  const isPerTable = bookingMode === 'PER_TABLE'; // Phòng thảo luận theo bàn -> Chọn theo bàn
+  const isPerSeat = bookingMode === 'PER_SEAT';
+  const isPerTable = bookingMode === 'PER_TABLE';
   const isWholeSpace = !isPerSeat && !isPerTable;
   const isStudyBooth = `${space?.spaceTypeName || ''} ${space?.spaceType?.name || ''}`
     .toLowerCase()
     .includes('booth');
-  // WHOLE_SPACE và PER_TABLE đều nhận từ 1 người đến đúng sức chứa.
 
-  // LOGIC LIÊN KẾT CSDL: Lấy trực tiếp từ space.requiresApproval (cột space_types.requires_approval của Kim Tuyến)
+  // Lấy quy định phê duyệt đồng bộ từ cơ sở dữ liệu.
   const requiresApproval = space?.requiresApproval ?? (space?.spaceType?.requiresApproval ?? !isPerSeat);
 
-  // Đồng bộ số người với sức chứa thực tế ngay khi tải chi tiết không gian.
-  // Tránh trường hợp participantCount trên URL lớn hơn sức chứa rồi chỉ báo lỗi khi đặt.
+  // Giới hạn số người tham gia khớp với sức chứa thực tế của không gian.
   useEffect(() => {
     if (isPerSeat) {
       setParticipantCount(1);
@@ -185,20 +195,20 @@ export const SpaceDetailPage: React.FC = () => {
     }
   }, [isPerSeat, isWholeSpace, searchParams, space?.capacity]);
 
-  // Quản lý danh sách hình ảnh (lấy từ bảng space_images) & Slider/Carousel
+  // Quản lý thư viện ảnh đại diện của không gian học tập và trình chiếu slider.
   const [spaceImages, setSpaceImages] = useState<string[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState<number>(0);
   const [isHovered, setIsHovered] = useState<boolean>(false);
 
-  // Modal phóng to chi tiết ảnh (Phong cách Ảnh 2)
+  // Quản lý modal xem ảnh kích thước lớn (Lightbox).
   const [isImageModalOpen, setIsImageModalOpen] = useState<boolean>(false);
   const [modalImageIndex, setModalImageIndex] = useState<number>(0);
 
-  // Quản lý các lịch bảo trì sắp tới (thời gian hiện tại -> tương lai)
+  // Danh sách các đợt bảo trì sắp tới của phòng học lấy từ cơ sở dữ liệu.
   const [upcomingMaintenances, setUpcomingMaintenances] = useState<MaintenanceSchedule[]>([]);
   const [isMaintenanceModalOpen, setIsMaintenanceModalOpen] = useState<boolean>(false);
 
-  // Lắng nghe phím tắt bàn phím khi modal đang mở (ESC để đóng, phím mũi tên để chuyển ảnh)
+  // Lắng nghe phím ESC và phím mũi tên để chuyển ảnh hoặc đóng lightbox.
   useEffect(() => {
     if (!isImageModalOpen) return;
 
@@ -216,6 +226,7 @@ export const SpaceDetailPage: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isImageModalOpen, spaceImages.length]);
 
+  // Nạp dữ liệu chi tiết của phòng học, lịch bảo trì và danh mục bàn ghế từ máy chủ backend.
   useEffect(() => {
     if (!id) return;
     setLoading(true);
@@ -224,7 +235,7 @@ export const SpaceDetailPage: React.FC = () => {
       .then(async (data) => {
         setSpace(data);
 
-        // Nạp danh sách các đợt bảo trì sắp tới (chỉ lấy thời gian hiện tại -> tương lai)
+        // Nạp danh sách các đợt bảo trì trong tương lai.
         try {
           const mList = await spaceService.getMaintenancesBySpace(Number(id));
           const nowMs = Date.now();
@@ -244,11 +255,10 @@ export const SpaceDetailPage: React.FC = () => {
           }
         }
 
-        // Nạp thư viện ảnh trực tiếp từ bảng space_images
+        // Tải toàn bộ danh sách ảnh từ bảng space_images.
         try {
           const imgs = await spaceService.getImagesBySpace(Number(id));
           if (imgs && imgs.length > 0) {
-            // Sắp xếp: ảnh isPrimary = true đứng đầu tiên, sau đó theo sortOrder tăng dần
             const sorted = [...imgs].sort((a, b) => {
               if (a.isPrimary) return -1;
               if (b.isPrimary) return 1;
@@ -276,6 +286,7 @@ export const SpaceDetailPage: React.FC = () => {
       })
       .finally(() => setLoading(false));
 
+    // Lấy thông tin giờ vận hành và sơ đồ ghế ngồi/bàn học.
     spaceService.getOperatingHours().then((res) => {
       if (res) {
         setOperatingHours({
@@ -291,7 +302,7 @@ export const SpaceDetailPage: React.FC = () => {
 
   const hasMultipleImages = spaceImages.length > 1;
 
-  // Lịch bảo trì sắp tới gần với hiện tại nhất (thời gian hiện tại -> tương lai)
+  // Tìm đợt bảo trì sắp diễn ra gần nhất với thời điểm hiện tại.
   const nearestMaintenance = React.useMemo(() => {
     const nowMs = Date.now();
     if (upcomingMaintenances.length > 0) {
@@ -310,7 +321,7 @@ export const SpaceDetailPage: React.FC = () => {
     return null;
   }, [upcomingMaintenances, space?.nextMaintenance, space?.upcomingMaintenances]);
 
-  // Tự động chuyển ảnh sau mỗi 5 giây (nếu có > 1 ảnh, tạm dừng khi người dùng hover chuột vào ảnh)
+  // Tự động chuyển đổi ảnh sau mỗi 5 giây trừ khi người dùng di chuột lên ảnh.
   useEffect(() => {
     if (!hasMultipleImages || isHovered) return;
     const interval = setInterval(() => {
@@ -319,20 +330,24 @@ export const SpaceDetailPage: React.FC = () => {
     return () => clearInterval(interval);
   }, [hasMultipleImages, isHovered, spaceImages.length]);
 
+  // Chuyển sang ảnh trước đó trong carousel.
   const handlePrevImage = (e: React.MouseEvent) => {
     e.stopPropagation();
     setCurrentImageIndex((prev) => (prev - 1 + spaceImages.length) % spaceImages.length);
   };
 
+  // Chuyển sang ảnh tiếp theo trong carousel.
   const handleNextImage = (e: React.MouseEvent) => {
     e.stopPropagation();
     setCurrentImageIndex((prev) => (prev + 1) % spaceImages.length);
   };
 
+  // Xác thực biểu mẫu và gửi yêu cầu đặt trọn phòng lên máy chủ backend.
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBookingError(null);
 
+    // Kiểm tra trạng thái hoạt động của phòng học.
     if (space?.status && space.status !== 'AVAILABLE') {
       setBookingError(`Không gian này hiện đang ở trạng thái ${space.status === 'MAINTENANCE' ? 'Bảo trì' : 'Tạm khóa'}, tạm thời không nhận đặt chỗ.`);
       return;
@@ -351,11 +366,13 @@ export const SpaceDetailPage: React.FC = () => {
     const nowCheck = new Date();
     const todayCheck = `${nowCheck.getFullYear()}-${String(nowCheck.getMonth() + 1).padStart(2, '0')}-${String(nowCheck.getDate()).padStart(2, '0')}`;
 
+    // Kiểm tra không được chọn ngày trong quá khứ.
     if (date < todayCheck) {
       setBookingError('Không thể đặt phòng vào ngày trong quá khứ. Vui lòng chọn ngày hôm nay hoặc trong tương lai.');
       return;
     }
 
+    // Kiểm tra giờ bắt đầu không được nhỏ hơn giờ hiện tại đối với ngày hôm nay.
     if (date === todayCheck) {
       const currentMinutes = nowCheck.getHours() * 60 + nowCheck.getMinutes();
       if (startMinutes < currentMinutes) {
@@ -364,7 +381,7 @@ export const SpaceDetailPage: React.FC = () => {
       }
     }
 
-    // Kiểm tra không cho đặt trùng vào khung giờ bảo trì sắp tới
+    // Kiểm tra xung đột với lịch bảo trì sắp tới của phòng.
     const selectedStartMs = new Date(toIsoDateTime(date, startTime)).getTime();
     const selectedEndMs = new Date(toIsoDateTime(date, endTime)).getTime();
     const maintenanceConflict = upcomingMaintenances.find((m) => {
@@ -385,11 +402,13 @@ export const SpaceDetailPage: React.FC = () => {
       return;
     }
 
+    // Kiểm tra thời gian nằm trong khung giờ mở cửa của tòa nhà.
     if (startMinutes < openMinutes || endMinutes > closeMinutes) {
       setBookingError(`Tòa nhà chỉ mở cửa phục vụ trong khung giờ từ ${operatingHours.openingHour} đến ${operatingHours.closingHour}. Vui lòng chọn lại.`);
       return;
     }
 
+    // Kiểm tra thời lượng phiên đặt không vượt quá số phút tối đa cho phép.
     const durationMinutes = endMinutes - startMinutes;
     if (durationMinutes > operatingHours.maxDurationMinutes) {
       const maxHours = Math.floor(operatingHours.maxDurationMinutes / 60);
@@ -397,21 +416,21 @@ export const SpaceDetailPage: React.FC = () => {
       return;
     }
 
-    // Bắt buộc nhập lý do sử dụng nếu phòng cần duyệt trước theo CSDL
+    // Bắt buộc nhập mục đích sử dụng nếu phòng yêu cầu Staff phê duyệt.
     if (requiresApproval && (!purpose || !purpose.trim())) {
       setBookingError('Vui lòng nhập mục đích sử dụng (bắt buộc đối với không gian cần nhân viên duyệt).');
       return;
     }
 
+    // Kiểm tra số lượng người tham gia không vượt quá sức chứa.
     if (space?.capacity && Number(participantCount) > space.capacity) {
       setBookingError(`Số người tham gia (${participantCount}) vượt quá sức chứa tối đa (${space.capacity} người) của không gian này.`);
       return;
     }
 
-    // 1. Nếu là PER_SEAT hoặc PER_TABLE: Mở modal chọn chỗ ngồi hoặc chọn bàn
-    // 2. Nếu là WHOLE_SPACE (Study Booth, phòng nhóm, thuyết trình...): Đặt phòng như bình thường trực tiếp!
     if (!space) return;
     setSubmitting(true);
+    // Gửi yêu cầu đặt phòng trọn gói qua API bookingService.
     try {
       const startDateTime = toIsoDateTime(date, startTime);
       const endDateTime = toIsoDateTime(date, endTime);
@@ -440,6 +459,7 @@ export const SpaceDetailPage: React.FC = () => {
     }
   };
 
+  // Xử lý thông báo thành công sau khi hoàn tất chọn vị trí từ modal sơ đồ.
   const handleBookingSuccess = (_bookingId: number, selectedItems: string[]) => {
     setIsSeatModalOpen(false);
     if (isPerTable) {
@@ -452,6 +472,7 @@ export const SpaceDetailPage: React.FC = () => {
     }, 1500);
   };
 
+  // Hiển thị giao diện nạp dữ liệu.
   if (loading) {
     return (
       <div className="space-detail-page">
@@ -463,6 +484,7 @@ export const SpaceDetailPage: React.FC = () => {
     );
   }
 
+  // Hiển thị thông báo khi xảy ra lỗi tải dữ liệu.
   if (error || !space) {
     return (
       <div className="space-detail-page">
@@ -478,6 +500,7 @@ export const SpaceDetailPage: React.FC = () => {
     );
   }
 
+  // Định dạng chi tiết thời gian lịch bảo trì.
   const formatDetailMaintenanceTime = (startStr: string, endStr: string): string => {
     try {
       const start = new Date(startStr);
@@ -507,14 +530,16 @@ export const SpaceDetailPage: React.FC = () => {
   };
 
   return (
+    // Khung chứa toàn bộ trang chi tiết không gian học tập
     <div className="space-detail-page">
+      {/* Thông báo toast thông báo tác vụ nổi */}
       {toastMessage && (
         <div className="portal-toast">
           <span>{toastMessage}</span>
         </div>
       )}
 
-      {/* Nút Quay lại theo Ảnh 2 */}
+      {/* Thanh điều hướng quay lại danh sách tìm kiếm */}
       <div className="back-navigation-bar">
         <button
           type="button"
@@ -532,12 +557,12 @@ export const SpaceDetailPage: React.FC = () => {
         </button>
       </div>
 
-      {/* Layout 2 cột theo yêu cầu: Cột trái hẹp lại, Cột phải form rộng dài hơn, hiển thị trọn trong 1 màn hình */}
+      {/* Bố cục 2 cột: Cột trái thông tin phòng, Cột phải biểu mẫu đặt chỗ */}
       <div className="space-detail-layout">
-        {/* CỘT TRÁI: THÔNG TIN CHI TIẾT PHÒNG HỌC (THU GỌN VỪA VẶN 1 TRANG) */}
+        {/* Cột trái: Thẻ hình ảnh đại diện, thông số kỹ thuật và danh sách tiện ích */}
         <div className="space-detail-left">
-          {/* Card Hình ảnh và Tiêu đề tích hợp Thông số & Tiện ích */}
           <div className="space-hero-card">
+            {/* Vùng hiển thị ảnh đại diện và thanh điều khiển carousel */}
             <div
               className="space-hero-image-box"
               onClick={() => {
@@ -555,7 +580,7 @@ export const SpaceDetailPage: React.FC = () => {
                 className="space-hero-img"
               />
 
-              {/* Hint badge nhấp xem ảnh chi tiết khi di chuột */}
+              {/* Nhãn gợi ý bấm để phóng to ảnh */}
               <div className="carousel-zoom-hint">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="11" cy="11" r="8"></circle>
@@ -566,7 +591,7 @@ export const SpaceDetailPage: React.FC = () => {
                 Xem ảnh chi tiết
               </div>
 
-              {/* Nút điều hướng <> chỉ hiển thị khi phòng có nhiều hơn 1 ảnh, di chuột vào sẽ nổi bật */}
+              {/* Các nút bấm chuyển ảnh qua lại và dấu chấm chỉ báo */}
               {hasMultipleImages && (
                 <>
                   <button
@@ -593,7 +618,6 @@ export const SpaceDetailPage: React.FC = () => {
                     </svg>
                   </button>
 
-                  {/* Dãy chấm chọn nhanh ảnh (Dots Indicator) */}
                   <div className="carousel-dots-indicator">
                     {spaceImages.map((_, idx) => (
                       <button
@@ -610,13 +634,13 @@ export const SpaceDetailPage: React.FC = () => {
                     ))}
                   </div>
 
-                  {/* Badge hiển thị chỉ số ảnh */}
                   <div className="carousel-count-badge">
                     📸 {currentImageIndex + 1} / {spaceImages.length}
                   </div>
                 </>
               )}
 
+              {/* Huy hiệu trạng thái khả dụng của phòng */}
               <div className="hero-badge-pinned">
                 {space.status === 'MAINTENANCE' ? (
                   <span className="badge-status-pill" style={{ background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECDD3' }}>
@@ -638,6 +662,7 @@ export const SpaceDetailPage: React.FC = () => {
               </div>
             </div>
 
+            {/* Thông tin mô tả chi tiết và các thông số phòng học */}
             <div className="space-hero-content">
               <div className="space-detail-title-row">
                 <h1 className="space-detail-title">{space.name}</h1>
@@ -648,7 +673,6 @@ export const SpaceDetailPage: React.FC = () => {
                     onClick={() => setIsMaintenanceModalOpen(true)}
                     title="Bấm vào để xem chi tiết tất cả lịch bảo trì sắp tới của phòng này"
                   >
-                    {/* Icon danh sách đặt trước chữ lịch */}
                     <svg
                       className="maintenance-list-icon"
                       width="16"
@@ -679,7 +703,6 @@ export const SpaceDetailPage: React.FC = () => {
                       </span>
                     )}
 
-                    {/* Hint trực quan để người dùng nhận biết ngay là bấm vào xem chi tiết */}
                     <span className="maintenance-action-hint">
                       Chi tiết
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -699,12 +722,10 @@ export const SpaceDetailPage: React.FC = () => {
                 <p className="space-description-paragraph">{space.description}</p>
               )}
 
-              {/* Thông số kỹ thuật 100% liên kết CSDL (Địa điểm, Sức chứa, Phê duyệt, Mô hình) */}
+              {/* Lưới tóm tắt 4 thông số cốt lõi: Địa điểm, Sức chứa, Phê duyệt, Mô hình */}
               <div className="specs-compact-grid">
-                {/* Khung 1: Địa điểm */}
                 <div className="spec-compact-item">
                   <span className="spec-compact-icon">
-                    {/* MapPin icon */}
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E11D48" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
                       <circle cx="12" cy="10" r="3"/>
@@ -718,10 +739,8 @@ export const SpaceDetailPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Khung 2: Sức chứa */}
                 <div className="spec-compact-item">
                   <span className="spec-compact-icon">
-                    {/* Users icon */}
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
                       <circle cx="9" cy="7" r="4"/>
@@ -743,10 +762,8 @@ export const SpaceDetailPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Khung 3: Phê duyệt */}
                 <div className="spec-compact-item">
                   <span className="spec-compact-icon">
-                    {/* Shield-check icon */}
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                       <polyline points="9 12 11 14 15 10"/>
@@ -760,11 +777,9 @@ export const SpaceDetailPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Khung 4: Mô hình */}
                 <div className="spec-compact-item">
                   <span className="spec-compact-icon">
                     {isPerSeat ? (
-                      /* Armchair / Seat icon */
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M19 9V6a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v3"/>
                         <path d="M3 11v5a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v2H7v-2a2 2 0 0 0-4 0z"/>
@@ -772,14 +787,12 @@ export const SpaceDetailPage: React.FC = () => {
                         <line x1="19" y1="18" x2="19" y2="21"/>
                       </svg>
                     ) : isPerTable ? (
-                      /* Table icon */
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <rect x="3" y="9" width="18" height="3" rx="1"/>
                         <line x1="7" y1="12" x2="7" y2="20"/>
                         <line x1="17" y1="12" x2="17" y2="20"/>
                       </svg>
                     ) : (
-                      /* Building / Door icon */
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
                         <polyline points="9 22 9 12 15 12 15 22"/>
@@ -795,7 +808,7 @@ export const SpaceDetailPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Tiện ích có sẵn thu gọn dạng tag */}
+              {/* Danh sách các tiện ích có sẵn trong phòng */}
               {space.facilities && space.facilities.length > 0 && (
                 <div className="facilities-compact-box">
                   <span className="facilities-compact-label">Tiện ích:</span>
@@ -816,7 +829,7 @@ export const SpaceDetailPage: React.FC = () => {
           </div>
         </div>
 
-        {/* CỘT PHẢI: CARD FORM ĐẶT CHỖ (ẢNH 2) */}
+        {/* Cột phải: Khung biểu mẫu điền thông tin đặt phòng hoặc chọn vị trí trên sơ đồ */}
         <div className="space-detail-right">
           {isWholeSpace ? (
           <div className="booking-form-sticky-card">
@@ -827,6 +840,7 @@ export const SpaceDetailPage: React.FC = () => {
               </p>
             </div>
 
+            {/* Cảnh báo khi phòng đang bảo trì hoặc tạm ngưng */}
             {space.status === 'MAINTENANCE' && (
               <div style={{ margin: '14px 20px 0', padding: '12px 14px', background: '#FEF2F2', border: '1px solid #FECDD3', borderRadius: '10px', color: '#DC2626', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '16px' }}>🔧</span>
@@ -840,8 +854,8 @@ export const SpaceDetailPage: React.FC = () => {
               </div>
             )}
 
+            {/* Form điền thông tin ngày giờ, số lượng người và mục đích sử dụng */}
             <form onSubmit={handleFormSubmit} className="detail-booking-form">
-              {/* Ngày */}
               <div className="form-field-group">
                 <label className="form-label">Ngày sử dụng</label>
                 <DateInputVI
@@ -867,7 +881,7 @@ export const SpaceDetailPage: React.FC = () => {
                 />
               </div>
 
-              {/* Khung giờ: Bắt đầu & Kết thúc (Chuẩn 24 giờ, KHÔNG dùng AM / PM) */}
+              {/* Dòng chọn giờ bắt đầu và giờ kết thúc */}
               <div className="form-time-row">
                 <div className="form-field-group">
                   <label className="form-label">Giờ bắt đầu</label>
@@ -881,7 +895,7 @@ export const SpaceDetailPage: React.FC = () => {
                     }
                     max={operatingHours.closingHour}
                     value={startTime}
-                    onChange={(val) => {
+                    onChange={(val: string) => {
                       setStartTime(val);
                       if (date === today) {
                         const curMinutes = now.getHours() * 60 + now.getMinutes();
@@ -904,20 +918,19 @@ export const SpaceDetailPage: React.FC = () => {
                     min={operatingHours.openingHour}
                     max={operatingHours.closingHour}
                     value={endTime}
-                    onChange={(val) => setEndTime(val)}
+                    onChange={(val: string) => setEndTime(val)}
                     required
                   />
                 </div>
               </div>
 
-              {/* Gợi ý giờ hoạt động cả tòa */}
+              {/* Nhãn gợi ý giờ mở cửa toàn tòa */}
               <div className="building-hours-hint">
                 <span className="building-hours-icon">⏰</span>
                 <span><strong>Giờ mở cửa toàn tòa:</strong> {operatingHours.openingHour} – {operatingHours.closingHour} (Tối đa {Math.floor(operatingHours.maxDurationMinutes / 60)} giờ/lượt đặt)</span>
               </div>
 
-
-              {/* Số người tham gia */}
+              {/* Trường nhập số lượng người tham gia */}
               <div className="form-field-group participant-count-field">
                 <label className="form-label">Số người tham gia</label>
                 <input
@@ -940,8 +953,6 @@ export const SpaceDetailPage: React.FC = () => {
                     const parsedCount = Number.parseInt(val, 10);
                     if (!Number.isFinite(parsedCount)) return;
 
-                    // Thuộc tính max của input number vẫn cho phép gõ/paste số lớn hơn.
-                    // Clamp ngay tại đây để người dùng không phải đợi tới lúc bấm đặt mới biết lỗi.
                     setParticipantCount(Math.min(Math.max(parsedCount, 1), space.capacity));
                     setBookingError(null);
                   }}
@@ -950,7 +961,6 @@ export const SpaceDetailPage: React.FC = () => {
                       setParticipantCount(1);
                       return;
                     }
-                    // Chỉ clamp về giá trị hợp lệ (không tự ép lên 2 — validate khi submit)
                     if (!participantCount || Number(participantCount) < 1) {
                       setParticipantCount(1);
                     } else if (Number(participantCount) > space.capacity) {
@@ -978,7 +988,7 @@ export const SpaceDetailPage: React.FC = () => {
                 )}
               </div>
 
-              {/* Mục đích sử dụng */}
+              {/* Trường nhập mục đích sử dụng */}
               <div className="form-field-group">
                 <label className="form-label">
                   Mục đích sử dụng {requiresApproval && <span style={{ color: '#EF4444', fontWeight: 700 }}>*</span>}
@@ -997,7 +1007,7 @@ export const SpaceDetailPage: React.FC = () => {
                 />
               </div>
 
-              {/* Nút Đặt chỗ */}
+              {/* Nút gửi yêu cầu đặt chỗ */}
               <button 
                 type="submit" 
                 className="btn-detail-book-now"
@@ -1060,6 +1070,7 @@ export const SpaceDetailPage: React.FC = () => {
             </form>
           </div>
           ) : (
+            // Giao diện thẻ hướng dẫn chọn vị trí sơ đồ cho chế độ đặt theo ghế hoặc theo bàn
             <div className="position-booking-card">
               <div className="position-card-glow" />
               <div className="position-card-badge">
@@ -1077,6 +1088,7 @@ export const SpaceDetailPage: React.FC = () => {
                   : 'Xem sơ đồ chỗ ngồi, chọn đúng vị trí bạn muốn rồi hoàn tất thông tin đặt chỗ.'}
               </p>
 
+              {/* Thanh hiển thị tiến trình 3 bước đặt chỗ trực quan */}
               <div className="position-flow-preview">
                 <div className="position-flow-item active">
                   <span>1</span>
@@ -1119,6 +1131,7 @@ export const SpaceDetailPage: React.FC = () => {
                 </div>
               )}
 
+              {/* Nút bấm mở sơ đồ chọn chỗ ngồi hoặc bàn học */}
               <button
                 type="button"
                 className="position-card-cta"
@@ -1149,7 +1162,7 @@ export const SpaceDetailPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Modal sơ đồ chọn Chỗ ngồi (PER_SEAT) hoặc Bàn thảo luận (PER_TABLE) */}
+      {/* Modal sơ đồ tương tác chọn Ghế ngồi hoặc Bàn học */}
       {(isPerSeat || isPerTable) && isSeatModalOpen && (
           <SeatSelectionModal
             space={space}
@@ -1167,7 +1180,7 @@ export const SpaceDetailPage: React.FC = () => {
         />
       )}
 
-      {/* MODAL PHÓNG TO CHI TIẾT ẢNH (THIẾT KẾ CHUẨN THEO ẢNH 2) */}
+      {/* Modal Lightbox xem thư viện ảnh kích thước lớn */}
       {isImageModalOpen && (
         <div
           className="image-lightbox-backdrop"
@@ -1177,7 +1190,7 @@ export const SpaceDetailPage: React.FC = () => {
             className="image-lightbox-modal"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* CỘT TRÁI: KHUNG XEM ẢNH LỚN BỐ CỤC ĐẸP MẮT */}
+            {/* Cột trái: Khung hiển thị ảnh lớn và nút chuyển ảnh */}
             <div className="image-lightbox-left">
               <div className="modal-main-image-wrap">
                 <img
@@ -1186,12 +1199,10 @@ export const SpaceDetailPage: React.FC = () => {
                   className="modal-main-img"
                 />
 
-                {/* Badge số thứ tự ảnh góc trên trái (vd: 7/7) */}
                 <div className="modal-img-badge-counter">
                   {modalImageIndex + 1} / {spaceImages.length}
                 </div>
 
-                {/* Nút điều hướng ảnh trước (<) */}
                 {spaceImages.length > 1 && (
                   <button
                     type="button"
@@ -1209,7 +1220,6 @@ export const SpaceDetailPage: React.FC = () => {
                   </button>
                 )}
 
-                {/* Nút điều hướng ảnh tiếp theo (>) */}
                 {spaceImages.length > 1 && (
                   <button
                     type="button"
@@ -1227,16 +1237,14 @@ export const SpaceDetailPage: React.FC = () => {
                   </button>
                 )}
 
-                {/* Badge phân loại / góc nhìn ở đáy ảnh chính giữa */}
                 <div className="modal-img-caption-pill">
                   Phân loại: {modalImageIndex === 0 ? 'Ảnh chính diện không gian' : `Góc nhìn chi tiết #${modalImageIndex + 1}`}
                 </div>
               </div>
             </div>
 
-            {/* CỘT PHẢI: THÔNG TIN PHÒNG & DANH SÁCH TẤT CẢ ẢNH */}
+            {/* Cột phải: Thông số chi tiết phòng và lưới ảnh thu nhỏ thumbnails */}
             <div className="image-lightbox-right">
-              {/* Header: Tag thương hiệu/loại không gian & Nút đóng tròn X */}
               <div className="modal-header-row">
                 <span className="modal-category-tag">
                   🐾 {space.spaceTypeName || space.spaceType?.name || 'KHÔNG GIAN TIÊU CHUẨN'}
@@ -1252,10 +1260,8 @@ export const SpaceDetailPage: React.FC = () => {
                 </button>
               </div>
 
-              {/* Tên phòng lớn in đậm */}
               <h2 className="modal-space-title">{space.name}</h2>
 
-              {/* Thông số nổi bật (Sức chứa & Trạng thái duyệt) */}
               <div className="modal-space-highlight">
                 <span className="modal-highlight-val">
                   👥 {space.capacity} Chỗ ngồi
@@ -1267,7 +1273,6 @@ export const SpaceDetailPage: React.FC = () => {
 
               <div className="modal-divider-dashed" />
 
-              {/* Tiêu đề mục tất cả hình ảnh */}
               <div className="modal-gallery-heading">
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
@@ -1277,7 +1282,7 @@ export const SpaceDetailPage: React.FC = () => {
                 Tất Cả Hình Ảnh & Phân Loại ({spaceImages.length})
               </div>
 
-              {/* Lưới Thumbnails 3 cột */}
+              {/* Lưới các ảnh thu nhỏ thumbnails */}
               <div className="modal-thumbnails-grid">
                 {spaceImages.map((imgUrl, idx) => (
                   <button
@@ -1296,7 +1301,7 @@ export const SpaceDetailPage: React.FC = () => {
                 ))}
               </div>
 
-              {/* Thông tin phòng chi tiết bên dưới */}
+              {/* Thông tin vị trí và giờ hoạt động ở chân modal */}
               <div className="modal-footer-specs">
                 <div className="modal-spec-line">
                   📍 <strong>Địa điểm:</strong> {space.building} • {space.floor ? (space.floor.toString().toLowerCase().includes('tầng') ? space.floor : `Tầng ${space.floor}`) : 'Đang cập nhật'}
@@ -1313,7 +1318,7 @@ export const SpaceDetailPage: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL CHI TIẾT TẤT CẢ LỊCH BẢO TRÌ SẮP TỚI (SANG TRỌNG & HIỆN ĐẠI) */}
+      {/* Modal hiển thị toàn bộ danh sách các đợt bảo trì sắp tới của phòng */}
       {isMaintenanceModalOpen && (
         <div
           className="maintenance-modal-backdrop"
@@ -1323,7 +1328,6 @@ export const SpaceDetailPage: React.FC = () => {
             className="maintenance-modal-card"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal Header */}
             <div className="maintenance-modal-header">
               <div className="maintenance-modal-title-group">
                 <div className="maintenance-modal-icon-badge">
@@ -1349,9 +1353,7 @@ export const SpaceDetailPage: React.FC = () => {
               </button>
             </div>
 
-            {/* Modal Body */}
             <div className="maintenance-modal-body">
-              {/* Banner Lưu ý sang trọng */}
               <div className="maintenance-notice-box">
                 <div className="notice-icon">ℹ️</div>
                 <div className="notice-content">
@@ -1359,7 +1361,7 @@ export const SpaceDetailPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Danh sách đợt bảo trì */}
+              {/* Danh sách các mốc thời gian bảo trì */}
               <div className="maintenance-items-list">
                 {upcomingMaintenances.filter((m) => new Date(m.endTime).getTime() >= Date.now()).length === 0 ? (
                   <div className="maintenance-empty-state">
@@ -1443,7 +1445,6 @@ export const SpaceDetailPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Modal Footer */}
             <div className="maintenance-modal-footer">
               <span className="footer-count-text">
                 Tổng cộng <strong>{upcomingMaintenances.filter((m) => new Date(m.endTime).getTime() >= Date.now()).length}</strong> đợt bảo trì sắp diễn ra

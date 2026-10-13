@@ -36,6 +36,8 @@ export interface Booking {
   canCancel: boolean;
   canCheckIn: boolean;
   selectedSeats?: string[];
+  checkInEarlyOpenMinutes?: number;
+  checkInGraceMinutes?: number;
 }
 
 export interface BookingAuditLog {

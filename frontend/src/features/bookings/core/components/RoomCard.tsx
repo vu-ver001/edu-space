@@ -1,3 +1,4 @@
+// Thẻ hiển thị thông tin tóm tắt và trạng thái khả dụng của từng phòng học (Module M04 - Khánh Vân).
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Armchair, Building2 } from 'lucide-react';
@@ -5,6 +6,7 @@ import type { Space } from '../services/spaceService';
 import '../pages/SearchSpacesPage.css';
 import './MaintenanceModal.css';
 
+// Định nghĩa thuộc tính Props đầu vào của thẻ thông tin phòng học.
 interface Props {
   space: Space;
   searchParams?: {
@@ -18,7 +20,7 @@ interface Props {
   onBook?: (space: Space) => void;
 }
 
-// Fallback high-res photos for university study & meeting spaces
+// Danh sách ảnh dự phòng chất lượng cao cho các loại phòng học và phòng tự học.
 const ROOM_IMAGES: Record<number, string> = {
   1: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&auto=format&fit=crop&q=80',
   2: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&auto=format&fit=crop&q=80',
@@ -29,6 +31,7 @@ const ROOM_IMAGES: Record<number, string> = {
 };
 const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&auto=format&fit=crop&q=80';
 
+// Định dạng chuỗi ngày giờ lịch bảo trì phòng học sang định dạng thân thiện.
 export const formatMaintenanceTime = (startStr: string, endStr: string): string => {
   try {
     const start = new Date(startStr);
@@ -59,6 +62,7 @@ export const formatMaintenanceTime = (startStr: string, endStr: string): string 
   }
 };
 
+// Rút gọn và chuẩn hóa tên hiển thị của các loại tiện ích trong thẻ phòng.
 const formatDisplayName = (f: any): string => {
   const rawName = typeof f === 'string' ? f : f?.name || '';
   if (rawName.toLowerCase().includes('bảng trắng')) return 'Bảng trắng';
@@ -74,7 +78,7 @@ const formatDisplayName = (f: any): string => {
   return rawName;
 };
 
-// Icon bàn thảo luận nhóm sang trọng thay thế emoji 🪑
+// Biểu tượng SVG chuyên dụng biểu thị chế độ đặt bàn họp nhóm.
 export const TableMeetingIcon = ({ size = 14, strokeWidth = 2.2, style }: { size?: number; strokeWidth?: number; style?: React.CSSProperties }) => (
   <svg
     width={size}
@@ -95,18 +99,20 @@ export const TableMeetingIcon = ({ size = 14, strokeWidth = 2.2, style }: { size
   </svg>
 );
 
+// Component RoomCard hiển thị ảnh, thông số sức chứa, tiện ích và nút điều hướng xem chi tiết.
 export const RoomCard: React.FC<Props> = ({ space, searchParams }) => {
   const navigate = useNavigate();
+  // Xác định trạng thái khả dụng và đường dẫn ảnh đại diện chính của phòng.
   const isAvailable = space.isAvailable ?? (space.status === 'AVAILABLE');
-  // Ưu tiên ảnh có is_primary = true từ bảng space_images
   const imageUrl = space.primaryImageUrl || space.imageUrl || ROOM_IMAGES[space.id] || DEFAULT_IMAGE;
 
-  // Đo đạc để tiện ích luôn hiển thị đúng 1 dòng, nếu không đủ chỗ thì +N ở cuối dòng
+  // Quản lý đo đạc danh sách nhãn tiện ích để chỉ hiển thị đúng 1 dòng kèm badge (+N).
   const amenitiesContainerRef = useRef<HTMLDivElement>(null);
   const measureContainerRef = useRef<HTMLDivElement>(null);
   const facilitiesList = space.facilities || [];
   const [visibleCount, setVisibleCount] = useState<number>(facilitiesList.length);
 
+  // Thuật toán đo chiều rộng thực tế của từng nhãn tiện ích để tính số lượng hiển thị vừa vặn.
   const updateVisibleChips = useCallback(() => {
     if (!amenitiesContainerRef.current || !measureContainerRef.current || facilitiesList.length === 0) {
       setVisibleCount(facilitiesList.length);
@@ -122,7 +128,7 @@ export const RoomCard: React.FC<Props> = ({ space, searchParams }) => {
     const moreWidth = moreEl ? moreEl.offsetWidth : 36;
     const gap = 6;
 
-    // Kiểm tra nếu tất cả chip vừa trên 1 dòng
+    // Kiểm tra nếu tất cả các nhãn tiện ích vừa vặn trên 1 dòng.
     let totalAllWidth = 0;
     for (let i = 0; i < chips.length; i++) {
       totalAllWidth += chips[i].offsetWidth + (i > 0 ? gap : 0);
@@ -133,7 +139,7 @@ export const RoomCard: React.FC<Props> = ({ space, searchParams }) => {
       return;
     }
 
-    // Nếu không vừa toàn bộ, tính số chip tối đa để vừa cả badge +N ở cuối dòng
+    // Tính toán số lượng nhãn tối đa có thể hiển thị trước khi chèn nhãn (+N).
     let currentWidth = 0;
     let fitCount = 0;
     for (let i = 0; i < chips.length; i++) {
@@ -150,6 +156,7 @@ export const RoomCard: React.FC<Props> = ({ space, searchParams }) => {
     setVisibleCount(Math.max(1, fitCount));
   }, [facilitiesList]);
 
+  // Cập nhật lại số lượng nhãn tiện ích khi thay đổi kích thước thẻ phòng.
   useEffect(() => {
     updateVisibleChips();
 
@@ -166,6 +173,7 @@ export const RoomCard: React.FC<Props> = ({ space, searchParams }) => {
     };
   }, [updateVisibleChips]);
 
+  // Chuyển hướng sang trang chi tiết phòng kèm các tham số tìm kiếm ngày giờ.
   const handleViewAndBook = () => {
     const params = new URLSearchParams();
     if (searchParams?.date) params.set('date', searchParams.date);
@@ -179,6 +187,7 @@ export const RoomCard: React.FC<Props> = ({ space, searchParams }) => {
     navigate(`/student/spaces/${space.id}${queryString ? `?${queryString}` : ''}`);
   };
 
+  // Xác định chế độ đặt chỗ: theo ghế (PER_SEAT), theo bàn (PER_TABLE) hoặc trọn phòng.
   const bookingMode = space.bookingMode || space.spaceType?.bookingMode || (
     space.spaceTypeName?.toLowerCase().includes('bàn') ? 'PER_TABLE' :
     space.spaceTypeName?.toLowerCase().includes('ghế') || space.spaceTypeName?.toLowerCase().includes('mở') ? 'PER_SEAT' :
@@ -186,12 +195,13 @@ export const RoomCard: React.FC<Props> = ({ space, searchParams }) => {
   );
   const isPerSeat = bookingMode === 'PER_SEAT';
   const isPerTable = bookingMode === 'PER_TABLE';
-  // LOGIC LIÊN KẾT CSDL: Lấy trực tiếp từ space.requiresApproval (hoặc space.spaceType.requiresApproval từ Kim Tuyến)
+  // Kiểm tra yêu cầu phê duyệt đồng bộ trực tiếp từ cơ sở dữ liệu.
   const requiresApproval = space.requiresApproval ?? space.spaceType?.requiresApproval ?? !isPerSeat;
 
   return (
+    // Khung thẻ phòng học tổng thể
     <div className={`room-card-v1 ${!isAvailable ? 'card-disabled' : ''}`}>
-      {/* Top Image Container with Badge */}
+      {/* Phần hình ảnh đại diện của phòng và huy hiệu trạng thái */}
       <div className="room-card-image-wrapper">
         <img 
           src={imageUrl} 
@@ -220,8 +230,9 @@ export const RoomCard: React.FC<Props> = ({ space, searchParams }) => {
         </div>
       </div>
 
-      {/* Card Content Body */}
+      {/* Phần nội dung chi tiết của thẻ phòng */}
       <div className="room-card-body">
+        {/* Tên phòng và nhãn chế độ đặt chỗ tương ứng */}
         <div className="room-card-header">
           <h3 className="room-card-title">{space.name}</h3>
           <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -245,6 +256,7 @@ export const RoomCard: React.FC<Props> = ({ space, searchParams }) => {
           </div>
         </div>
 
+        {/* Thông tin vị trí tòa nhà, tầng và sức chứa tối đa */}
         <div className="room-card-location-meta">
           <span className="meta-item">
             <svg className="meta-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -264,7 +276,7 @@ export const RoomCard: React.FC<Props> = ({ space, searchParams }) => {
           </span>
         </div>
 
-        {/* Amenities Pills - Đúng 1 dòng duy nhất, nếu không đủ chỗ thì +N ở cuối dòng */}
+        {/* Danh sách nhãn tiện ích hiển thị trên 1 dòng kèm nút xem thêm */}
         <div ref={amenitiesContainerRef} className="room-card-amenities">
           {facilitiesList.slice(0, visibleCount).map((f: any, idx: number) => {
             const rawName = typeof f === 'string' ? f : f?.name || '';
@@ -289,7 +301,7 @@ export const RoomCard: React.FC<Props> = ({ space, searchParams }) => {
           )}
         </div>
 
-        {/* Invisible measuring clone container để đo chính xác theo pixel */}
+        {/* Khung ẩn giả lập đo kích thước các nhãn tiện ích */}
         <div
           ref={measureContainerRef}
           style={{
@@ -317,7 +329,7 @@ export const RoomCard: React.FC<Props> = ({ space, searchParams }) => {
           </span>
         </div>
 
-        {/* Action Button full-width */}
+        {/* Nút hành động dẫn sang trang chi tiết phòng học */}
         <div className="room-card-action">
           <button
             type="button"

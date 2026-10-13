@@ -82,15 +82,15 @@ public class BookingService {
     public BookingResponse createBooking(CreateBookingRequest request, String userEmail) {
         LocalDateTime now = LocalDateTime.now();
 
-        // BƯỚC 1: Xác thực người dùng
+        // BƯỚC 1: Xác thực danh tính sinh viên từ email tài khoản đang đăng nhập.
         Long studentId = resolveStudentId(userEmail);
 
-        // BƯỚC 2: Kiểm tra định dạng thời gian & các giới hạn
+        // BƯỚC 2: Kiểm tra định dạng thời gian và các giới hạn khung giờ (giờ mở/đóng cửa, thời lượng tối đa, số ngày đặt trước).
         LocalDateTime startTime = request.getStartTime();
         LocalDateTime endTime = request.getEndTime();
         availabilityService.validateBookingTimeLimits(startTime, endTime);
 
-        // BƯỚC 3: Kiểm tra phòng và sức chứa
+        // BƯỚC 3: Tra cứu thông tin không gian trong danh mục và kiểm tra tính hợp lệ về sức chứa.
         AvailabilityService.SpaceCatalogItem space = availabilityService.getSpaceCatalogItem(request.getSpaceId());
         if (space == null) {
             throw BusinessException.notFound("SPACE_NOT_FOUND", "Không tìm thấy phòng với ID: " + request.getSpaceId());
@@ -113,11 +113,11 @@ public class BookingService {
                     "Số người tham gia (" + request.getParticipantCount() + ") vượt quá sức chứa của phòng (" + space.getCapacity() + ")");
         }
 
-        // BƯỚC 4: Giải phóng pending quá hạn trước khi kiểm tra
+        // BƯỚC 4: Tự động quét và giải phóng các yêu cầu chờ duyệt đã quá hạn trước khi kiểm tra khả dụng.
         availabilityService.expirePendingApproval(now);
 
         // ================= BEGIN KT =================
-        // BƯỚC 4a: Kiểm tra bảo trì phòng
+        // BƯỚC 4a: Kiểm tra không gian có nằm trong lịch bảo trì hay không.
         if (maintenanceBlockRepository != null) {
             List<com.eduspace.backend.space.entity.MaintenanceBlock> maintenanceConflicts =
                     maintenanceBlockRepository.findOverlappingBlocks(space.getId(), startTime, endTime);
@@ -129,12 +129,12 @@ public class BookingService {
         }
         // ================= END KT =================
 
-        // BƯỚC 4b: Kiểm tra loại không gian có hỗ trợ chọn chỗ ngồi hay bàn hay không
+        // BƯỚC 4b: Xác định phương thức đặt chỗ (đặt toàn bộ phòng, theo từng ghế, hoặc theo từng bàn).
         boolean isPerSeat = "PER_SEAT".equalsIgnoreCase(space.getBookingMode());
         boolean isPerTable = "PER_TABLE".equalsIgnoreCase(space.getBookingMode());
         boolean isWholeSpace = !isPerSeat && !isPerTable;
 
-        // LOGIC LIÊN KẾT CSDL: Bắt buộc nhập lý do nếu phòng yêu cầu phê duyệt hoặc đặt whole-space / per-table
+        // Bắt buộc nhập lý do sử dụng nếu không gian yêu cầu nhân viên phê duyệt hoặc là phòng sinh hoạt chung.
         if (space.isRequiresApproval() || !isPerSeat) {
             if (request.getPurpose() == null || request.getPurpose().trim().isBlank()) {
                 throw BusinessException.badRequest("PURPOSE_REQUIRED", 
@@ -145,13 +145,14 @@ public class BookingService {
         List<String> requestedSeats = request.getSelectedSeats();
         Long requestedTableId = request.getTableId();
 
+        // Kiểm tra hợp lệ: Không cho phép chọn ghế/bàn riêng lẻ đối với không gian đặt trọn gói.
         if (isWholeSpace && ((requestedSeats != null && !requestedSeats.isEmpty()) || requestedTableId != null)) {
             throw BusinessException.badRequest("SELECTION_NOT_ALLOWED", 
                     "Không gian loại [" + space.getSpaceTypeName() + "] chỉ áp dụng đặt trọn gói toàn bộ không gian, không hỗ trợ chọn vị trí ghế hoặc bàn riêng lẻ.");
         }
 
+        // Kiểm tra quy tắc đặt chỗ theo ghế: Chỉ dành cho cá nhân (1 người = 1 ghế duy nhất).
         if (!isWholeSpace && !isPerTable) {
-            // PER_SEAT mode: Khu tự học chung
             if (request.getParticipantCount() != 1) {
                 throw BusinessException.badRequest(
                         "INDIVIDUAL_SEAT_ONLY",
@@ -168,6 +169,7 @@ public class BookingService {
             }
         }
 
+        // Kiểm tra quy tắc đặt chỗ theo bàn: Xác thực bàn hợp lệ và sức chứa của bàn.
         SpaceTable targetTable = null;
         if (isPerTable) {
             if (requestedTableId == null && requestedSeats != null && !requestedSeats.isEmpty() && spaceTableRepository != null) {
@@ -207,13 +209,20 @@ public class BookingService {
             }
         }
 
-        // BƯỚC 5: Kiểm tra booking đang chiếm chỗ của phòng
+        // =========================================================================================================
+        // BƯỚC 5: [LÕI HỆ THỐNG] THUẬT TOÁN PHÁT HIỆN XUNG ĐỘT KHÔNG GIAN & KIỂM SOÁT ĐỒNG THỜI (CONCURRENCY CONTROL)
+        // - Cơ chế: Truy vấn tất cả booking giao thoa thời gian đang ở trạng thái chiếm chỗ (PENDING_APPROVAL, CONFIRMED, CHECKED_IN).
+        // - Với PER_TABLE: Chặn nếu cả phòng bị đặt trọn gói, hoặc chính bàn này (ID hoặc Mã bàn) đã có đơn giữ chỗ trùng giờ.
+        // - Với PER_SEAT (Seat Concurrency Lock): Trích xuất toàn bộ tập ghế đang bận (occupiedSeats), thực hiện phép giao tập hợp
+        //   với ghế yêu cầu. Nếu tập giao khác rỗng -> phát hiện ngay xung đột 2 người cùng chọn 1 ghế tại cùng một thời điểm.
+        // - Với WHOLE_SPACE: Chặn toàn bộ nếu tồn tại bất kỳ đơn đặt chỗ nào (nguyên phòng, theo bàn, theo ghế) trong khung giờ đó.
+        // =========================================================================================================
         List<Booking> overlappingSpaceBookings = bookingRepository.findOverlappingSpaceBookings(
                 space.getId(), startTime, endTime, AvailabilityService.OCCUPYING_STATUSES
         );
 
         if (isPerTable) {
-            // 5a. Kiểm tra nếu phòng bị đặt trọn gói trong khung giờ
+            // Kiểm tra nếu toàn bộ phòng đã có đơn đặt trọn gói trong khung giờ yêu cầu.
             boolean wholeRoomOccupied = overlappingSpaceBookings.stream()
                     .anyMatch(b -> b.getTableId() == null && b.getSelectedSeatsList().isEmpty());
             if (wholeRoomOccupied) {
@@ -232,7 +241,7 @@ public class BookingService {
                         Collections.singletonList(conflict));
             }
 
-            // 5b. Kiểm tra xung đột chính bàn này
+            // Kiểm tra xung đột riêng cho bàn mà sinh viên đang yêu cầu đặt.
             final Long finalTableId = requestedTableId;
             final SpaceTable finalTargetTable = targetTable;
             Optional<Booking> tableConflictOpt = overlappingSpaceBookings.stream()
@@ -254,7 +263,7 @@ public class BookingService {
                         Collections.singletonList(conflict));
             }
         } else if (requestedSeats != null && !requestedSeats.isEmpty()) {
-            // 5a. Kiểm tra nếu phòng bị đặt trọn gói trong khung giờ
+            // Kiểm tra nếu toàn bộ phòng đã có người đặt trọn gói trước đó.
             boolean wholeRoomOccupied = overlappingSpaceBookings.stream()
                     .anyMatch(b -> b.getSelectedSeatsList().isEmpty());
             if (wholeRoomOccupied) {
@@ -273,7 +282,7 @@ public class BookingService {
                         Collections.singletonList(conflict));
             }
 
-            // 5b. Kiểm tra xung đột từng vị trí ghế (Seat concurrency lock)
+            // [SEAT LOCK] Trích xuất tập hợp ghế đã chiếm và đối soát giao nhau để chống đặt trùng ghế lẻ.
             java.util.Set<String> occupiedSeats = overlappingSpaceBookings.stream()
                     .flatMap(b -> b.getSelectedSeatsList().stream())
                     .collect(Collectors.toSet());
@@ -288,7 +297,7 @@ public class BookingService {
                         "Vị trí ghế [" + itemsStr + "] vừa có người đặt trong khung giờ này. Vui lòng chọn vị trí khác.");
             }
         } else {
-            // Đặt trọn phòng: nếu có bất kỳ booking nào (trọn phòng, theo ghế, hoặc theo bàn) thì không thể đặt trọn phòng
+            // Đặt trọn phòng (WHOLE_SPACE): Bất kỳ đơn đặt chỗ nào trong khung giờ đều tính là xung đột thời gian.
             if (!overlappingSpaceBookings.isEmpty()) {
                 Booking conflictBooking = overlappingSpaceBookings.get(0);
                 ConflictDetail conflict = ConflictDetail.builder()
@@ -304,7 +313,11 @@ public class BookingService {
             }
         }
 
-        // BƯỚC 6: Kiểm tra booking đang chiếm chỗ khác của chính sinh viên
+        // =========================================================================================================
+        // BƯỚC 6: [LÕI HỆ THỐNG] CHỐNG SINH VIÊN TỰ ĐẶT TRÙNG LỊCH CHÍNH MÌNH (SELF-BOOKING CONFLICT)
+        // - Cơ chế: Một sinh viên không thể có mặt ở 2 phòng/vị trí khác nhau cùng một thời điểm.
+        // - Kiểm tra các booking khác của chính studentId đang ở trạng thái chiếm chỗ và giao thoa với khung giờ này.
+        // =========================================================================================================
         List<Booking> overlappingStudentBookings = bookingRepository.findOverlappingStudentBookings(
                 studentId, startTime, endTime, AvailabilityService.OCCUPYING_STATUSES
         );
@@ -322,7 +335,12 @@ public class BookingService {
                     Collections.singletonList(conflict));
         }
 
-        // BƯỚC 7: Kiểm tra xung đột lịch học chính khóa (Mock/Seed SIS)
+        // =========================================================================================================
+        // BƯỚC 7: [LÕI HỆ THỐNG] TÍCH HỢP KIỂM TRA THỜI KHÓA BIỂU ĐÀO TẠO SIS (STUDENT SCHEDULE CONFLICT)
+        // - Cơ chế: Tích hợp với CSDL quản lý sinh viên của Nhà trường qua StudentScheduleRepository.
+        // - Nếu sinh viên có tiết học chính khóa trên giảng đường tại khung giờ yêu cầu, từ chối cho phép đặt phòng
+        //   để đảm bảo sinh viên ưu tiên việc học tập trên lớp theo đúng quy chế đào tạo.
+        // =========================================================================================================
         LocalDate bookingDate = startTime.toLocalDate();
         LocalTime startT = startTime.toLocalTime();
         LocalTime endT = endTime.toLocalTime();
@@ -343,7 +361,13 @@ public class BookingService {
                     Collections.singletonList(conflict));
         }
 
-        // BƯỚC 8: Kiểm tra Quota ngày & Rate-limit tạo yêu cầu (kiểm tra độc lập)
+        // =========================================================================================================
+        // BƯỚC 8: [LÕI HỆ THỐNG] KIỂM SOÁT HẠN MỨC ĐẶT PHÒNG QUOTA NGÀY VÀ RATE-LIMIT CHỐNG SPAM
+        // - Quota ngày (DAILY_BOOKING_QUOTA = 2 đơn/ngày): Đếm số đơn đang chiếm chỗ trong ngày của sinh viên,
+        //   ngăn chặn tình trạng một người giữ quá nhiều phòng gây thiếu hụt tài nguyên chung.
+        // - Rate-Limit theo giờ (RATE_LIMIT_HOURLY = 10 req/giờ): Đếm số yêu cầu tạo đơn trong 1 giờ qua,
+        //   bảo vệ hệ thống trước bot spam hoặc hành vi click liên tục làm nghẽn máy chủ.
+        // =========================================================================================================
         LocalDateTime dayStart = bookingDate.atStartOfDay();
         LocalDateTime dayEnd = bookingDate.plusDays(1).atStartOfDay();
         long dailyQuotaLimit = availabilityService.getPolicyLong("DAILY_BOOKING_QUOTA", 2L);
@@ -363,11 +387,11 @@ public class BookingService {
                     "Bạn đã gửi quá nhiều yêu cầu tạo đặt chỗ (" + recentRequests + " lần/giờ). Vui lòng thử lại sau.");
         }
 
-        // BƯỚC 9: Xác định trạng thái ban đầu dựa vào cấu hình CSDL của Kim Tuyến (space_types.requires_approval)
+        // BƯỚC 9: Xác định trạng thái ban đầu dựa trên cấu hình yêu cầu duyệt (requiresApproval) của phòng.
         boolean requiresApproval = space.isRequiresApproval();
         BookingStatus initialStatus = requiresApproval ? BookingStatus.PENDING_APPROVAL : BookingStatus.CONFIRMED;
 
-        // BƯỚC 10: Lưu booking và nhật ký thao tác
+        // BƯỚC 10: Khởi tạo thực thể Booking và lưu vào cơ sở dữ liệu.
         int actualParticipantCount;
         if (isPerSeat) {
             actualParticipantCount = 1;
@@ -381,6 +405,7 @@ public class BookingService {
                 ? request.getPurpose().trim()
                 : (isPerSeat ? "Tự học cá nhân" : "Học tập & Thảo luận");
 
+        // [MÃ ĐƠN] Sinh mã đặt chỗ duy nhất theo quy chuẩn BK-YYMMDD-XXXX.
         String bookingCode = generateBookingCode(now);
 
         Booking booking = Booking.builder()
@@ -401,8 +426,10 @@ public class BookingService {
             booking.setSelectedSeatsList(Collections.singletonList(targetTable.getTableCode()));
         }
 
+        // Lưu đơn đặt chỗ vào CSDL.
         booking = bookingRepository.save(booking);
 
+        // Ghi nhật ký kiểm toán (Audit Log) cho thao tác tạo đơn mới.
         BookingAuditLog audit = BookingAuditLog.builder()
                 .bookingId(booking.getId())
                 .action(AuditAction.CREATE_BOOKING)
@@ -417,18 +444,11 @@ public class BookingService {
         log.info("Tạo booking #{} thành công cho sinh viên {} tại phòng {} với trạng thái {}", 
                 booking.getId(), userEmail, space.getName(), initialStatus);
 
+        // Chuyển đổi sang BookingResponse DTO và trả về cho client.
         return toBookingResponse(booking, now);
     }
 
-    /**
-     * Lấy danh sách booking của sinh viên đang đăng nhập.
-     * Sắp xếp logic theo độ ưu tiên nghiệp vụ và thời gian:
-     * 1. CHECKED_IN (Đang trong ca học)
-     * 2. CONFIRMED (Đã duyệt, sắp diễn ra - ca gần nhất lên trước)
-     * 3. PENDING_APPROVAL (Chờ duyệt - ca gần nhất lên trước)
-     * 4. COMPLETED (Đã hoàn thành - mới nhất gần đây lên trước)
-     * 5. CANCELLED, REJECTED, EXPIRED, NO_SHOW (Đã đóng - mới nhất gần đây lên trước)
-     */
+    // Lấy danh sách lịch sử và các đơn đặt chỗ của sinh viên hiện tại theo bộ lọc trạng thái.
     @Transactional(readOnly = true)
     public List<BookingResponse> getMyBookings(String userEmail, BookingStatus status) {
         Long studentId = resolveStudentId(userEmail);
@@ -443,6 +463,7 @@ public class BookingService {
                 .collect(Collectors.toList());
     }
 
+    // Bảng trọng số ưu tiên trạng thái nghiệp vụ (1: Đang dùng, 2: Đã duyệt sắp tới, 3: Chờ duyệt, 4: Đã xong, 5: Đã đóng).
     private int getBookingStatusRank(BookingStatus status) {
         if (status == null) return 99;
         switch (status) {
@@ -459,6 +480,13 @@ public class BookingService {
         }
     }
 
+    // =========================================================================================================
+    // [LÕI HỆ THỐNG] THUẬT TOÁN SẮP XẾP ĐƠN ĐẶT CHỖ THEO TRẢI NGHIỆM NGƯỜI DÙNG (UX PRIORITY SORTING)
+    // - Nhóm cần chú ý / sắp diễn ra (CHECKED_IN, CONFIRMED, PENDING_APPROVAL): Sắp xếp theo thời gian bắt đầu TĂNG DẦN
+    //   (startTime ASC) -> Đơn ca gần nhất luôn được đẩy lên đầu màn hình để sinh viên kịp giờ check-in.
+    // - Nhóm đã đóng / lịch sử (COMPLETED, CANCELLED, REJECTED, EXPIRED): Sắp xếp theo thời gian bắt đầu GIẢM DẦN
+    //   (startTime DESC) -> Đơn vừa hoàn thành hoặc vừa hủy gần nhất hiển thị trước để sinh viên dễ tra cứu đối soát.
+    // =========================================================================================================
     private int compareBookingsLogically(BookingResponse a, BookingResponse b) {
         int rankA = getBookingStatusRank(a.getStatus());
         int rankB = getBookingStatusRank(b.getStatus());
@@ -467,7 +495,7 @@ public class BookingService {
         }
 
         if (rankA <= 3) {
-            // Sắp diễn ra / cần chú ý: gần nhất lên trước (startTime ASC)
+            // Đơn sắp diễn ra: Ca gần thời điểm hiện tại nhất xếp lên trước (ASC).
             LocalDateTime timeA = a.getStartTime() != null ? a.getStartTime() : LocalDateTime.MAX;
             LocalDateTime timeB = b.getStartTime() != null ? b.getStartTime() : LocalDateTime.MAX;
             int timeCompare = timeA.compareTo(timeB);
@@ -476,7 +504,7 @@ public class BookingService {
             Long idB = b.getId() != null ? b.getId() : 0L;
             return idA.compareTo(idB);
         } else {
-            // Booking đã kết thúc: mới nhất gần đây lên trước (startTime DESC)
+            // Đơn lịch sử đã kết thúc: Mới hoàn thành gần đây nhất xếp lên trước (DESC).
             LocalDateTime timeA = a.getStartTime() != null ? a.getStartTime() : LocalDateTime.MIN;
             LocalDateTime timeB = b.getStartTime() != null ? b.getStartTime() : LocalDateTime.MIN;
             int timeCompare = timeB.compareTo(timeA);
@@ -487,9 +515,7 @@ public class BookingService {
         }
     }
 
-    /**
-     * Xem chi tiết một booking.
-     */
+    // Tra cứu thông tin chi tiết của một đơn đặt chỗ theo ID.
     @Transactional(readOnly = true)
     public BookingResponse getBookingById(Long id, String userEmail) {
         Booking booking = bookingRepository.findById(id)
@@ -499,15 +525,15 @@ public class BookingService {
         return toBookingResponse(booking, LocalDateTime.now());
     }
 
-    /**
-     * Hủy booking trước giờ bắt đầu.
-     */
+    // Sinh viên hủy đơn đặt chỗ trước giờ bắt đầu để giải phóng phòng cho người khác.
     @Transactional
     public BookingResponse cancelBooking(Long id, String userEmail, String reason) {
+        // Khóa bi quan (SELECT FOR UPDATE) để đảm bảo tính toàn vẹn trạng thái khi hủy đơn.
         Booking booking = bookingRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> BusinessException.notFound("BOOKING_NOT_FOUND", "Không tìm thấy booking với ID: " + id));
         requireOwnerOrStaff(booking, userEmail);
 
+        // Bắt buộc nhập lý do hủy đơn.
         if (reason == null || reason.isBlank()) {
             throw BusinessException.badRequest("CANCEL_REASON_REQUIRED", "Vui lòng nhập lý do hủy.");
         }
@@ -515,19 +541,23 @@ public class BookingService {
 
         LocalDateTime now = LocalDateTime.now(checkInClock);
 
+        // Chỉ cho phép hủy khi đơn ở trạng thái PENDING_APPROVAL hoặc CONFIRMED.
         if (booking.getStatus() != BookingStatus.PENDING_APPROVAL && booking.getStatus() != BookingStatus.CONFIRMED) {
             throw BusinessException.badRequest("CANNOT_CANCEL_STATUS", 
                     "Không thể hủy booking ở trạng thái: " + booking.getStatus().getDisplayName());
         }
 
+        // Không cho phép hủy khi đã đến hoặc qua giờ bắt đầu ca đặt.
         if (!now.isBefore(booking.getStartTime())) {
             throw BusinessException.badRequest("CANNOT_CANCEL_PAST_START", 
                     "Không thể hủy booking khi đã đến hoặc qua giờ bắt đầu");
         }
 
+        // Cập nhật trạng thái thành CANCELLED và lưu vào CSDL.
         booking.setStatus(BookingStatus.CANCELLED);
         bookingRepository.save(booking);
 
+        // Ghi nhật ký kiểm toán (Audit Log) cho thao tác hủy đơn.
         BookingAuditLog audit = BookingAuditLog.builder()
                 .bookingId(booking.getId())
                 .action(AuditAction.CANCEL_BOOKING)
@@ -543,24 +573,26 @@ public class BookingService {
         return toBookingResponse(booking, now);
     }
 
-    /**
-     * Duyệt booking (Staff).
-     */
+    // STAFF DUYỆT BK phê duyệt đơn đặt chỗ đang chờ duyệt (PENDING_APPROVAL -> CONFIRMED).
     @Transactional
     public BookingResponse approveBooking(Long id, String staffEmail) {
+        // Khóa bi quan (SELECT FOR UPDATE) chống xung đột phê duyệt song song giữa các Staff.
         Booking booking = bookingRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> BusinessException.notFound("BOOKING_NOT_FOUND", "Không tìm thấy booking với ID: " + id));
         LocalDateTime now = LocalDateTime.now(checkInClock);
 
+        // Kiểm tra tính hợp lệ: Chỉ duyệt đơn đang chờ duyệt.
         if (booking.getStatus() != BookingStatus.PENDING_APPROVAL) {
             throw BusinessException.badRequest("INVALID_STATUS_FOR_APPROVAL", 
                     "Chỉ có thể duyệt booking đang ở trạng thái Chờ duyệt. Trạng thái hiện tại: " + booking.getStatus().getDisplayName());
         }
 
+        // Chặn phê duyệt nếu đã quá giờ bắt đầu ca đặt.
         if (!now.isBefore(booking.getStartTime())) {
             throw BusinessException.conflict("BOOKING_APPROVAL_EXPIRED", "Đã quá thời hạn xử lý; scheduler sẽ chuyển booking sang EXPIRED.");
         }
 
+        // Tái kiểm tra xung đột thời gian với các đơn khác của phòng trước khi phê duyệt chính thức.
         List<Booking> conflicts = bookingRepository.findOverlappingSpaceBookingsExcluding(
                 booking.getSpaceId(), booking.getId(), booking.getStartTime(), booking.getEndTime(), AvailabilityService.OCCUPYING_STATUSES
         );
@@ -569,9 +601,11 @@ public class BookingService {
                     "Phòng đã phát sinh xung đột với lượt đặt khác trước thời điểm duyệt");
         }
 
+        // Cập nhật trạng thái sang CONFIRMED và lưu CSDL.
         booking.setStatus(BookingStatus.CONFIRMED);
         bookingRepository.save(booking);
 
+        // Ghi nhật ký kiểm toán (Audit Log) cho thao tác phê duyệt của Staff.
         BookingAuditLog audit = BookingAuditLog.builder()
                 .bookingId(booking.getId())
                 .action(AuditAction.APPROVE_BOOKING)
@@ -589,34 +623,38 @@ public class BookingService {
         return response;
     }
 
-    /**
-     * Từ chối booking (Staff).
-     */
+    // STAFF TỪ CHỐI đơn đặt chỗ kèm lý do bắt buộc (PENDING_APPROVAL -> REJECTED).
     @Transactional
     public BookingResponse rejectBooking(Long id, String staffEmail, String rejectReason) {
+        // Kiểm tra lý do từ chối bắt buộc không được để trống.
         if (rejectReason == null || rejectReason.trim().isEmpty()) {
             throw BusinessException.badRequest("REJECT_REASON_REQUIRED", "Lý do từ chối không được để trống theo quy tắc R-20");
         }
 
+        // Khóa bi quan bản ghi đơn đặt chỗ để cập nhật trạng thái.
         Booking booking = bookingRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> BusinessException.notFound("BOOKING_NOT_FOUND", "Không tìm thấy booking với ID: " + id));
         LocalDateTime now = LocalDateTime.now(checkInClock);
 
+        // Kiểm tra tính hợp lệ: Chỉ từ chối đơn đang chờ duyệt.
         if (booking.getStatus() != BookingStatus.PENDING_APPROVAL) {
             throw BusinessException.badRequest("INVALID_STATUS_FOR_REJECTION", 
                     "Chỉ có thể từ chối booking đang Chờ duyệt. Trạng thái hiện tại: " + booking.getStatus().getDisplayName());
         }
 
+        // Kiểm tra thời hạn xử lý đơn.
         if (!now.isBefore(booking.getStartTime())) {
             throw BusinessException.conflict("BOOKING_APPROVAL_EXPIRED", "Đã quá thời hạn xử lý; scheduler sẽ chuyển booking sang EXPIRED.");
         }
 
+        // Cập nhật trạng thái REJECTED cùng thông tin người từ chối và lý do.
         booking.setStatus(BookingStatus.REJECTED);
         booking.setRejectedBy(resolveStudentId(staffEmail));
         booking.setRejectedAt(now);
         booking.setRejectReason(rejectReason.trim());
         bookingRepository.save(booking);
 
+        // Ghi nhật ký kiểm toán (Audit Log) cho thao tác từ chối của Staff.
         BookingAuditLog audit = BookingAuditLog.builder()
                 .bookingId(booking.getId())
                 .action(AuditAction.REJECT_BOOKING)
@@ -634,12 +672,7 @@ public class BookingService {
         return response;
     }
 
-
-    /**
-     * Duyệt hàng loạt booking (Staff).
-     * Áp dụng quy tắc cho từng đơn độc lập: các đơn hợp lệ được duyệt (CONFIRMED),
-     * các đơn phát sinh xung đột hoặc hết hạn được ghi nhận chi tiết lỗi.
-     */
+    // Duyệt hàng loạt đơn đặt chỗ: Xử lý độc lập từng đơn trong giao dịch riêng biệt (TransactionTemplate REQUIRES_NEW).
     public BulkBookingOperationResponse bulkApproveBookings(List<Long> bookingIds, String staffEmail) {
         if (bookingIds == null || bookingIds.isEmpty()) {
             return BulkBookingOperationResponse.builder()
@@ -703,10 +736,7 @@ public class BookingService {
                 .build();
     }
 
-    /**
-     * Từ chối hàng loạt booking (Staff).
-     * Bắt buộc có lý do từ chối chung theo quy tắc R-20.
-     */
+    // Từ chối hàng loạt đơn đặt chỗ kèm lý do chung: Xử lý độc lập từng đơn trong giao dịch riêng biệt.
     public BulkBookingOperationResponse bulkRejectBookings(List<Long> bookingIds, String staffEmail, String rejectReason) {
         if (rejectReason == null || rejectReason.trim().isEmpty()) {
             throw BusinessException.badRequest("REJECT_REASON_REQUIRED", "Lý do từ chối không được để trống theo quy tắc R-20");
@@ -774,7 +804,7 @@ public class BookingService {
                 .build();
     }
 
-
+    // Lấy danh sách các đơn đặt phòng đang chờ duyệt còn hiệu lực dành cho nhân viên quản trị.
     @Transactional(readOnly = true)
     public List<BookingResponse> getPendingBookingsForStaff() {
         LocalDateTime now = LocalDateTime.now();
@@ -784,9 +814,7 @@ public class BookingService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Lấy danh sách booking của một phòng trong khoảng thời gian cụ thể (hỗ trợ hiển thị Space Timeline).
-     */
+    // Lấy danh sách booking của một phòng trong khoảng thời gian xác định để dựng biểu đồ Space Timeline.
     public List<BookingResponse> getSpaceTimeline(Long spaceId, LocalDateTime fromTime, LocalDateTime toTime) {
         if (spaceId == null) {
             throw BusinessException.badRequest("SPACE_ID_REQUIRED", "Mã phòng không được để trống");
@@ -808,6 +836,7 @@ public class BookingService {
                 .collect(Collectors.toList());
     }
 
+    // Ánh xạ thực thể Booking sang BookingResponse DTO kèm tính toán quyền hủy và check-in thời gian thực.
     public BookingResponse toBookingResponse(Booking booking, LocalDateTime now) {
         boolean canCancel = (booking.getStatus() == BookingStatus.PENDING_APPROVAL || booking.getStatus() == BookingStatus.CONFIRMED)
                 && now.isBefore(booking.getStartTime());
@@ -874,9 +903,12 @@ public class BookingService {
                 .selectedSeats(booking.getSelectedSeatsList())
                 .tableId(booking.getTableId())
                 .tableCode(tableCode)
+                .checkInEarlyOpenMinutes(openMinutes)
+                .checkInGraceMinutes(graceMinutes)
                 .build();
     }
 
+    // Kiểm tra quyền: Chỉ sinh viên chủ sở hữu đơn đặt hoặc nhân viên quản trị (Staff/Admin) mới có quyền truy cập.
     private void requireOwnerOrStaff(Booking booking, String email) {
         Long actorId = resolveStudentId(email);
         if (!SecurityUtils.hasRole("STAFF") && !SecurityUtils.hasRole("ADMIN")
@@ -885,6 +917,7 @@ public class BookingService {
         }
     }
 
+    // Giải mã và xác thực mã định danh sinh viên (ID) từ email người dùng trong hệ thống.
     private Long resolveStudentId(String email) {
         if (email == null || email.isBlank() || "anonymousUser".equals(email)) {
             throw new BusinessException("UNAUTHENTICATED", "Bạn cần đăng nhập.", org.springframework.http.HttpStatus.UNAUTHORIZED);
@@ -894,13 +927,13 @@ public class BookingService {
                 .orElseThrow(() -> new BusinessException("UNAUTHENTICATED", "Tài khoản không khả dụng.", org.springframework.http.HttpStatus.UNAUTHORIZED));
     }
 
-    /**
-     * Sinh mã booking tự động ngắn gọn, logic và thực tế nghiệp vụ cao:
-     * Định dạng: BK-YYMMDD-[SEQ:04d] (Ví dụ: BK-260923-0001)
-     * - BK: Tiền tố nhận diện đơn đặt chỗ EduSpace (Booking)
-     * - YYMMDD: Ngày giao dịch đặt phòng (Ví dụ: 260923 tức 23/09/2026)
-     * - SEQ: Số thứ tự đơn trong ngày (0001, 0002...), tăng dần và chống trùng lặp tuyệt đối.
-     */
+    // =========================================================================================================
+    // [LÕI HỆ THỐNG] THUẬT TOÁN SINH MÃ ĐẶT CHỖ TỰ ĐỘNG CHUẨN HÓA (FORMAT: BK-YYMMDD-XXXX)
+    // - BK: Tiền tố nhận diện đơn đặt chỗ (Booking) của hệ thống EduSpace.
+    // - YYMMDD: Chuỗi ngày tạo giao dịch (ví dụ: 261013 tức ngày 13/10/2026).
+    // - SEQ: Số thứ tự tự tăng trong ngày (0001, 0002...).
+    // - Vòng lặp kiểm tra 'existsByBookingCode' đảm bảo tính duy nhất tuyệt đối của mã đơn trên toàn hệ thống.
+    // =========================================================================================================
     public String generateBookingCode(LocalDateTime bookingTime) {
         String datePart = (bookingTime != null ? bookingTime : LocalDateTime.now())
                 .format(java.time.format.DateTimeFormatter.ofPattern("yyMMdd"));
