@@ -3,6 +3,8 @@ import { Camera, CameraOff, RefreshCw, ScanLine } from 'lucide-react';
 import { staffApi } from '../api/staffApi';
 import type { StaffBooking } from '../types/staff';
 import QrCameraScanner from '../components/QrCameraScanner';
+import { CheckInBookingModalKT } from '../components/CheckInBookingModalKT';
+import './BookingManagementPageKT.css';
 import './QrCheckInPage.css';
 
 type Result =
@@ -37,39 +39,83 @@ export default function QrCheckInPage() {
   const [cameraOn, setCameraOn] = useState(false);
   const [sessionCount, setSessionCount] = useState(0);
 
+  // Trạng thái modal popup đối chiếu thông tin sinh viên
+  const [previewBooking, setPreviewBooking] = useState<StaffBooking | null>(null);
+  const [pendingToken, setPendingToken] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
+  const [lockedToken, setLockedToken] = useState<string | null>(null);
+
   const inputRef = useRef<HTMLInputElement>(null);
   const busyRef = useRef(false);
 
   // Ô nhập tay phải luôn giữ focus để máy quét USB gõ vào được. Khi camera đang
-  // bật thì tắt hẳn cơ chế này, nếu không sẽ cướp focus khỏi nút bật/tắt camera.
+  // bật hoặc khi popup đang mở thì tắt hẳn cơ chế này để không cướp focus.
   useEffect(() => {
-    if (cameraOn) return;
+    if (cameraOn || previewBooking) return;
     inputRef.current?.focus();
-  }, [cameraOn, result, busy]);
+  }, [cameraOn, result, busy, previewBooking]);
 
+  // Bước 1: Tra cứu thông tin mã (inspect) mà chưa thực hiện check-in và chưa tiêu thụ token
   const handleToken = useCallback(async (rawToken: string): Promise<void> => {
     const token = rawToken.trim();
-    if (!token || busyRef.current) return;
+    if (!token || busyRef.current || confirming) return;
 
     busyRef.current = true;
     setBusy(true);
-    setResult({ tone: 'pending', text: 'Đang xác minh mã…' });
+    setResult({ tone: 'pending', text: 'Đang kiểm tra mã và tải thông tin sinh viên…' });
     try {
-      const booking = await staffApi.scanCheckInToken(token);
-      setResult({ tone: 'success', booking });
-      setValue('');
-      setSessionCount((count) => count + 1);
+      const booking = await staffApi.inspectCheckInToken(token);
+      setPendingToken(token);
+      setPreviewBooking(booking);
+      setResult(null);
     } catch (error) {
       const detail = staffApi.scanCheckInError(error);
       setResult({ tone: 'error', text: ERROR_TEXT[detail.code] ?? detail.message });
-      // Giữ mã trong ô để đối chiếu, nhưng chọn sẵn để lần nhập sau gõ đè.
+      setLockedToken(token);
       inputRef.current?.select();
     } finally {
       busyRef.current = false;
       setBusy(false);
+      if (!cameraOn && !previewBooking) inputRef.current?.focus();
+    }
+  }, [cameraOn, confirming, previewBooking]);
+
+  // Bước 2: Staff bấm "Xác nhận check-in" trên popup sau khi đối chiếu thẻ sinh viên
+  const handleConfirmCheckIn = async () => {
+    if (!pendingToken || confirming) return;
+
+    setConfirming(true);
+    try {
+      const booking = await staffApi.scanCheckInToken(pendingToken);
+      setResult({ tone: 'success', booking });
+      setValue('');
+      setSessionCount((count) => count + 1);
+      setLockedToken(pendingToken);
+      setPreviewBooking(null);
+      setPendingToken(null);
+    } catch (error) {
+      const detail = staffApi.scanCheckInError(error);
+      setResult({ tone: 'error', text: ERROR_TEXT[detail.code] ?? detail.message });
+      setLockedToken(pendingToken);
+      setPreviewBooking(null);
+      setPendingToken(null);
+    } finally {
+      setConfirming(false);
       if (!cameraOn) inputRef.current?.focus();
     }
-  }, [cameraOn]);
+  };
+
+  // Bước 3: Staff chọn "Không xác nhận" hoặc đóng popup: không check-in, giữ nguyên booking & token
+  const handleDismiss = () => {
+    if (confirming) return;
+    if (pendingToken) {
+      setLockedToken(pendingToken);
+    }
+    setPreviewBooking(null);
+    setPendingToken(null);
+    setResult(null);
+    if (!cameraOn) inputRef.current?.focus();
+  };
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -211,8 +257,25 @@ export default function QrCheckInPage() {
           )}
         </div>
 
-        {cameraOn && <QrCameraScanner onToken={handleToken} />}
+        {cameraOn && (
+          <QrCameraScanner
+            onToken={handleToken}
+            isPausedExternal={Boolean(previewBooking) || confirming}
+            lockedToken={lockedToken}
+          />
+        )}
       </section>
+
+      <CheckInBookingModalKT
+        isOpen={Boolean(previewBooking)}
+        booking={previewBooking}
+        isLoading={confirming}
+        onClose={handleDismiss}
+        onConfirm={handleConfirmCheckIn}
+        instructionNote="Vui lòng đối chiếu thông tin với thẻ sinh viên trước khi xác nhận."
+        cancelLabel="Không xác nhận"
+        confirmLabel="Xác nhận check-in"
+      />
     </div>
   );
 }

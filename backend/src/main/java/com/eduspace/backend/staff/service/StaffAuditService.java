@@ -3,6 +3,7 @@ package com.eduspace.backend.staff.service;
 import com.eduspace.backend.auth.entity.User;
 import com.eduspace.backend.auth.repository.UserRepository;
 import com.eduspace.backend.auth.security.SecurityUtils;
+import com.eduspace.backend.common.exception.AppException;
 import com.eduspace.backend.space.entity.Space;
 import com.eduspace.backend.space.repository.SpaceRepository;
 import com.eduspace.backend.staff.dto.response.StaffAuditLogPageResponseKT;
@@ -13,6 +14,7 @@ import com.eduspace.backend.staff.entity.StaffAuditLog;
 import com.eduspace.backend.staff.repository.StaffAuditLogRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,7 +40,7 @@ public class StaffAuditService {
 
     /**
      * Ghi nhận nhật ký thao tác vận hành của Staff.
-     * Sử dụng Propagation.REQUIRED để việc lưu audit log độc lập với transaction chính khi cần.
+     * REQUIRED giữ audit log trong cùng transaction với thao tác nghiệp vụ.
      */
     @Transactional(propagation = Propagation.REQUIRED)
     public StaffAuditLog logAction(Long actorUserId, String actorEmail, StaffAuditAction action,
@@ -61,20 +63,8 @@ public class StaffAuditService {
 
     @Transactional(readOnly = true)
     public List<StaffAuditLogResponseKT> getAuditLogs(String actionStr, String targetType, Long targetId, Long spaceId) {
-        List<StaffAuditLog> list;
-        StaffAuditAction action = parseAction(actionStr);
-
-        if (action != null) {
-            list = staffAuditLogRepository.findByActionOrderByCreatedAtDesc(action);
-        } else if (targetType != null && targetId != null) {
-            list = staffAuditLogRepository.findByTargetTypeAndTargetIdOrderByCreatedAtDesc(targetType, targetId);
-        } else if (spaceId != null) {
-            list = staffAuditLogRepository.findBySpaceIdOrderByCreatedAtDesc(spaceId);
-        } else {
-            list = staffAuditLogRepository.findAllByOrderByCreatedAtDesc();
-        }
-
-        return enrich(list);
+        return enrich(findFilteredLogs(actionStr, targetType, targetId, spaceId,
+                null, null, null, null));
     }
 
     /**
@@ -86,31 +76,8 @@ public class StaffAuditService {
     public StaffAuditLogPageResponseKT searchAuditLogs(String actionStr, String targetType, Long targetId,
                                                        Long spaceId, String spaceName, Long actorUserId,
                                                        String fromStr, String toStr, Integer page, Integer size) {
-        Long effectiveActorId = resolveActorScope(actorUserId);
-        StaffAuditAction action = parseAction(actionStr);
-        LocalDateTime from = parseFrom(fromStr);
-        LocalDateTime to = parseTo(toStr);
-
-        List<StaffAuditLog> filtered = staffAuditLogRepository.search(
-                action,
-                blankToNull(targetType),
-                targetId,
-                spaceId,
-                effectiveActorId,
-                from,
-                to);
-
-        // Lọc thêm theo tên không gian (frontend gửi spaceName, backend chỉ lưu spaceId).
-        Set<Long> spaceIdAllowlist = resolveSpaceIds(spaceName);
-        if (spaceIdAllowlist != null) {
-            if (spaceIdAllowlist.isEmpty()) {
-                filtered = List.of();
-            } else {
-                filtered = filtered.stream()
-                        .filter(log -> log.getSpaceId() != null && spaceIdAllowlist.contains(log.getSpaceId()))
-                        .collect(Collectors.toList());
-            }
-        }
+        List<StaffAuditLog> filtered = findFilteredLogs(actionStr, targetType, targetId,
+                spaceId, spaceName, actorUserId, fromStr, toStr);
 
         int pageIndex = (page == null || page < 0) ? 0 : page;
         int pageSize = (size == null || size <= 0) ? 10 : Math.min(size, 100);
@@ -134,9 +101,8 @@ public class StaffAuditService {
     public StaffAuditStatsResponseKT getAuditStats(String actionStr, String targetType, Long targetId,
                                                   Long spaceId, String spaceName, Long actorUserId,
                                                   String fromStr, String toStr) {
-        StaffAuditLogPageResponseKT all = searchAuditLogs(
-                actionStr, targetType, targetId, spaceId, spaceName, actorUserId, fromStr, toStr, 0, 10000);
-        List<StaffAuditLogResponseKT> logs = all.getContent();
+        List<StaffAuditLog> logs = findFilteredLogs(actionStr, targetType, targetId,
+                spaceId, spaceName, actorUserId, fromStr, toStr);
 
         long approved = logs.stream().filter(l -> l.getAction() == StaffAuditAction.BOOKING_APPROVED).count();
         long rejected = logs.stream().filter(l -> l.getAction() == StaffAuditAction.BOOKING_REJECTED).count();
@@ -146,7 +112,7 @@ public class StaffAuditService {
                 || l.getAction() == StaffAuditAction.MAINTENANCE_CANCELLED).count();
 
         return StaffAuditStatsResponseKT.builder()
-                .totalActions(all.getTotalElements())
+                .totalActions(logs.size())
                 .approvedCount(approved)
                 .rejectedCount(rejected)
                 .checkInCount(checkIn)
@@ -154,17 +120,38 @@ public class StaffAuditService {
                 .build();
     }
 
+    private List<StaffAuditLog> findFilteredLogs(String actionStr, String targetType, Long targetId,
+                                                 Long spaceId, String spaceName, Long actorUserId,
+                                                 String fromStr, String toStr) {
+        List<StaffAuditLog> filtered = staffAuditLogRepository.search(
+                parseAction(actionStr), blankToNull(targetType), targetId, spaceId,
+                resolveActorScope(actorUserId), parseFrom(fromStr), parseTo(toStr));
+        Set<Long> spaceIdAllowlist = resolveSpaceIds(spaceName);
+        if (spaceIdAllowlist == null) {
+            return filtered;
+        }
+        return filtered.stream()
+                .filter(log -> log.getSpaceId() != null && spaceIdAllowlist.contains(log.getSpaceId()))
+                .collect(Collectors.toList());
+    }
+
     /**
      * STAFF chỉ được thấy log của chính mình (enforce từ JWT, không tin client).
      * ADMIN được lọc tự do theo actorUserId.
      */
     private Long resolveActorScope(Long requestedActorId) {
-        Long currentUserId = SecurityUtils.getCurrentUserId();
-        boolean isAdmin = SecurityUtils.hasRole("ADMIN");
-        if (!isAdmin && currentUserId != null) {
-            return currentUserId;
+        if (SecurityUtils.hasRole("ADMIN")) {
+            return requestedActorId;
         }
-        return requestedActorId;
+        String email = SecurityUtils.getCurrentUserEmail();
+        if (email == null) {
+            throw new AppException(HttpStatus.UNAUTHORIZED, "UNAUTHENTICATED", "Bạn cần đăng nhập.");
+        }
+        return userRepository.findByEmail(email)
+                .filter(User::isActive)
+                .map(User::getId)
+                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED,
+                        "UNAUTHENTICATED", "Tài khoản không khả dụng."));
     }
 
     private Set<Long> resolveSpaceIds(String spaceName) {
@@ -232,7 +219,7 @@ public class StaffAuditService {
         } catch (DateTimeParseException ignored) {
         }
         try {
-            return LocalDate.parse(value.substring(0, 10)).atTime(23, 59, 59);
+            return LocalDate.parse(value.substring(0, 10)).plusDays(1).atStartOfDay();
         } catch (DateTimeParseException | StringIndexOutOfBoundsException ex) {
             return null;
         }

@@ -18,6 +18,7 @@ import { AuditLogPage } from './features/operations/pages/AuditLogPage';
 import { StatisticsDashboardPage } from './features/admin/statistics';
 import { SearchSpacesPage, SpaceDetailPage, MyBookingsPage } from './features/bookings/core';
 import { UserManagementPage } from './features/admin/auth/UserManagementPage.tsx';
+import { ProfilePage } from "./pages/ProfilePage.tsx";
 
 const ADMIN_BASE = import.meta.env.VITE_ROUTE_ADMIN || '/admin';
 const STAFF_BASE = import.meta.env.VITE_ROUTE_STAFF || '/staff';
@@ -75,6 +76,8 @@ export default function App() {
                     {/* ROOT ROUTE */}
                     <Route path="/" element={<RootRedirect />} />
 
+                    <Route path="/profile" element={<ProfilePage />} />
+
                     {/* ADMIN */}
                     <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
                         <Route path="/admin/space-types" element={<SpaceTypeListPageKT />} />
@@ -92,12 +95,14 @@ export default function App() {
                         <Route path={`${ADMIN_BASE}/space-types/:id`} element={<SpaceTypeDetailPageKT />} />
                         <Route path={`${ADMIN_BASE}/settings-general`} element={<GeneralSettingsPage />} />
                         <Route path={`${ADMIN_BASE}/users`} element={<UserManagementPage />} />
+                        <Route path={`${ADMIN_BASE}/timeline`} element={<TimelinePage />} />
+                        <Route path={`${ADMIN_BASE}/audit-logs`} element={<AuditLogPage />} />
 
                     </Route>
 
                     {/* STAFF - Phần Quản lý không gian & Vận hành Staff của Kim Tuyến */}
                     <Route element={<ProtectedRoute allowedRoles={['STAFF']} />}>
-                        <Route path={STAFF_BASE} element={<BookingManagementPageKT />} />
+                        <Route path={STAFF_BASE} element={<Navigate to={`${STAFF_BASE}/approvals`} replace />} />
                         <Route path={`${STAFF_BASE}/bookings`} element={<BookingManagementPageKT />} />
                         <Route path={`${STAFF_BASE}/operations`} element={<StaffOperationsPageKT />} />
                         <Route path={`${STAFF_BASE}/approvals`} element={<BookingManagementPageKT />} />

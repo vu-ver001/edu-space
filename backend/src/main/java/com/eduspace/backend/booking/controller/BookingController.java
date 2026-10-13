@@ -12,6 +12,7 @@ import com.eduspace.backend.booking.dto.request.BulkRejectBookingRequest;
 import com.eduspace.backend.booking.dto.request.CreateBookingRequest;
 import com.eduspace.backend.booking.dto.request.RejectBookingRequest;
 import com.eduspace.backend.booking.dto.response.BookingResponse;
+import com.eduspace.backend.booking.dto.response.BookingAuditLogResponse;
 import com.eduspace.backend.booking.dto.response.BulkBookingOperationResponse;
 import com.eduspace.backend.booking.entity.BookingStatus;
 import com.eduspace.backend.booking.service.BookingService;
@@ -58,6 +59,12 @@ public class BookingController {
     public ResponseEntity<BookingResponse> getBookingById(@PathVariable Long id) {
         String currentUserEmail = resolveCurrentUserEmail();
         return ResponseEntity.ok(bookingService.getBookingById(id, currentUserEmail));
+    }
+
+    @GetMapping("/{id}/audit-logs")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('STUDENT', 'STAFF', 'ADMIN')")
+    public ResponseEntity<List<BookingAuditLogResponse>> getBookingAuditLogs(@PathVariable Long id) {
+        return ResponseEntity.ok(bookingService.getBookingAuditLogs(id, resolveCurrentUserEmail()));
     }
 
     /**
