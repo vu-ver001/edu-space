@@ -1,3 +1,4 @@
+// Trang tìm kiếm và kiểm tra khả dụng phòng học thời gian thực (Module M04 - Khánh Vân).
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { FilterBar } from '../components/FilterBar';
@@ -9,8 +10,10 @@ import { spaceService } from '../services/spaceService';
 import './SearchSpacesPage.css';
 import '../components/MaintenanceModal.css';
 
+// Số dòng hiển thị thẻ phòng học trên mỗi trang phân trang.
 const SPACE_ROWS_PER_PAGE = 4;
 
+// Trích xuất các tham số bộ lọc tìm kiếm từ địa chỉ URL của trình duyệt.
 const readFilterFromUrl = (params: URLSearchParams): SearchFilter => {
   const participant = Number(params.get('participantCount'));
   const spaceTypeId = Number(params.get('spaceTypeId'));
@@ -29,6 +32,7 @@ const readFilterFromUrl = (params: URLSearchParams): SearchFilter => {
   };
 };
 
+// Đồng bộ các tiêu chí bộ lọc tìm kiếm lên tham số địa chỉ URL của trình duyệt.
 const writeFilterToUrl = (filter: SearchFilter): URLSearchParams => {
   const params = new URLSearchParams();
   if (filter.date) params.set('date', filter.date);
@@ -40,6 +44,7 @@ const writeFilterToUrl = (filter: SearchFilter): URLSearchParams => {
   return params;
 };
 
+// Sắp xếp các không gian học tập theo mức độ tối ưu với số lượng người tham gia.
 const sortSpacesBySuitability = (items: Space[], participantCount?: number): Space[] => {
   const requested = participantCount && participantCount > 0 ? participantCount : undefined;
   const modeRank = (space: Space) => {
@@ -70,6 +75,7 @@ const sortSpacesBySuitability = (items: Space[], participantCount?: number): Spa
   });
 };
 
+// Kiểm tra sự phù hợp giữa số người nhập vào với chế độ đặt chỗ của không gian.
 const matchesParticipantBookingMode = (space: Space, participantCount?: number): boolean => {
   const count = Math.max(1, Number(participantCount) || 1);
   const bookingMode = space.bookingMode || space.spaceType?.bookingMode;
@@ -79,6 +85,7 @@ const matchesParticipantBookingMode = (space: Space, participantCount?: number):
   return bookingMode === 'PER_TABLE' && Number(space.capacity) >= count;
 };
 
+// Component trang tìm kiếm phòng học và hiển thị kết quả khả dụng thời gian thực.
 export const SearchSpacesPage: React.FC = () => {
   const [urlSearchParams, setUrlSearchParams] = useSearchParams();
   const [spaces, setSpaces] = useState<Space[]>([]);
@@ -93,12 +100,13 @@ export const SearchSpacesPage: React.FC = () => {
     typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches ? 1 : 3
   );
 
+  // Gọi API backend kiểm tra tính khả dụng của phòng học và loại bỏ lịch bảo trì xung đột.
   const fetchSpaces = (filter: SearchFilter = activeFilter) => {
     setCurrentPage(1);
     setLoading(true);
     setError(null);
 
-    // Kiểm tra tính hợp lệ của thời gian (02_Yeu_cau_logic §1.1: startTime < endTime)
+    // Kiểm tra tính hợp lệ của khoảng thời gian bắt đầu và kết thúc.
     if (filter.startTime && filter.endTime && filter.startTime >= filter.endTime) {
       setError('Thời gian bắt đầu phải trước thời gian kết thúc.');
       setSpaces([]);
@@ -106,6 +114,7 @@ export const SearchSpacesPage: React.FC = () => {
       return;
     }
 
+    // Ghép chuỗi ngày giờ thành định dạng ISO 8601.
     const toIso = (dateStr: string, timeStr: string) => {
       const parts = (timeStr || '').trim().split(':');
       const h = (parts[0] || '08').padStart(2, '0');
@@ -114,6 +123,7 @@ export const SearchSpacesPage: React.FC = () => {
       return `${dateStr}T${h}:${m}:${sec}`;
     };
 
+    // Chuyển chuỗi thời gian sang mili-giây để so sánh phạm vi xung đột.
     const parseMs = (timeStr?: string) => {
       if (!timeStr) return 0;
       const formatted = timeStr.includes('T') ? timeStr : timeStr.replace(' ', 'T');
@@ -121,7 +131,7 @@ export const SearchSpacesPage: React.FC = () => {
       return isNaN(d.getTime()) ? 0 : d.getTime();
     };
 
-    // Kiểm tra xem phòng có lịch bảo trì trùng với khoảng thời gian tìm kiếm không
+    // Thuật toán kiểm tra lịch bảo trì giao cắt với khung giờ tìm kiếm của sinh viên.
     const isMaintenanceConflict = (s: Space): boolean => {
       if (s.status === 'MAINTENANCE') return true;
       if (!filter.date || !filter.startTime || !filter.endTime) return false;
@@ -134,9 +144,9 @@ export const SearchSpacesPage: React.FC = () => {
       }
 
       const durationMs = searchEndMs - searchStartMs;
-      const isShortSearch = durationMs <= 180 * 60 * 1000; // <= 3 giờ
+      const isShortSearch = durationMs <= 180 * 60 * 1000;
 
-      // Thu thập tất cả các khoảng bảo trì giao cắt với [searchStartMs, searchEndMs]
+      // Gom tất cả các khoảng thời gian bảo trì trùng với khoảng tìm kiếm.
       const maintRanges: { start: number; end: number }[] = [];
       const addMaint = (startStr?: string, endStr?: string) => {
         const mStart = parseMs(startStr);
@@ -158,12 +168,12 @@ export const SearchSpacesPage: React.FC = () => {
 
       if (maintRanges.length === 0) return false;
 
-      // Nếu là tìm kiếm khung giờ ngắn (<= 3h) mà có bảo trì -> Ẩn phòng
+      // Nếu tìm kiếm khung giờ ngắn (dưới 3h) mà vướng bảo trì thì ẩn phòng hoàn toàn.
       if (isShortSearch) {
         return true;
       }
 
-      // Nếu tìm kiếm khung giờ dài (> 3h): Gộp các khoảng bảo trì và kiểm tra xem còn khoảng trống >= 30 phút không
+      // Hợp nhất các khoảng bảo trì liên tiếp để kiểm tra khe trống tối thiểu 30 phút.
       maintRanges.sort((a, b) => a.start - b.start);
       const merged: { start: number; end: number }[] = [];
       for (const r of maintRanges) {
@@ -181,7 +191,7 @@ export const SearchSpacesPage: React.FC = () => {
 
       let currentCursor = searchStartMs;
       let hasAvailableGap = false;
-      const minSlotMs = 30 * 60 * 1000; // Tối thiểu 30 phút
+      const minSlotMs = 30 * 60 * 1000;
 
       for (const m of merged) {
         if (m.start - currentCursor >= minSlotMs) {
@@ -196,14 +206,13 @@ export const SearchSpacesPage: React.FC = () => {
         hasAvailableGap = true;
       }
 
-      // Nếu không còn khoảng trống nào >= 30 phút -> Bị bảo trì phủ kín toàn bộ -> Ẩn phòng
       return !hasAvailableGap;
     };
 
+    // Thực hiện truy vấn danh sách phòng trống khả dụng từ spaceService.
     spaceService
       .searchAvailableSpaces(filter)
       .then((data) => {
-        // Ẩn hoàn toàn các phòng đang hoặc có lịch bảo trì trong khoảng thời gian tìm kiếm
         let filtered = data.filter(
           (s) => !isMaintenanceConflict(s)
             && (!filter.participantCount || matchesParticipantBookingMode(s, filter.participantCount))
@@ -223,29 +232,26 @@ export const SearchSpacesPage: React.FC = () => {
         const serverMsg = formatMessageDatesVI(err?.response?.data?.message);
         const errCode = err?.response?.data?.code;
 
-        // Nếu là lỗi dữ liệu không hợp lệ (400 Bad Request như INVALID_TIME_RANGE), hiển thị lỗi chính xác
         if (err?.response?.status === 400 || errCode === 'INVALID_TIME_RANGE') {
           setError(serverMsg || 'Thời gian bắt đầu phải trước thời gian kết thúc.');
           setSpaces([]);
           return;
         }
 
-        // Không dùng danh sách phòng chưa kiểm tra làm dữ liệu dự phòng vì có thể sai sức chứa,
-        // trạng thái ghế/bàn hoặc lịch đã đặt trong CSDL.
         setSpaces([]);
         setError(serverMsg || 'Không thể kết nối đến máy chủ để kiểm tra phòng phù hợp.');
       })
       .finally(() => setLoading(false));
   };
 
+  // Khôi phục bộ lọc từ URL và nạp dữ liệu không gian khi mở trang.
   useEffect(() => {
     fetchSpaces(activeFilter);
-    // Khôi phục bộ lọc từ URL và tải dữ liệu một lần khi mở trang.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Lắng nghe sự kiện chuyển đổi tài khoản người dùng để tải lại kết quả tìm kiếm.
   useEffect(() => {
-    // Lắng nghe sự kiện chuyển user hoặc cấp token tự động từ PortalLayout
     const handleUserSwitch = () => {
       fetchSpaces(activeFilter);
     };
@@ -253,6 +259,7 @@ export const SearchSpacesPage: React.FC = () => {
     return () => window.removeEventListener('user-switched', handleUserSwitch);
   }, [activeFilter]);
 
+  // Cập nhật số thẻ trên mỗi dòng theo kích thước màn hình hiển thị.
   useEffect(() => {
     const mobileLayout = window.matchMedia('(max-width: 768px)');
     const syncCardsPerRow = () => setCardsPerRow(mobileLayout.matches ? 1 : 3);
@@ -262,6 +269,7 @@ export const SearchSpacesPage: React.FC = () => {
     return () => mobileLayout.removeEventListener('change', syncCardsPerRow);
   }, []);
 
+  // Kích hoạt tìm kiếm mới khi người dùng áp dụng bộ lọc từ thanh FilterBar.
   const handleSearch = (filter: SearchFilter) => {
     setHasSearched(true);
     setActiveFilter(filter);
@@ -269,6 +277,7 @@ export const SearchSpacesPage: React.FC = () => {
     fetchSpaces(filter);
   };
 
+  // Xử lý thông báo và tải lại danh sách khi hoàn tất tạo đơn đặt phòng.
   const handleBookingSuccess = () => {
     setSelectedSpaceForBooking(null);
     setToastMessage('✓ Đặt không gian thành công! Đã cập nhật vào hệ thống.');
@@ -276,6 +285,7 @@ export const SearchSpacesPage: React.FC = () => {
     fetchSpaces(activeFilter);
   };
 
+  // Chuyển đổi định dạng ngày YYYY-MM-DD sang dd/MM/yyyy để hiển thị thanh kết quả.
   const formatDisplayDate = (dStr: string) => {
     if (!dStr) return '';
     const parts = dStr.split('-');
@@ -285,6 +295,7 @@ export const SearchSpacesPage: React.FC = () => {
     return dStr;
   };
 
+  // Tính toán số lượng phòng khả dụng và các thông số phân trang.
   const availableCount = spaces.filter((s) => s.isAvailable ?? (s.status === 'AVAILABLE')).length;
   const displayDate = formatDisplayDate(activeFilter.date);
   const displayStart = activeFilter.startTime ? activeFilter.startTime.substring(0, 5) : '';
@@ -303,14 +314,17 @@ export const SearchSpacesPage: React.FC = () => {
   const pageStartIndex = (safeCurrentPage - 1) * pageSize;
   const paginatedSpaces = spaces.slice(pageStartIndex, pageStartIndex + pageSize);
 
+  // Đặt lại số trang về 1 khi số lượng thẻ trên trang thay đổi.
   useEffect(() => {
     setCurrentPage(1);
   }, [pageSize]);
 
+  // Đảm bảo chỉ số trang hợp lệ không vượt quá tổng số trang.
   useEffect(() => {
     if (currentPage > totalPages) setCurrentPage(totalPages);
   }, [currentPage, totalPages]);
 
+  // Xử lý chuyển trang và cuộn giao diện lên đầu danh sách phòng.
   const handlePageChange = (page: number) => {
     const nextPage = Math.min(Math.max(page, 1), totalPages);
     setCurrentPage(nextPage);
@@ -319,6 +333,7 @@ export const SearchSpacesPage: React.FC = () => {
     });
   };
 
+  // Tạo danh sách trang phân trang dạng nút bấm và dấu ba chấm.
   const getPaginationItems = (): Array<number | string> => {
     if (totalPages <= 5) {
       return Array.from({ length: totalPages }, (_, index) => index + 1);
@@ -331,7 +346,9 @@ export const SearchSpacesPage: React.FC = () => {
   };
 
   return (
+    // Khung chứa toàn bộ trang tìm kiếm không gian học tập
     <div className="search-spaces-page">
+      {/* Toast thông báo đặt phòng thành công */}
       {toastMessage && (
         <div className="portal-toast">
           <span>{toastMessage}</span>
@@ -339,7 +356,7 @@ export const SearchSpacesPage: React.FC = () => {
         </div>
       )}
 
-      {/* Tiêu đề trang */}
+      {/* Tiêu đề giới thiệu chức năng tìm kiếm không gian học tập */}
       <div className="portal-page-intro">
         <h2 className="portal-page-main-heading">
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -352,7 +369,7 @@ export const SearchSpacesPage: React.FC = () => {
         <p className="portal-page-sub-heading">Tìm kiếm phòng học, phòng họp phù hợp với nhu cầu</p>
       </div>
 
-      {/* Bộ lọc tìm kiếm theo form nội bộ chuẩn ảnh mẫu */}
+      {/* Thanh bộ lọc tìm kiếm theo ngày, giờ, số người và tiện ích */}
       <FilterBar
         onSearch={handleSearch}
         isLoading={loading}
@@ -360,7 +377,7 @@ export const SearchSpacesPage: React.FC = () => {
         initialFilter={activeFilter}
       />
 
-      {/* Thanh trạng thái khả dụng theo Ảnh 1 (Đã bỏ nút Dạng bảng) */}
+      {/* Thanh thông báo kết quả khả dụng và nút làm mới dữ liệu */}
       {hasSearched && <div className="results-control-bar">
         <div className="results-info-group">
           <span className="results-availability-text">
@@ -385,7 +402,7 @@ export const SearchSpacesPage: React.FC = () => {
         </div>
       </div>}
 
-      {/* Trạng thái Loading / Error / Empty / Content */}
+      {/* Xử lý các trạng thái: Đang tải, Lỗi, Trống hoặc Hiển thị danh sách thẻ phòng */}
       {!hasSearched ? (
         <div className="portal-empty-card">
           <span>🔎</span>
@@ -413,8 +430,8 @@ export const SearchSpacesPage: React.FC = () => {
           <p>Tất cả phòng trong khung giờ này đã có lịch đặt hoặc đang bảo trì. Vui lòng chọn khung giờ khác.</p>
         </div>
       ) : (
-        /* LƯỚI THẺ 3 CỘT NỘI BỘ THEO ẢNH 1 (Duy nhất định dạng thẻ, đã bỏ hoàn toàn dạng bảng) */
         <>
+          {/* Lưới các thẻ phòng học hiển thị dạng 3 cột trực quan */}
           <div className="rooms-grid-v1">
             {paginatedSpaces.map((space) => (
               <RoomCard
@@ -433,6 +450,7 @@ export const SearchSpacesPage: React.FC = () => {
             ))}
           </div>
 
+          {/* Thanh điều hướng phân trang danh sách phòng */}
           <nav className="spaces-pagination" aria-label="Phân trang danh sách không gian">
             <div className="spaces-pagination-summary">
               Hiển thị <strong>{pageStartIndex + 1}</strong>–<strong>{Math.min(pageStartIndex + pageSize, spaces.length)}</strong>
@@ -489,7 +507,7 @@ export const SearchSpacesPage: React.FC = () => {
         </>
       )}
 
-      {/* Modal đặt phòng */}
+      {/* Modal biểu mẫu tạo đơn đặt không gian học tập */}
       {selectedSpaceForBooking && (
         <BookingModal
           space={selectedSpaceForBooking}

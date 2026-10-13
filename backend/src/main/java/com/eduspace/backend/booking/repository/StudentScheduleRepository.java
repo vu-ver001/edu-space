@@ -10,9 +10,11 @@ import java.util.List;
 
 import com.eduspace.backend.booking.entity.StudentSchedule;
 
+// Repository quản lý truy vấn thời khóa biểu đào tạo chính khóa của sinh viên (Khánh Vân).
 @Repository
 public interface StudentScheduleRepository extends JpaRepository<StudentSchedule, Long> {
 
+    // Tra cứu các tiết học chính khóa của sinh viên bị trùng lịch trong ngày và khung giờ dự kiến đặt phòng.
     @Query("SELECT ss FROM StudentSchedule ss WHERE ss.studentId = :studentId " +
            "AND ss.scheduleDate = :scheduleDate " +
            "AND ss.startTime < :endTime AND ss.endTime > :startTime")
@@ -23,5 +25,6 @@ public interface StudentScheduleRepository extends JpaRepository<StudentSchedule
             @Param("endTime") LocalTime endTime
     );
 
+    // Lấy toàn bộ danh sách lịch học theo mã định danh của sinh viên.
     List<StudentSchedule> findByStudentId(Long studentId);
 }

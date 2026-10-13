@@ -1,16 +1,20 @@
+// Trang quản lý lịch sử và theo dõi trạng thái các đơn đặt phòng của sinh viên (Module M03 - Khánh Vân).
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { StatusBadge } from '../components/StatusBadge';
 import { QrCheckInModal } from '../components/QrCheckInModal';
-import { formatMessageDatesVI } from '../components/DateInputVI';
+import { formatMessageDatesVI, formatBookingReasonVI } from '../components/DateInputVI';
 import type { Booking } from '../services/bookingService';
 import { bookingService } from '../services/bookingService';
 import './MyBookingsPage.css';
 
+// Số dòng hiển thị thẻ đặt phòng trên mỗi trang phân trang.
 const BOOKING_ROWS_PER_PAGE = 4;
 
+// Component chính quản lý lịch sử đặt phòng, hủy đơn và hiển thị mã QR check-in.
 export const MyBookingsPage: React.FC = () => {
   const navigate = useNavigate();
+  // Khởi tạo trạng thái danh sách đơn đặt, trạng thái tải và bộ lọc tab.
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -21,15 +25,17 @@ export const MyBookingsPage: React.FC = () => {
     typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches ? 1 : 3
   );
 
-  // Modal states
+  // Quản lý trạng thái hộp thoại hủy đơn và popup mã QR check-in.
   const [cancellingBooking, setCancellingBooking] = useState<Booking | null>(null);
   const [cancelReason, setCancelReason] = useState<string>('');
   const [cancelReasonTouched, setCancelReasonTouched] = useState<boolean>(false);
   const [qrCheckInBooking, setQrCheckInBooking] = useState<Booking | null>(null);
 
+  // Quản lý trạng thái xử lý tác vụ và thông báo toast.
   const [actionLoading, setActionLoading] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Gọi API lấy toàn bộ danh sách các lượt đặt của người dùng hiện tại từ máy chủ backend.
   const fetchBookings = () => {
     setLoading(true);
     setError(null);
@@ -42,6 +48,7 @@ export const MyBookingsPage: React.FC = () => {
       .finally(() => setLoading(false));
   };
 
+  // Nạp danh sách đơn đặt khi tải trang và lắng nghe sự kiện đổi tài khoản người dùng.
   useEffect(() => {
     fetchBookings();
 
@@ -52,6 +59,7 @@ export const MyBookingsPage: React.FC = () => {
     return () => window.removeEventListener('user-switched', handleUserSwitch);
   }, []);
 
+  // Lắng nghe kích thước màn hình để tự động điều chỉnh số lượng thẻ trên một dòng.
   useEffect(() => {
     const mobileLayout = window.matchMedia('(max-width: 900px)');
     const syncCardsPerRow = () => setCardsPerRow(mobileLayout.matches ? 1 : 3);
@@ -61,7 +69,7 @@ export const MyBookingsPage: React.FC = () => {
     return () => mobileLayout.removeEventListener('change', syncCardsPerRow);
   }, []);
 
-  // Xác nhận hủy đặt phòng
+  // Xử lý gửi yêu cầu hủy đơn đặt phòng kèm lý do bắt buộc lên máy chủ backend.
   const handleConfirmCancel = async () => {
     if (!cancellingBooking) return;
     if (!cancelReason.trim()) {
@@ -84,7 +92,7 @@ export const MyBookingsPage: React.FC = () => {
     }
   };
 
-  // Tính toán số liệu thống kê (Metrics)
+  // Tính toán số liệu thống kê tổng quan theo từng trạng thái đơn đặt.
   const metrics = useMemo(() => {
     const total = bookings.length;
     const pending = bookings.filter((b) => b.status === 'PENDING_APPROVAL').length;
@@ -94,21 +102,21 @@ export const MyBookingsPage: React.FC = () => {
     return { total, pending, confirmed, checkedIn, completed };
   }, [bookings]);
 
-  // Helper tính độ ưu tiên trạng thái
+  // Xác định trọng số ưu tiên sắp xếp cho từng trạng thái đơn đặt.
   const getStatusPriority = (status: string) => {
     switch (status) {
       case 'CHECKED_IN': return 1;
       case 'CONFIRMED': return 2;
       case 'PENDING_APPROVAL': return 3;
       case 'COMPLETED': return 4;
-      default: return 5; // CANCELLED, REJECTED, EXPIRED, NO_SHOW
+      default: return 5;
     }
   };
 
-  // Bộ lọc danh sách và sắp xếp logic
+  // Lọc và sắp xếp danh sách các đơn đặt phòng theo tab, từ khóa tìm kiếm và thời gian.
   const filteredBookings = useMemo(() => {
     const list = bookings.filter((b) => {
-      // Tab filter
+      // Lọc theo từng danh mục tab trạng thái đang chọn.
       if (activeTab === 'PENDING') {
         if (b.status !== 'PENDING_APPROVAL') return false;
       } else if (activeTab === 'CONFIRMED') {
@@ -119,7 +127,7 @@ export const MyBookingsPage: React.FC = () => {
         if (b.status !== 'COMPLETED') return false;
       }
 
-      // Search query filter
+      // Lọc theo từ khóa tìm kiếm: tên phòng, loại phòng, mục đích, tòa nhà hoặc mã đơn.
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchName = b.spaceName?.toLowerCase().includes(q);
@@ -147,18 +155,19 @@ export const MyBookingsPage: React.FC = () => {
       const timeA = new Date(a.startTime).getTime();
       const timeB = new Date(b.startTime).getTime();
 
-      // Đơn sắp diễn ra / cần chú ý (Rank 1, 2, 3): ca sớm nhất, gần nhất lên trước (ASC)
+      // Đơn sắp diễn ra hoặc đang chờ duyệt: ưu tiên hiển thị ca gần nhất lên đầu.
       if (rankA <= 3) {
         if (timeA !== timeB) return timeA - timeB;
         return a.id - b.id;
       }
 
-      // Đơn đã đóng (Rank 4, 5): mới hoàn thành / mới đóng gần đây nhất lên trước (DESC)
+      // Đơn đã kết thúc hoặc hủy: hiển thị đơn mới kết thúc gần đây nhất lên đầu.
       if (timeA !== timeB) return timeB - timeA;
       return b.id - a.id;
     });
   }, [bookings, activeTab, searchQuery]);
 
+  // Tính toán kích thước trang và cắt danh sách đơn đặt hiển thị theo trang hiện tại.
   const pageSize = BOOKING_ROWS_PER_PAGE * cardsPerRow;
   const totalPages = Math.max(1, Math.ceil(filteredBookings.length / pageSize));
   const safeCurrentPage = Math.min(currentPage, totalPages);
@@ -168,14 +177,17 @@ export const MyBookingsPage: React.FC = () => {
     [filteredBookings, pageStartIndex, pageSize]
   );
 
+  // Đặt lại trang về 1 khi người dùng đổi tab hoặc nhập từ khóa tìm kiếm mới.
   useEffect(() => {
     setCurrentPage(1);
   }, [activeTab, searchQuery, pageSize]);
 
+  // Đảm bảo chỉ số trang không vượt quá tổng số trang hiện có.
   useEffect(() => {
     if (currentPage > totalPages) setCurrentPage(totalPages);
   }, [currentPage, totalPages]);
 
+  // Xử lý chuyển trang và cuộn nhẹ lên đầu lưới danh sách thẻ.
   const handlePageChange = (page: number) => {
     const nextPage = Math.min(Math.max(page, 1), totalPages);
     setCurrentPage(nextPage);
@@ -184,6 +196,7 @@ export const MyBookingsPage: React.FC = () => {
     });
   };
 
+  // Tạo danh sách số trang kèm các dấu ba chấm rút gọn.
   const getPaginationItems = (): Array<number | string> => {
     if (totalPages <= 5) {
       return Array.from({ length: totalPages }, (_, index) => index + 1);
@@ -195,7 +208,7 @@ export const MyBookingsPage: React.FC = () => {
     return [1, 'start-dots', safeCurrentPage - 1, safeCurrentPage, safeCurrentPage + 1, 'end-dots', totalPages];
   };
 
-  // Helper định dạng ngày tháng chuẩn dd/mm/yyyy
+  // Phân tích và định dạng chuỗi ngày tháng theo chuẩn ngày, tháng và giờ.
   const parseDateInfo = (isoString: string) => {
     const d = new Date(isoString);
     const pad = (n: number) => n.toString().padStart(2, '0');
@@ -207,8 +220,9 @@ export const MyBookingsPage: React.FC = () => {
   };
 
   return (
+    // Khung chứa toàn bộ trang danh sách lịch đặt của sinh viên
     <div className="my-bookings-container">
-      {/* Toast thông báo nổi */}
+      {/* Thông báo toast nổi góc màn hình khi thực hiện thành công tác vụ */}
       {toastMessage && (
         <div className="astp-toast-float">
           <div style={{
@@ -234,7 +248,7 @@ export const MyBookingsPage: React.FC = () => {
         </div>
       )}
 
-      {/* 1. Header Section */}
+      {/* Phần tiêu đề trang và nút làm mới danh sách */}
       <div className="mb-header">
         <div className="mb-header-title-group">
           <h1>
@@ -272,7 +286,7 @@ export const MyBookingsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Top Summary Metric Cards (Viền xanh nhẹ tinh tế từng khung) */}
+      {/* Bảng thẻ thống kê số lượng đơn theo các trạng thái chính */}
       <div className="mb-metrics-grid">
         <div className="mb-metric-card">
           <div className="mb-metric-icon-box active">
@@ -330,7 +344,7 @@ export const MyBookingsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 3. Toolbar: Filter Tabs & Search */}
+      {/* Thanh điều hướng tab bộ lọc trạng thái và ô tìm kiếm nhanh */}
       <div className="mb-toolbar-card">
         <div className="mb-tabs-nav">
           {[
@@ -369,7 +383,7 @@ export const MyBookingsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 4. Nội dung chính: Danh sách Bookings DẠNG THẺ (CARDS VIEW) */}
+      {/* Danh sách các đơn đặt phòng hiển thị dạng thẻ trực quan */}
       {loading ? (
         <div className="portal-loading-card">
           <div className="portal-spinner" />
@@ -408,14 +422,14 @@ export const MyBookingsPage: React.FC = () => {
           </button>
         </div>
       ) : (
-        /* DẠNG THẺ TRỰC QUAN DUY NHẤT (CARDS VIEW) */
         <>
+          {/* Lưới các thẻ đơn đặt phòng */}
           <div className="mb-cards-grid">
           {paginatedBookings.map((b) => {
             const startInfo = parseDateInfo(b.startTime);
             const endInfo = parseDateInfo(b.endTime);
 
-            // Phân biệt mô hình đặt chỗ
+            // Xác định mô hình đặt theo ghế cá nhân, theo bàn hoặc trọn phòng.
             const isPerSeat = b.selectedSeats && b.selectedSeats.length > 0;
             const isPerTable = Boolean(b.tableId || b.tableCode);
 
@@ -425,7 +439,7 @@ export const MyBookingsPage: React.FC = () => {
                 className={`mb-booking-card ${b.canCheckIn ? 'checkin-ready' : ''}`}
               >
                 <div>
-                  {/* Thanh trên cùng của Thẻ */}
+                  {/* Thanh mã đơn đặt và huy hiệu trạng thái phía trên thẻ */}
                   <div className="mb-card-top-bar">
                     <span
                       className="mb-card-booking-id"
@@ -449,15 +463,13 @@ export const MyBookingsPage: React.FC = () => {
                     <StatusBadge status={b.status} size="md" />
                   </div>
 
-                  {/* Phần thân chính của Thẻ */}
+                  {/* Khối hiển thị ngày tháng và thông tin không gian */}
                   <div className="mb-card-main">
-                    {/* Khối Ngày Tháng Chuẩn Giao Diện Check-in (Ảnh 2) */}
                     <div className="mb-date-box">
                       <strong className="mb-date-day">{startInfo.dayNum}</strong>
                       <span className="mb-date-month">{startInfo.monthNum}</span>
                     </div>
 
-                    {/* Chi tiết Không gian & Thời gian */}
                     <div className="mb-space-details">
                       <div className="mb-space-name-row">
                         <Link
@@ -467,7 +479,7 @@ export const MyBookingsPage: React.FC = () => {
                           {b.spaceName}
                         </Link>
 
-                        {/* Huy hiệu mô hình đặt */}
+                        {/* Huy hiệu biểu thị loại hình đặt phòng */}
                         {isPerTable ? (
                           <span className="mb-mode-pill table">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 3, verticalAlign: '-1px' }}>
@@ -498,6 +510,7 @@ export const MyBookingsPage: React.FC = () => {
                         )}
                       </div>
 
+                      {/* Vị trí tầng, tòa nhà và loại phòng */}
                       <div className="mb-space-location">
                         <svg className="mb-location-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
@@ -508,6 +521,7 @@ export const MyBookingsPage: React.FC = () => {
                         <span className="mb-location-type" title={b.spaceTypeName}>{b.spaceTypeName}</span>
                       </div>
 
+                      {/* Khung giờ sử dụng và số lượng người tham gia */}
                       <div className="mb-time-badge-row">
                         <span className="mb-time-tag">
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1D72FE" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4 }}>
@@ -529,7 +543,7 @@ export const MyBookingsPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Mục đích sử dụng */}
+                  {/* Mục đích sử dụng do sinh viên đã điền */}
                   {b.purpose && (
                     <div className="mb-purpose-box">
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6, flexShrink: 0, marginTop: 1 }}>
@@ -540,7 +554,7 @@ export const MyBookingsPage: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Các trạng thái thông báo cụ thể từ CSDL */}
+                  {/* Thông báo hướng dẫn điểm danh khi cửa sổ check-in đang mở */}
                   {b.status === 'CONFIRMED' && b.canCheckIn && (
                     <div className="mb-alert-box ready">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
@@ -553,6 +567,7 @@ export const MyBookingsPage: React.FC = () => {
                     </div>
                   )}
 
+                  {/* Thông báo thời gian mở cửa sổ check-in lấy động từ chính sách CSDL */}
                   {b.status === 'CONFIRMED' && !b.canCheckIn && (
                     <div className="mb-alert-box muted">
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
@@ -561,11 +576,12 @@ export const MyBookingsPage: React.FC = () => {
                         <line x1="12" y1="8" x2="12.01" y2="8"/>
                       </svg>
                       <div>
-                        Phòng đã được giữ chỗ. Cửa sổ check-in sẽ tự động mở trước giờ bắt đầu 15 phút.
+                        Phòng đã được giữ chỗ. Cửa sổ check-in sẽ tự động mở trước giờ bắt đầu {b.checkInEarlyOpenMinutes ? `${b.checkInEarlyOpenMinutes} phút` : 'theo quy định'}.
                       </div>
                     </div>
                   )}
 
+                  {/* Cảnh báo đơn đang chờ Staff duyệt */}
                   {b.status === 'PENDING_APPROVAL' && (
                     <div className="mb-alert-box muted" style={{ background: '#FFFBEB', borderColor: '#FDE68A', color: '#92400E' }}>
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
@@ -578,6 +594,7 @@ export const MyBookingsPage: React.FC = () => {
                     </div>
                   )}
 
+                  {/* Cảnh báo đơn bị từ chối phê duyệt kèm lý do */}
                   {b.status === 'REJECTED' && b.rejectReason && (
                     <div className="mb-alert-box danger">
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
@@ -591,6 +608,7 @@ export const MyBookingsPage: React.FC = () => {
                     </div>
                   )}
 
+                  {/* Cảnh báo đơn bị hủy do hết hạn chờ duyệt */}
                   {b.status === 'EXPIRED' && (
                     <div className="mb-alert-box muted">
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
@@ -598,11 +616,12 @@ export const MyBookingsPage: React.FC = () => {
                       </svg>
                       <div>
                         <strong>Hết hạn xử lý:</strong>{' '}
-                        {formatMessageDatesVI(b.expireReason) || 'Đã quá giờ bắt đầu mà chưa được duyệt.'}
+                        {formatBookingReasonVI(b.expireReason, 'Đã quá thời gian bắt đầu sử dụng mà chưa được xét duyệt.')}
                       </div>
                     </div>
                   )}
 
+                  {/* Cảnh báo đơn bị hủy do không đến check-in theo số phút quy định trong CSDL */}
                   {b.status === 'NO_SHOW' && (
                     <div className="mb-alert-box danger">
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
@@ -613,11 +632,16 @@ export const MyBookingsPage: React.FC = () => {
                       </svg>
                       <div>
                         <strong>Vắng mặt (No-show):</strong>{' '}
-                        {formatMessageDatesVI(b.expireReason) || 'Quá 15 phút sau giờ bắt đầu mà không thực hiện check-in.'}
+                        {formatBookingReasonVI(
+                          b.expireReason,
+                          b.checkInGraceMinutes ? `Quá ${b.checkInGraceMinutes} phút sau giờ bắt đầu mà không thực hiện check-in.` : 'Quá thời hạn cho phép sau giờ bắt đầu mà không thực hiện check-in.',
+                          b.checkInGraceMinutes
+                        )}
                       </div>
                     </div>
                   )}
 
+                  {/* Thông báo trạng thái đã điểm danh thành công */}
                   {b.status === 'CHECKED_IN' && (
                     <div className="mb-alert-box ready">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
@@ -631,10 +655,10 @@ export const MyBookingsPage: React.FC = () => {
                   )}
                 </div>
 
-                {/* Các nút thao tác ở chân Thẻ */}
+                {/* Các nút hành động dưới đáy thẻ đơn đặt */}
                 <div className="mb-card-actions">
                    <div className="mb-actions-left">
-                    {/* Nút Mã QR Check-in */}
+                    {/* Nút mở mã QR check-in */}
                     {b.status === 'CONFIRMED' && (
                       <button
                         type="button"
@@ -652,7 +676,7 @@ export const MyBookingsPage: React.FC = () => {
                       </button>
                     )}
 
-                    {/* Nút Hủy nếu được phép */}
+                    {/* Nút hủy đơn nếu ca đặt còn trong khoảng thời gian cho phép */}
                     {b.canCancel && (
                       <button
                         type="button"
@@ -674,7 +698,7 @@ export const MyBookingsPage: React.FC = () => {
                   </div>
 
                   <div className="mb-actions-right">
-                    {/* Xem chi tiết phòng */}
+                    {/* Nút xem chi tiết thông tin phòng học */}
                     <button
                         type="button"
                         className="btn-card-icon-action btn-action-view"
@@ -705,6 +729,7 @@ export const MyBookingsPage: React.FC = () => {
           })}
           </div>
 
+          {/* Thanh điều hướng phân trang danh sách đơn đặt */}
           {totalPages > 1 && (
             <nav className="mb-pagination" aria-label="Phân trang lịch đặt">
               <div className="mb-pagination-summary">
@@ -765,7 +790,7 @@ export const MyBookingsPage: React.FC = () => {
         </>
       )}
 
-      {/* 5. Modal Xác Nhận Hủy Đặt Phòng (Cancel Booking Modal) */}
+      {/* Hộp thoại Modal xác nhận hủy đơn đặt phòng */}
       {cancellingBooking && (
         <div
           className="mb-modal-overlay"
@@ -872,7 +897,7 @@ export const MyBookingsPage: React.FC = () => {
         </div>
       )}
 
-      {/* 6. Modal Mã QR Check-in Điểm Danh (Liên kết 100% CSDL của bạn Vũ) */}
+      {/* Modal hiển thị mã QR Check-in điểm danh nhận phòng */}
       {qrCheckInBooking && (
         <QrCheckInModal
           booking={qrCheckInBooking}

@@ -1,3 +1,4 @@
+// Modal trực quan hóa sơ đồ chọn chỗ ngồi cá nhân hoặc bàn học nhóm (Module M03 & M04 - Khánh Vân).
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
@@ -21,6 +22,7 @@ import { spaceService } from '../services/spaceService';
 import { bookingService } from '../services/bookingService';
 import './SeatSelectionModal.css';
 
+// Định nghĩa các thuộc tính Props truyền vào modal chọn chỗ ngồi/bàn học.
 interface Props {
   space: Space;
   date: string;
@@ -36,14 +38,17 @@ interface Props {
   onSuccess: (bookingId: number, selectedItems: string[]) => void;
 }
 
+// Chuyển đổi định dạng giờ HH:mm sang số phút tính từ đầu ngày.
 const toMinutes = (value: string) => {
   const [hours, minutes] = value.split(':').map(Number);
   return (hours || 0) * 60 + (minutes || 0);
 };
 
+// Ghép ngày và giờ thành chuỗi thời gian chuẩn ISO 8601.
 const toIsoDateTime = (date: string, time: string) =>
   `${date}T${time.length === 5 ? `${time}:00` : time}`;
 
+// Component Modal trực quan hóa sơ đồ phòng học và hỗ trợ tương tác thu phóng.
 export const SeatSelectionModal: React.FC<Props> = ({
   space,
   date,
@@ -58,6 +63,7 @@ export const SeatSelectionModal: React.FC<Props> = ({
   onClose,
   onSuccess,
 }) => {
+  // Xác định chế độ hiển thị theo bàn học nhóm (TABLE) hay chỗ ngồi cá nhân (SEAT).
   const isTableMode = useMemo(() => {
     if (mode === 'TABLE') return true;
     if (mode === 'SEAT') return false;
@@ -65,6 +71,7 @@ export const SeatSelectionModal: React.FC<Props> = ({
     return bookingMode === 'PER_TABLE';
   }, [mode, space]);
 
+  // Quản lý các bước thực hiện: chọn vị trí trên sơ đồ (SELECT) hoặc nhập thông tin chi tiết (DETAILS).
   const [step, setStep] = useState<'SELECT' | 'DETAILS'>('SELECT');
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [occupiedItems, setOccupiedItems] = useState<Set<string>>(new Set());
@@ -75,13 +82,14 @@ export const SeatSelectionModal: React.FC<Props> = ({
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Zoom & Pan state cho giao diện sơ đồ phòng học tương tác (Zero Page Scroll)
+  // Quản lý trạng thái thu phóng (Zoom) và kéo rê bản đồ (Pan) trên canvas.
   const [zoomLevel, setZoomLevel] = useState<number>(1);
   const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState<boolean>(false);
   const panStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const hasMovedRef = useRef<boolean>(false);
 
+  // Lưu trữ dữ liệu biểu mẫu đặt chỗ người dùng chỉnh sửa tại bước 2.
   const [bookingDate, setBookingDate] = useState(date);
   const [bookingStartTime, setBookingStartTime] = useState(startTime);
   const [bookingEndTime, setBookingEndTime] = useState(endTime);
@@ -90,6 +98,7 @@ export const SeatSelectionModal: React.FC<Props> = ({
   );
   const [bookingPurpose, setBookingPurpose] = useState(purpose);
 
+  // Kiểm tra yêu cầu phê duyệt và xác định thời gian hiện tại theo múi giờ hệ thống.
   const requiresApproval = space.requiresApproval ?? space.spaceType?.requiresApproval ?? isTableMode;
   const today = useMemo(() => {
     const now = new Date();
@@ -98,6 +107,7 @@ export const SeatSelectionModal: React.FC<Props> = ({
   const startIso = toIsoDateTime(bookingDate, bookingStartTime);
   const endIso = toIsoDateTime(bookingDate, bookingEndTime);
 
+  // Tìm bàn đang được chọn trong danh sách để hiển thị sức chứa tối đa.
   const selectedTable = useMemo(
     () => isTableMode
       ? tablesList.find((table) => table.tableCode.toUpperCase() === selectedItems[0]?.toUpperCase()) || null
@@ -106,15 +116,17 @@ export const SeatSelectionModal: React.FC<Props> = ({
   );
   const selectedCapacity = isTableMode ? (selectedTable?.capacity || space.capacity) : 1;
 
-  // Zoom controls
+  // Điều khiển phóng to sơ đồ phòng học tối đa 220%.
   const handleZoomIn = () => setZoomLevel((prev) => Math.min(2.2, +(prev + 0.15).toFixed(2)));
+  // Điều khiển thu nhỏ sơ đồ phòng học tối thiểu 65%.
   const handleZoomOut = () => setZoomLevel((prev) => Math.max(0.65, +(prev - 0.15).toFixed(2)));
+  // Đặt lại tỷ lệ xem sơ đồ về trạng thái mặc định ban đầu.
   const handleResetZoom = () => {
     setZoomLevel(1);
     setPanOffset({ x: 0, y: 0 });
   };
 
-  // Mouse pan event handlers
+  // Bắt đầu kéo rê sơ đồ bằng thao tác nhấn chuột trái.
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0) return;
     setIsPanning(true);
@@ -122,6 +134,7 @@ export const SeatSelectionModal: React.FC<Props> = ({
     panStartRef.current = { x: e.clientX - panOffset.x, y: e.clientY - panOffset.y };
   };
 
+  // Cập nhật vị trí tọa độ khi di chuyển chuột để pan canvas.
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!isPanning) return;
     const dx = e.clientX - panStartRef.current.x - panOffset.x;
@@ -135,11 +148,12 @@ export const SeatSelectionModal: React.FC<Props> = ({
     });
   };
 
+  // Kết thúc trạng thái kéo rê sơ đồ khi nhả chuột.
   const handleMouseUp = () => {
     setIsPanning(false);
   };
 
-  // Touch pan event handlers
+  // Bắt đầu kéo sơ đồ trên màn hình cảm ứng di động.
   const handleTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length === 1) {
       const touch = e.touches[0];
@@ -149,6 +163,7 @@ export const SeatSelectionModal: React.FC<Props> = ({
     }
   };
 
+  // Di chuyển sơ đồ theo cử chỉ ngón tay trên màn hình cảm ứng.
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!isPanning || e.touches.length !== 1) return;
     const touch = e.touches[0];
@@ -163,10 +178,12 @@ export const SeatSelectionModal: React.FC<Props> = ({
     });
   };
 
+  // Kết thúc cử chỉ cảm ứng trên thiết bị di động.
   const handleTouchEnd = () => {
     setIsPanning(false);
   };
 
+  // Phóng to hoặc thu nhỏ sơ đồ khi lăn chuột.
   const handleWheel = (e: React.WheelEvent) => {
     if (e.deltaY < 0) {
       handleZoomIn();
@@ -175,6 +192,7 @@ export const SeatSelectionModal: React.FC<Props> = ({
     }
   };
 
+  // Nạp danh sách bàn/ghế và kiểm tra tình trạng đã được đặt từ máy chủ cơ sở dữ liệu.
   const loadData = useCallback(async () => {
     setLoadingData(true);
     setResourceError(null);
@@ -215,10 +233,12 @@ export const SeatSelectionModal: React.FC<Props> = ({
     }
   }, [bookingDate, bookingEndTime, bookingStartTime, endIso, isTableMode, space.id, space.name, startIso]);
 
+  // Tự động tải lại dữ liệu tài nguyên khi thông tin thời gian hoặc phòng thay đổi.
   useEffect(() => {
     loadData();
   }, [loadData]);
 
+  // Đẩy người dùng về bước chọn vị trí nếu vị trí vừa chọn bị chiếm bởi người khác.
   useEffect(() => {
     if (step === 'DETAILS' && selectedItems.length === 0) {
       setStep('SELECT');
@@ -226,6 +246,7 @@ export const SeatSelectionModal: React.FC<Props> = ({
     }
   }, [isTableMode, selectedItems.length, step]);
 
+  // Xử lý chọn hoặc bỏ chọn một vị trí ghế/bàn trên sơ đồ.
   const selectItem = (code: string, isInactive = false) => {
     if (hasMovedRef.current) return;
     const normalized = code.toUpperCase();
@@ -234,6 +255,7 @@ export const SeatSelectionModal: React.FC<Props> = ({
     setSelectedItems((current) => current.includes(code) ? [] : [code]);
   };
 
+  // Chuyển sang bước 2 để điền biểu mẫu đặt phòng chi tiết.
   const continueToDetails = () => {
     if (!selectedItems.length) {
       setErrorMessage(`Vui lòng chọn một ${isTableMode ? 'bàn' : 'ghế'} trên sơ đồ để tiếp tục.`);
@@ -246,6 +268,7 @@ export const SeatSelectionModal: React.FC<Props> = ({
     setStep('DETAILS');
   };
 
+  // Kiểm tra tính hợp lệ của các dữ liệu ngày giờ và số người trước khi xác nhận đặt.
   const validateDetails = () => {
     if (!selectedItems.length) {
       return `Vui lòng quay lại và chọn một ${isTableMode ? 'bàn' : 'ghế'} trước khi xác nhận.`;
@@ -275,6 +298,7 @@ export const SeatSelectionModal: React.FC<Props> = ({
     return null;
   };
 
+  // Gửi thông tin đặt chỗ kèm mã vị trí ghế/bàn lên hệ thống backend.
   const handleConfirmBooking = async () => {
     const validationError = validateDetails();
     if (validationError) {
@@ -306,7 +330,7 @@ export const SeatSelectionModal: React.FC<Props> = ({
     }
   };
 
-  // Thống kê tài nguyên trong phòng
+  // Thống kê tổng số lượng vị trí còn trống, đã đặt hoặc đang tạm khóa trong phòng.
   const currentStats = useMemo(() => {
     let available = 0;
     let occupied = 0;
@@ -331,7 +355,7 @@ export const SeatSelectionModal: React.FC<Props> = ({
     }
   }, [isTableMode, tablesList, seatsList, occupiedItems]);
 
-  // Phân bổ các dãy ghế phòng học (Classroom Desks Layout - Không còn nhãn A, B, C...)
+  // Phân bổ sắp xếp danh sách ghế ngồi thành các dãy bàn học trực quan.
   const seatClusters = useMemo(() => {
     if (!seatsList.length) return [];
     const sorted = [...seatsList].sort((a, b) =>
@@ -352,7 +376,7 @@ export const SeatSelectionModal: React.FC<Props> = ({
     return clusters;
   }, [seatsList]);
 
-  // Render ghế học cá nhân (Per-Seat) phong cách sáng sủa, thanh lịch
+  // Render giao diện một nút ghế ngồi cá nhân trên sơ đồ kèm màu sắc trạng thái.
   const renderClassroomSeat = (seat: SpaceSeat) => {
     const code = seat.seatCode.toUpperCase();
     const occupied = occupiedItems.has(code);
@@ -383,7 +407,7 @@ export const SeatSelectionModal: React.FC<Props> = ({
     );
   };
 
-  // Render bàn học nhóm (Per-Table) dạng sơ đồ phòng học trực quan
+  // Render giao diện một bàn học nhóm trên sơ đồ kèm thông tin số lượng chỗ ngồi.
   const renderClassroomTable = (table: SpaceTable) => {
     const code = table.tableCode.toUpperCase();
     const occupied = occupiedItems.has(code);
@@ -404,7 +428,7 @@ export const SeatSelectionModal: React.FC<Props> = ({
         onClick={() => selectItem(table.tableCode, inactive)}
         title={title}
       >
-        {/* Mặt bàn học nhóm */}
+        {/* Mặt bàn học nhóm và nhãn biểu thị trạng thái */}
         <div className="table-top-surface">
           <div className="table-badge-row">
             <span className="table-icon-wrap">
@@ -424,8 +448,10 @@ export const SeatSelectionModal: React.FC<Props> = ({
   };
 
   return (
+    // Lớp phủ nền modal chọn vị trí phòng học
     <div className="cinema-modal-overlay" role="dialog" aria-modal="true">
       <div className={`cinema-modal-container ${step === 'DETAILS' ? 'cinema-modal-details' : 'cinema-modal-interactive-mode'}`}>
+        {/* Phần đầu Modal hiển thị thanh tiến trình 2 bước và thông tin không gian */}
         <header className="cinema-modal-header">
           <div>
             <div className="booking-flow-steps" aria-label="Tiến trình đặt chỗ">
@@ -454,6 +480,7 @@ export const SeatSelectionModal: React.FC<Props> = ({
           </button>
         </header>
 
+        {/* Thông báo lỗi khi thao tác hoặc lỗi không tải được tài nguyên */}
         {errorMessage && <div className="cinema-error-banner">⚠ {errorMessage}</div>}
         {resourceError && (
           <div className="cinema-error-banner" style={{ background: '#fef2f2', borderColor: '#fca5a5', color: '#991b1b' }}>
@@ -463,11 +490,10 @@ export const SeatSelectionModal: React.FC<Props> = ({
 
         {step === 'SELECT' ? (
           <>
-            {/* ================== VÙNG SƠ ĐỒ PHÒNG HỌC TƯƠNG TÁC (PAN & ZOOM, SÁNG SỦA, KHÔNG SCROLL) ================== */}
+            {/* Không gian tương tác trực quan với sơ đồ bàn ghế học tập */}
             <div className="classroom-interactive-workspace">
-              {/* Thanh điều hướng nhanh phía trên Canvas (Tối giản, sáng sủa) */}
+              {/* Thanh chú thích trạng thái màu sắc và hướng dẫn tương tác */}
               <div className="classroom-top-toolbar">
-                {/* Chú thích trạng thái chuẩn kiểu cũ quen thuộc */}
                 <div className="classroom-legend-strip">
                   <div className="legend-strip-item">
                     <span className="legend-strip-box available" /> Còn trống ({currentStats.available})
@@ -491,7 +517,7 @@ export const SeatSelectionModal: React.FC<Props> = ({
                 </div>
               </div>
 
-              {/* Viewport Canvas tương tác (Sáng sủa, không cuộn thanh cuộn trang) */}
+              {/* Khung Canvas tương tác hỗ trợ kéo rê chuột và thu phóng */}
               <div
                 className={`classroom-canvas-viewport ${isPanning ? 'is-panning' : ''}`}
                 onMouseDown={handleMouseDown}
@@ -522,12 +548,12 @@ export const SeatSelectionModal: React.FC<Props> = ({
                     }}
                   >
                     {isTableMode ? (
-                      /* Sơ đồ bàn thảo luận nhóm (Per-Table) */
+                      /* Bố cục sơ đồ các bàn học nhóm */
                       <div className="classroom-tables-layout">
                         {tablesList.map(renderClassroomTable)}
                       </div>
                     ) : (
-                      /* Sơ đồ dãy ghế phòng học (Per-Seat) */
+                      /* Bố cục sơ đồ các dãy ghế cá nhân */
                       <div className="classroom-seats-layout">
                         {seatClusters.map((cluster, cIdx) => (
                           <div key={`cluster-${cIdx}`} className="classroom-desk-row">
@@ -541,7 +567,7 @@ export const SeatSelectionModal: React.FC<Props> = ({
                   </div>
                 )}
 
-                {/* Bộ điều khiển Phóng to / Thu nhỏ nổi phong cách sáng sủa (Floating Zoom Bar) */}
+                {/* Thanh công cụ điều khiển thu phóng nổi trên bản đồ */}
                 <div className="classroom-floating-zoom" onMouseDown={(e) => e.stopPropagation()}>
                   <button
                     type="button"
@@ -576,7 +602,7 @@ export const SeatSelectionModal: React.FC<Props> = ({
               </div>
             </div>
 
-            {/* Footer cố định luôn nhìn thấy ở đáy, không bao giờ bị cuộn */}
+            {/* Thanh điều khiển dưới đáy hiển thị vị trí được chọn và nút tiếp tục */}
             <footer className="cinema-modal-footer">
               <div className="footer-booking-info">
                 <div className="footer-selected-pill-box">
@@ -620,7 +646,7 @@ export const SeatSelectionModal: React.FC<Props> = ({
             </footer>
           </>
         ) : (
-          /* ================== BƯỚC 2: NHẬP THÔNG TIN ĐẶT CHỖ ================== */
+          /* Giao diện Bước 2: Nhập thông tin chi tiết và xác nhận đơn đặt */
           <main className="booking-details-step">
             <div className={`selected-resource-summary ${isTableMode ? 'summary-compact-table' : ''}`}>
               <div className="selected-resource-icon" aria-hidden="true">
@@ -640,6 +666,7 @@ export const SeatSelectionModal: React.FC<Props> = ({
               </button>
             </div>
 
+            {/* Biểu mẫu điền ngày giờ, số lượng người và mục đích sử dụng */}
             <form className="selection-booking-form" onSubmit={(event) => { event.preventDefault(); handleConfirmBooking(); }}>
               <div className="selection-form-field full-width">
                 <label><CalendarDays size={16} /> Ngày sử dụng</label>
@@ -690,6 +717,7 @@ export const SeatSelectionModal: React.FC<Props> = ({
                 />
               </div>
 
+              {/* Các nút quay lại hoặc xác nhận tạo đơn đặt */}
               <div className="selection-form-actions">
                 <button type="button" className="selection-back-button" onClick={() => { setStep('SELECT'); setErrorMessage(null); }} disabled={submitting}>
                   <ArrowLeft size={16} /> Quay lại chọn vị trí
