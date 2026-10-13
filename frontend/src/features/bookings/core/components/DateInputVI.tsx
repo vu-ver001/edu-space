@@ -1,8 +1,7 @@
+// Tiện ích định dạng ngày giờ chuẩn Việt Nam và ô nhập ngày tương tác (Module M03 & M04 - Khánh Vân).
 import React, { useRef } from 'react';
 
-/**
- * Chuyển đổi chuỗi ngày bất kỳ (YYYY-MM-DD hoặc ISO) thành định dạng dd/MM/yyyy
- */
+// Chuyển đổi chuỗi ngày bất kỳ (YYYY-MM-DD hoặc ISO) thành định dạng dd/MM/yyyy.
 export const formatDateVI = (dateInput?: string | Date | null): string => {
   if (!dateInput) return '';
   try {
@@ -21,9 +20,7 @@ export const formatDateVI = (dateInput?: string | Date | null): string => {
   }
 };
 
-/**
- * Chuyển đổi ngày giờ thành HH:mm dd/MM/yyyy
- */
+// Chuyển đổi chuỗi ngày giờ thành định dạng HH:mm dd/MM/yyyy.
 export const formatDateTimeVI = (dateTimeInput?: string | Date | null): string => {
   if (!dateTimeInput) return '';
   try {
@@ -40,10 +37,7 @@ export const formatDateTimeVI = (dateTimeInput?: string | Date | null): string =
   }
 };
 
-/**
- * Chuẩn hóa các ngày nằm bên trong nội dung note/thông báo lỗi.
- * Ví dụ: "trong ngày 2026-09-29" -> "trong ngày 29-09-2026".
- */
+// Chuẩn hóa các chuỗi ngày tháng nằm bên trong nội dung thông báo lỗi từ backend.
 export const formatMessageDatesVI = (message?: unknown): string => {
   if (message === null || message === undefined) return '';
 
@@ -55,8 +49,38 @@ export const formatMessageDatesVI = (message?: unknown): string => {
     .replace(/\b(\d{4})-(\d{2})-(\d{2})\b/g, '$3-$2-$1');
 };
 
+// Ánh xạ các mã trạng thái hủy hoặc lý do hệ thống thành câu tiếng Việt thân thiện lấy động từ CSDL.
+export const formatBookingReasonVI = (
+  reason?: unknown,
+  fallback: string = '',
+  graceMinutes?: number
+): string => {
+  if (reason === null || reason === undefined || reason === '') return fallback;
+  const raw = String(reason).trim();
+  const upper = raw.toUpperCase();
+
+  // Đơn đặt bị hủy tự động do hết hạn chờ quản trị viên duyệt trước giờ bắt đầu.
+  if (upper === 'PENDING_APPROVAL_TIMEOUT') {
+    return 'Đã quá thời gian bắt đầu sử dụng nhưng chưa được xét duyệt.';
+  }
+  // Đơn đặt bị hủy do sinh viên không đến điểm danh check-in theo số phút quy định trong CSDL.
+  if (upper === 'CHECKIN_WINDOW_EXPIRED' || upper === 'CHECKIN_DEADLINE_EXCEEDED') {
+    if (graceMinutes && graceMinutes > 0) {
+      return `Quá ${graceMinutes} phút sau giờ bắt đầu mà không thực hiện check-in.`;
+    }
+    return fallback || 'Quá thời hạn cho phép sau giờ bắt đầu mà không thực hiện check-in.';
+  }
+  // Ca đặt phòng đã kết thúc thời gian sử dụng.
+  if (upper === 'SESSION_ENDED') {
+    return 'Đã hết thời gian sử dụng phòng.';
+  }
+
+  return formatMessageDatesVI(raw) || fallback;
+};
+
+// Định nghĩa thuộc tính Props đầu vào của ô nhập ngày DateInputVI.
 interface DateInputVIProps {
-  value: string; // Định dạng YYYY-MM-DD
+  value: string;
   onChange: (val: string) => void;
   min?: string;
   max?: string;
@@ -67,10 +91,7 @@ interface DateInputVIProps {
   style?: React.CSSProperties;
 }
 
-/**
- * Component ô nhập ngày luôn hiển thị định dạng dd/mm/yyyy
- * Đồng thời hỗ trợ click mở hộp thoại chọn ngày native của trình duyệt
- */
+// Component DateInputVI hiển thị ngày dạng dd/mm/yyyy và tích hợp bộ chọn lịch của trình duyệt.
 export const DateInputVI: React.FC<DateInputVIProps> = ({
   value,
   onChange,
@@ -83,9 +104,10 @@ export const DateInputVI: React.FC<DateInputVIProps> = ({
   style = {},
 }) => {
   const hiddenInputRef = useRef<HTMLInputElement>(null);
-
+  // Định dạng ngày hiển thị theo kiểu Việt Nam dd/MM/yyyy.
   const displayValue = formatDateVI(value);
 
+  // Mở trực tiếp hộp thoại chọn ngày native của trình duyệt khi click vào ô nhập.
   const handleContainerClick = () => {
     if (hiddenInputRef.current) {
       if (typeof hiddenInputRef.current.showPicker === 'function') {
@@ -93,7 +115,7 @@ export const DateInputVI: React.FC<DateInputVIProps> = ({
           hiddenInputRef.current.showPicker();
           return;
         } catch {
-          // Fallback if showPicker is blocked
+          // Bỏ qua nếu trình duyệt chặn phương thức showPicker
         }
       }
       hiddenInputRef.current.focus();
@@ -101,6 +123,7 @@ export const DateInputVI: React.FC<DateInputVIProps> = ({
   };
 
   return (
+    // Phần tử bao ngoài cho phép click để mở lịch chọn ngày
     <div
       className={`date-input-vi-wrapper ${className}`}
       onClick={handleContainerClick}
@@ -113,7 +136,7 @@ export const DateInputVI: React.FC<DateInputVIProps> = ({
         ...style,
       }}
     >
-      {/* Ô hiển thị dạng dd/mm/yyyy ra ngoài */}
+      {/* Ô nhập chỉ đọc hiển thị văn bản ngày theo chuẩn dd/mm/yyyy */}
       <input
         type="text"
         readOnly
@@ -137,7 +160,7 @@ export const DateInputVI: React.FC<DateInputVIProps> = ({
         }}
       />
 
-      {/* Icon lịch bên phải */}
+      {/* Biểu tượng quyển lịch chỉ báo trực quan */}
       <span
         style={{
           position: 'absolute',
@@ -168,7 +191,7 @@ export const DateInputVI: React.FC<DateInputVIProps> = ({
         </svg>
       </span>
 
-      {/* Input type="date" ẩn để nhận sự kiện native date picker */}
+      {/* Thẻ input date ẩn trong suốt tiếp nhận sự kiện chọn ngày gốc của hệ điều hành */}
       <input
         ref={hiddenInputRef}
         type="date"

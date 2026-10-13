@@ -1,11 +1,13 @@
+// Ô nhập và chọn thời gian định dạng chuẩn 24H (HH:mm) cho hệ thống đặt phòng (Module M03 & M04 - Khánh Vân).
 import React, { useState, useRef, useEffect } from 'react';
 import './TimeInput24H.css';
 
+// Định nghĩa thuộc tính Props đầu vào của bộ chọn thời gian 24H.
 interface TimeInput24HProps {
-  value: string; // HH:mm định dạng 24 giờ, ví dụ "08:00", "13:00"
+  value: string;
   onChange: (val: string) => void;
-  min?: string; // HH:mm
-  max?: string; // HH:mm
+  min?: string;
+  max?: string;
   className?: string;
   required?: boolean;
   disabled?: boolean;
@@ -15,6 +17,7 @@ interface TimeInput24HProps {
   style?: React.CSSProperties;
 }
 
+// Chuyển đổi chuỗi giờ định dạng HH:mm sang số phút trong ngày.
 const toMinutes = (timeStr: string): number => {
   if (!timeStr) return 0;
   const parts = timeStr.trim().split(':');
@@ -23,11 +26,15 @@ const toMinutes = (timeStr: string): number => {
   return h * 60 + m;
 };
 
+// Chèn số 0 vào đầu chuỗi nếu số chỉ có một chữ số.
 const pad2 = (n: number | string): string => String(n).padStart(2, '0');
 
+// Mảng 24 giờ từ 00 đến 23.
 const HOURS = Array.from({ length: 24 }, (_, i) => pad2(i));
+// Mảng 60 phút từ 00 đến 59.
 const MINUTES = Array.from({ length: 60 }, (_, i) => pad2(i));
 
+// Component TimeInput24H cung cấp ô nhập liệu và dropdown chọn giờ/phút hai cột.
 export const TimeInput24H: React.FC<TimeInput24HProps> = ({
   value,
   onChange,
@@ -41,18 +48,19 @@ export const TimeInput24H: React.FC<TimeInput24HProps> = ({
   name,
   style = {},
 }) => {
+  // Quản lý trạng thái mở dropdown và giá trị hiển thị trên ô nhập.
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [inputValue, setInputValue] = useState<string>(value || '');
   const containerRef = useRef<HTMLDivElement>(null);
   const hourListRef = useRef<HTMLDivElement>(null);
   const minuteListRef = useRef<HTMLDivElement>(null);
 
-  // Đồng bộ khi value bên ngoài thay đổi
+  // Đồng bộ giá trị nội bộ khi thuộc tính value từ component cha thay đổi.
   useEffect(() => {
     setInputValue(value ? value.substring(0, 5) : '');
   }, [value]);
 
-  // Đóng dropdown khi click ra ngoài
+  // Lắng nghe sự kiện click chuột bên ngoài để tự động đóng dropdown.
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
@@ -65,14 +73,16 @@ export const TimeInput24H: React.FC<TimeInput24HProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen]);
 
+  // Tách giờ và phút hiện tại để làm nổi bật trong dropdown.
   const [currentHStr, currentMStr] = (inputValue || '08:00').split(':');
   const currentHour = pad2(currentHStr || '08');
   const currentMinute = pad2(currentMStr || '00');
 
+  // Tính toán giới hạn số phút nhỏ nhất và lớn nhất được phép chọn.
   const minMin = toMinutes(min);
   const maxMin = toMinutes(max);
 
-  // Tự động cuộn đến giờ và phút đang chọn khi mở dropdown (chuẩn theo trang Ngọc Anh)
+  // Tự động cuộn danh sách giờ và phút đến vị trí giá trị đang được chọn khi mở dropdown.
   useEffect(() => {
     if (isOpen) {
       const timer = setTimeout(() => {
@@ -93,12 +103,14 @@ export const TimeInput24H: React.FC<TimeInput24HProps> = ({
     }
   }, [isOpen]);
 
+  // Xử lý khi người dùng chọn một giờ trong danh sách.
   const handleHourClick = (h: string) => {
     const newTime = `${h}:${currentMinute || '00'}`;
     setInputValue(newTime);
     onChange(newTime);
   };
 
+  // Xử lý khi người dùng chọn một phút trong danh sách và đóng dropdown.
   const handleMinuteClick = (m: string) => {
     const newTime = `${currentHour || '08'}:${m}`;
     setInputValue(newTime);
@@ -106,6 +118,7 @@ export const TimeInput24H: React.FC<TimeInput24HProps> = ({
     setIsOpen(false);
   };
 
+  // Xử lý nhập trực tiếp từ bàn phím và tự động chuẩn hóa định dạng.
   const handleManualInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value;
     setInputValue(raw);
@@ -116,6 +129,7 @@ export const TimeInput24H: React.FC<TimeInput24HProps> = ({
     }
   };
 
+  // Tự động điền phút :00 hoặc chuẩn hóa chuỗi khi rời tiêu điểm ô nhập (blur).
   const handleBlur = () => {
     const val = inputValue.trim();
     if (/^\d{1,2}$/.test(val)) {
@@ -137,12 +151,13 @@ export const TimeInput24H: React.FC<TimeInput24HProps> = ({
   };
 
   return (
+    // Phần tử bao ngoài quản lý vị trí tương đối và sự kiện dropdown
     <div
       ref={containerRef}
       className={`time-input-24h-container ${className}`}
       style={{ position: 'relative', width: '100%', ...style }}
     >
-      {/* KHUNG TRIGGER Ô NHẬP GIỜ THEO CHUẨN TRANG NGỌC ANH: CHỮ KHÔNG IN ĐẬM */}
+      {/* Ô nhập thời gian và biểu tượng đồng hồ kích hoạt mở bảng chọn */}
       <div
         className={`time-input-24h-input-box ${isOpen ? 'active' : ''}`}
         onClick={() => !disabled && setIsOpen((prev) => !prev)}
@@ -160,7 +175,7 @@ export const TimeInput24H: React.FC<TimeInput24HProps> = ({
           placeholder={placeholder}
           maxLength={5}
         />
-        {/* ICON ĐỒNG HỒ CỐ ĐỊNH CHẶT CHẼ Ở GÓC PHẢI */}
+        {/* Biểu tượng đồng hồ chỉ báo */}
         <span
           className="time-input-24h-clock-icon"
           title="Bấm để chọn giờ"
@@ -181,11 +196,11 @@ export const TimeInput24H: React.FC<TimeInput24HProps> = ({
         </span>
       </div>
 
-      {/* DROPDOWN CHỌN GIỜ ĐỒNG BỘ 100% GIAO DIỆN THEO TRANG NGỌC ANH */}
+      {/* Bảng chọn thời gian hai cột Giờ và Phút */}
       {isOpen && (
         <div className="time-picker-24h-dropdown">
           <div className="time-picker-24h-columns">
-            {/* CỘT GIỜ */}
+            {/* Cột chọn danh sách Giờ từ 00 đến 23 */}
             <div className="time-picker-24h-column">
               <div className="time-picker-24h-column-header">Giờ</div>
               <div className="time-picker-24h-column-list" ref={hourListRef}>
@@ -211,7 +226,7 @@ export const TimeInput24H: React.FC<TimeInput24HProps> = ({
               </div>
             </div>
 
-            {/* CỘT PHÚT */}
+            {/* Cột chọn danh sách Phút từ 00 đến 59 */}
             <div className="time-picker-24h-column">
               <div className="time-picker-24h-column-header">Phút</div>
               <div className="time-picker-24h-column-list" ref={minuteListRef}>

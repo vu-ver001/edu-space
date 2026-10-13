@@ -1,14 +1,17 @@
+// Modal hiển thị mã QR động để sinh viên điểm danh nhận phòng (Module M03 - Khánh Vân).
 import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { bookingService, type Booking } from '../services/bookingService';
 import './QrCheckInModal.css';
 
+// Định nghĩa thuộc tính đầu vào của modal check-in.
 interface QrCheckInModalProps {
   booking: Booking | null;
   onClose: () => void;
   onCheckInSuccess?: () => void;
 }
 
+// Cấu trúc dữ liệu mã token check-in nhận từ hệ thống backend.
 interface TokenData {
   bookingId: number;
   token: string;
@@ -20,13 +23,14 @@ export const QrCheckInModal: React.FC<QrCheckInModalProps> = ({
   booking,
   onClose,
 }) => {
+  // Quản lý trạng thái nạp dữ liệu, thông tin token và các thông báo lỗi.
   const [loading, setLoading] = useState<boolean>(true);
   const [tokenData, setTokenData] = useState<TokenData | null>(null);
   const [errorStatus, setErrorStatus] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
 
-  // Gọi API backend của bạn Vũ để phát hành token check-in cho booking này
+  // Gọi API cấp mã token check-in thời gian thực cho đơn đặt phòng.
   const fetchToken = async () => {
     if (!booking) return;
     setLoading(true);
@@ -46,6 +50,7 @@ export const QrCheckInModal: React.FC<QrCheckInModalProps> = ({
     }
   };
 
+  // Tự động yêu cầu cấp mã token khi mở modal của một đơn đặt phòng.
   useEffect(() => {
     if (booking) {
       fetchToken();
@@ -75,9 +80,10 @@ export const QrCheckInModal: React.FC<QrCheckInModalProps> = ({
     return `${pad(d.getHours())}:${pad(d.getMinutes())} • ${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
   };
 
-  // Tính giờ mở cửa sổ check-in (trước 15 phút)
+  // Tính giờ mở cửa sổ check-in (lấy động từ CSDL qua booking.checkInEarlyOpenMinutes)
+  const openMinutes = booking.checkInEarlyOpenMinutes || 15;
   const startDate = new Date(booking.startTime);
-  const openTime = new Date(startDate.getTime() - 15 * 60 * 1000);
+  const openTime = new Date(startDate.getTime() - openMinutes * 60 * 1000);
   const openTimeStr = `${pad(openTime.getHours())}:${pad(openTime.getMinutes())}`;
   const openDateStr = `${pad(openTime.getDate())}/${pad(openTime.getMonth() + 1)}/${openTime.getFullYear()}`;
 
@@ -146,7 +152,7 @@ export const QrCheckInModal: React.FC<QrCheckInModalProps> = ({
               </div>
               <h4 className="qr-early-title">Cửa sổ check-in chưa mở</h4>
               <div className="qr-early-desc">
-                Theo chính sách trường, mã QR check-in được hệ thống phát hành tự động trước giờ bắt đầu <strong>15 phút</strong>.
+                Theo chính sách trường, mã QR check-in được hệ thống phát hành tự động trước giờ bắt đầu <strong>{openMinutes} phút</strong>.
                 <br />
                 ⏰ Bạn vui lòng quay lại lấy mã vào lúc: <strong>{openTimeStr} ngày {openDateStr}</strong>.
               </div>

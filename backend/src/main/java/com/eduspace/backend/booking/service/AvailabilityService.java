@@ -207,8 +207,10 @@ public class AvailabilityService {
                 .build());
     }
 
+    // Ánh xạ thực thể Space sang DTO SpaceCatalogItem để sử dụng chung trong toàn hệ thống.
     private SpaceCatalogItem mapSpaceToCatalogItem(Space space) {
         if (space == null) return null;
+        // Trích xuất danh sách tên tiện ích của phòng.
         List<String> facilityNames = (space.getFacilities() != null)
                 ? space.getFacilities().stream()
                         .filter(f -> f != null && f.getDeletedAt() == null)
@@ -216,6 +218,7 @@ public class AvailabilityService {
                         .collect(Collectors.toList())
                 : Collections.emptyList();
 
+        // Trích xuất danh sách ID tiện ích của phòng.
         List<Long> facilityIds = (space.getFacilities() != null)
                 ? space.getFacilities().stream()
                         .filter(f -> f != null && f.getDeletedAt() == null && f.getId() != null)
@@ -223,10 +226,11 @@ public class AvailabilityService {
                         .collect(Collectors.toList())
                 : Collections.emptyList();
 
+        // Xác định chế độ đặt phòng (WHOLE_SPACE, PER_SEAT, PER_TABLE).
         String bookingMode = (space.getSpaceType() != null && space.getSpaceType().getBookingMode() != null)
                 ? space.getSpaceType().getBookingMode().name()
                 : "WHOLE_SPACE";
-        // LOGIC LIÊN KẾT CSDL KIM TUYẾN: Đọc trực tiếp từ cột requires_approval trong bảng space_types
+        // Xác định cờ yêu cầu phê duyệt từ cấu hình loại không gian.
         boolean requiresApproval = (space.getSpaceType() != null)
                 ? space.getSpaceType().isRequiresApproval()
                 : !"PER_SEAT".equalsIgnoreCase(bookingMode);
@@ -234,7 +238,7 @@ public class AvailabilityService {
         Long typeId = space.getSpaceType() != null ? space.getSpaceType().getId() : 1L;
         String statusStr = space.getStatus() != null ? space.getStatus().name() : "AVAILABLE";
 
-        // LOGIC LIÊN KẾT CSDL KIM TUYẾN: Lấy ảnh chính (is_primary = true) từ bảng space_images
+        // Lấy đường dẫn hình ảnh đại diện của phòng từ CSDL hoặc sử dụng ảnh mặc định.
         String img = null;
         if (spaceImageRepository != null && space.getId() != null) {
             try {
@@ -258,7 +262,6 @@ public class AvailabilityService {
                     : "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&auto=format&fit=crop";
         }
 
-
         return SpaceCatalogItem.builder()
                 .id(space.getId())
                 .name(space.getName())
@@ -278,6 +281,7 @@ public class AvailabilityService {
                 .build();
     }
 
+    // Tra cứu thông tin chi tiết một phòng từ CSDL (tự động fallback về bộ nhớ tạm nếu CSDL lỗi).
     public SpaceCatalogItem getSpaceCatalogItem(Long spaceId) {
         if (spaceId == null) return null;
         if (spaceRepository != null) {
@@ -293,6 +297,7 @@ public class AvailabilityService {
         return SPACE_CATALOG.get(spaceId);
     }
 
+    // Lấy toàn bộ danh mục không gian đang hoạt động trong hệ thống.
     public List<SpaceCatalogItem> getAllCatalogItems() {
         if (spaceRepository != null) {
             try {
@@ -309,10 +314,7 @@ public class AvailabilityService {
         return new ArrayList<>(SPACE_CATALOG.values());
     }
 
-    /**
-     * Danh sách dùng cho tìm kiếm phải phản ánh đúng CSDL, không dùng catalog RAM dự phòng.
-     * Nếu CSDL không truy vấn được thì trả lỗi thay vì hiển thị các phòng có thể không còn tồn tại.
-     */
+    // Truy vấn danh mục không gian từ CSDL phục vụ tìm kiếm thời gian thực (không sử dụng catalog tĩnh).
     private List<SpaceCatalogItem> getDatabaseCatalogItemsForSearch() {
         if (spaceRepository == null) {
             throw new BusinessException(
@@ -340,10 +342,12 @@ public class AvailabilityService {
         }
     }
 
-    /**
-     * Quy tắc giao nhau thời gian chuẩn (02_Yeu_cau_logic §1.1):
-     * A.startTime < B.endTime AND A.endTime > B.startTime
-     */
+    // =========================================================================================================
+    // [LÕI HỆ THỐNG] THUẬT TOÁN GIAO THOA KHOẢNG THỜI GIAN CHUẨN (TIME OVERLAP ENGINE)
+    // - Công thức toán học: A và B giao nhau khi và chỉ khi: startA < endB && endA > startB.
+    // - Cơ chế: Dùng phép so sánh strictly before/after để loại trừ trường hợp tiếp xúc biên (endA == startB).
+    //   Nhờ đó, sinh viên ca sau có thể bắt đầu sử dụng phòng ngay tại thời điểm ca trước kết thúc mà không bị coi là xung đột.
+    // =========================================================================================================
     public boolean isOverlapping(LocalDateTime startA, LocalDateTime endA, LocalDateTime startB, LocalDateTime endB) {
         if (startA == null || endA == null || startB == null || endB == null) {
             return false;
@@ -351,9 +355,7 @@ public class AvailabilityService {
         return startA.isBefore(endB) && endA.isAfter(startB);
     }
 
-    /**
-     * Quét chuyển các booking PENDING_APPROVAL đã quá giờ bắt đầu sang EXPIRED.
-     */
+    // Tự động quét và chuyển trạng thái các đơn PENDING_APPROVAL đã quá giờ bắt đầu sang EXPIRED (giải phóng phòng).
     @Transactional
     public void expirePendingApproval(LocalDateTime now) {
         List<Booking> overdueBookings = bookingRepository.findPendingOverdueBookings(BookingStatus.PENDING_APPROVAL, now);
@@ -377,9 +379,7 @@ public class AvailabilityService {
         }
     }
 
-    /**
-     * Quét chuyển các booking CHECKED_IN đã quá endTime sang COMPLETED.
-     */
+    // Tự động quét và hoàn thành các đơn CHECKED_IN khi đã kết thúc thời gian sử dụng phòng (sang COMPLETED).
     @Transactional
     public void completeOverdueCheckedIn(LocalDateTime now) {
         List<Booking> completedCandidates = bookingRepository.findCompletedCandidateBookings(BookingStatus.CHECKED_IN, now);
@@ -401,23 +401,32 @@ public class AvailabilityService {
         }
     }
 
-    /**
-     * API kiểm tra khả dụng của một phòng cụ thể (02_Yeu_cau_logic §3.1).
-     */
+    // =========================================================================================================
+    // [LÕI HỆ THỐNG] THUẬT TOÁN KIỂM TRA KHẢ DỤNG THỜI GIAN THỰC CỦA MỘT PHÒNG (REAL-TIME SPACE AVAILABILITY)
+    // - Cơ chế: Quét đa tầng để thu thập toàn bộ các xung đột:
+    //   1. Quét giải phóng các đơn chờ duyệt quá hạn để làm mới trạng thái phòng.
+    //   2. Kiểm tra trạng thái phòng (MAINTENANCE) và các lịch bảo trì cụ thể (MaintenanceBlock).
+    //   3. Kiểm tra các booking đang chiếm chỗ (PENDING_APPROVAL, CONFIRMED, CHECKED_IN) trong khung giờ [startTime, endTime].
+    //   4. Trả về kết quả 'available = true' nếu danh sách xung đột (conflicts) hoàn toàn rỗng.
+    // =========================================================================================================
     @Transactional
     public AvailabilityResponse checkSpaceAvailability(Long spaceId, LocalDateTime startTime, LocalDateTime endTime) {
         LocalDateTime now = getCurrentDateTime();
+        // Quét giải phóng các đơn chờ duyệt quá hạn.
         expirePendingApproval(now);
 
+        // Tra cứu thông tin phòng.
         SpaceCatalogItem space = getSpaceCatalogItem(spaceId);
         if (space == null) {
             throw BusinessException.notFound("SPACE_NOT_FOUND", "Không tìm thấy phòng với ID: " + spaceId);
         }
 
+        // Kiểm tra hợp lệ khung giờ và các hạn mức thời gian.
         validateBookingTimeLimits(startTime, endTime);
 
         List<ConflictDetail> conflicts = new ArrayList<>();
 
+        // Kiểm tra trạng thái tĩnh của phòng có đang bảo trì hay không.
         if ("MAINTENANCE".equalsIgnoreCase(space.getStatus())) {
             conflicts.add(ConflictDetail.builder()
                     .type("SPACE_STATUS")
@@ -428,7 +437,7 @@ public class AvailabilityService {
                     .build());
         }
 
-        // ================= BEGIN KT =================
+        // Kiểm tra các khối lịch bảo trì động giao nhau với khung giờ đặt.
         if (maintenanceBlockRepository != null) {
             List<com.eduspace.backend.space.entity.MaintenanceBlock> activeBlocks =
                     maintenanceBlockRepository.findOverlappingBlocks(spaceId, startTime, endTime);
@@ -442,8 +451,8 @@ public class AvailabilityService {
                         .build());
             }
         }
-        // ================= END KT =================
 
+        // Kiểm tra các đơn đặt chỗ đang chiếm chỗ trong khoảng thời gian yêu cầu.
         List<Booking> overlappingBookings = bookingRepository.findOverlappingSpaceBookings(
                 spaceId, startTime, endTime, OCCUPYING_STATUSES
         );
@@ -466,17 +475,25 @@ public class AvailabilityService {
                 .build();
     }
 
-    /**
-     * Tìm kiếm phòng khả dụng theo bộ lọc.
-     */
+    // =========================================================================================================
+    // [LÕI HỆ THỐNG] THUẬT TOÁN TÌM KIẾM VÀ LỌC KHÔNG GIAN ĐA TIÊU CHÍ (MULTI-CRITERIA SPACE SEARCH FILTER)
+    // - Cơ chế: Áp dụng phễu lọc 5 tiêu chí độc lập:
+    //   1. Trạng thái không gian (status = AVAILABLE): Loại trừ phòng đang sửa chữa / ngừng phục vụ.
+    //   2. Phù hợp sức chứa (supportsParticipantCount): Kiểm tra số người tham gia khớp với mô hình phòng (WHOLE_SPACE, PER_SEAT, PER_TABLE).
+    //   3. Khớp bộ lọc loại phòng (spaceTypeId) và vị trí tòa nhà (building) nếu có lựa chọn.
+    //   4. Thỏa mãn 100% tiện ích bắt buộc (facilityIds: Bảng trắng, TV, Điều hòa... - phép tập hợp containsAll).
+    //   5. Khả dụng thực tế trong khung thời gian (isSpaceAvailableInInterval): Kiểm tra bảo trì và không bị phủ kín bởi booking khác.
+    // =========================================================================================================
     @Transactional
     public List<SpaceResponse> searchAvailableSpaces(SearchSpaceFilter filter) {
         LocalDateTime now = getCurrentDateTime();
+        // Quét giải phóng các đơn chờ duyệt quá hạn trước khi tìm kiếm.
         expirePendingApproval(now);
 
         LocalDateTime rawStart = resolveStartDateTime(filter);
         LocalDateTime rawEnd = resolveEndDateTime(filter);
 
+        // Kiểm tra hợp lệ: Thời gian bắt đầu phải trước thời gian kết thúc.
         if (rawStart != null && rawEnd != null) {
             if (!rawStart.isBefore(rawEnd)) {
                 throw BusinessException.badRequest("INVALID_TIME_RANGE", "Thời gian bắt đầu phải trước thời gian kết thúc");
@@ -497,25 +514,30 @@ public class AvailabilityService {
         }
 
         return getDatabaseCatalogItemsForSearch().stream()
+                // Lớp lọc 1: Trạng thái không gian phải sẵn sàng (AVAILABLE).
                 .filter(space -> "AVAILABLE".equalsIgnoreCase(space.getStatus()))
                 .filter(space -> {
+                    // Lớp lọc 2: Kiểm tra sức chứa phù hợp theo mô hình đặt chỗ.
                     if (!supportsParticipantCount(space, requestedParticipants)) {
                         return false;
                     }
+                    // Lớp lọc 3: Khớp loại không gian (nếu người dùng có chọn bộ lọc loại phòng).
                     if (filter.getSpaceTypeId() != null && !space.getSpaceTypeId().equals(filter.getSpaceTypeId())) {
                         return false;
                     }
+                    // Lớp lọc 4: Khớp khu vực tòa nhà (nếu người dùng có chọn bộ lọc tòa nhà).
                     if (filter.getBuilding() != null && !filter.getBuilding().isBlank()
                             && !space.getBuilding().equalsIgnoreCase(filter.getBuilding())) {
                         return false;
                     }
+                    // Lớp lọc 5: Thỏa mãn toàn bộ danh sách tiện ích được yêu cầu.
                     if (filter.getFacilityIds() != null && !filter.getFacilityIds().isEmpty()) {
                         if (space.getFacilityIds() == null || !space.getFacilityIds().containsAll(filter.getFacilityIds())) {
                             return false;
                         }
                     }
 
-                    // Kiểm tra khả dụng thực tế theo thời gian và mô hình đặt chỗ
+                    // Lớp lọc 6: Kiểm tra tính khả dụng thực tế trong khung giờ theo mô hình đặt chỗ.
                     if (effectiveStart != null && effectiveEnd != null) {
                         if (!isSpaceAvailableInInterval(space, effectiveStart, effectiveEnd, requestedParticipants)) {
                             return false;
@@ -527,6 +549,7 @@ public class AvailabilityService {
                     return true;
                 })
                 .map(space -> {
+                    // Ánh xạ sang SpaceResponse DTO kèm đánh dấu trạng thái khả dụng.
                     boolean isPerSeat = "PER_SEAT".equalsIgnoreCase(space.getBookingMode());
                     boolean isPerTable = "PER_TABLE".equalsIgnoreCase(space.getBookingMode());
                     List<com.eduspace.backend.staff.dto.response.MaintenanceResponseKT> mDtos = getUpcomingMaintenanceDtos(space.getId());
@@ -535,36 +558,11 @@ public class AvailabilityService {
                     SpaceResponse resp = mapToResponse(space);
                     resp.setIsAvailable(true);
                     return resp;
-                    /* return SpaceResponse.builder()
-                            .id(space.getId())
-                            .name(space.getName())
-                            .spaceTypeName(space.getSpaceTypeName())
-                            .bookingMode(space.getBookingMode())
-                            .requiresApproval(space.isRequiresApproval())
-                            .building(space.getBuilding())
-                            .floor(space.getFloor())
-                            .capacity(space.getCapacity())
-                            .status(space.getStatus())
-                            .imageUrl(space.getImageUrl())
-                            .description(space.getDescription())
-                            .facilities(space.getFacilities())
-                            .facilityIds(space.getFacilityIds())
-                            .nextMaintenance(nextM)
-                            .upcomingMaintenances(mDtos)
-                            .isAvailable(true)
-                            .allowSeatSelection(isPerSeat)
-                            .allowTableSelection(isPerTable)
-                            .build(); */
                 })
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Quy tắc đối tượng sử dụng theo mô hình đặt lấy từ space_types.booking_mode trong CSDL:
-     * - WHOLE_SPACE: từ 1 người đến đúng sức chứa; một booking giữ trọn không gian.
-     * - PER_SEAT: đúng 1 người và chọn một ghế cụ thể.
-     * - PER_TABLE: từ 1 người và phải còn bàn đủ sức chứa.
-     */
+    // Kiểm tra số lượng người tham gia có thỏa mãn quy tắc của mô hình đặt chỗ hay không.
     public boolean supportsParticipantCount(SpaceCatalogItem space, int participantCount) {
         if (space == null || participantCount < 1) return false;
 
@@ -573,6 +571,7 @@ public class AvailabilityService {
         return isPerTable(space) && space.getCapacity() >= participantCount;
     }
 
+    // Kiểm tra phòng có sẵn tài nguyên hoạt động (ghế hoặc bàn AVAILABLE) đáp ứng số người hay không.
     private boolean hasBookableResourceConfigured(SpaceCatalogItem space, int participantCount) {
         if (isWholeSpace(space)) return space.getCapacity() >= participantCount;
 
@@ -593,6 +592,7 @@ public class AvailabilityService {
         return false;
     }
 
+    // Lớp dữ liệu đại diện cho một khoảng thời gian (bắt đầu - kết thúc) và thời lượng tính theo phút.
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
@@ -605,6 +605,7 @@ public class AvailabilityService {
         }
     }
 
+    // Gộp các khoảng thời gian bận liên tiếp hoặc chồng chéo nhau thành danh sách khoảng thời gian tối giản.
     public static List<TimeInterval> mergeIntervals(List<TimeInterval> intervals) {
         if (intervals == null || intervals.isEmpty()) return Collections.emptyList();
         List<TimeInterval> sorted = new ArrayList<>(intervals);
@@ -628,6 +629,7 @@ public class AvailabilityService {
         return merged;
     }
 
+    // Tìm các khe thời gian rảnh (gap) giữa các khoảng thời gian bận trong một khung cửa sổ tra cứu.
     public static List<TimeInterval> findGaps(LocalDateTime windowStart, LocalDateTime windowEnd, List<TimeInterval> busyList) {
         if (busyList == null || busyList.isEmpty()) {
             return Collections.singletonList(new TimeInterval(windowStart, windowEnd));
@@ -652,9 +654,15 @@ public class AvailabilityService {
         return gaps;
     }
 
-    /**
-     * Kiểm tra khả dụng đúng với toàn bộ khung giờ người dùng yêu cầu và cấu hình trong CSDL.
-     */
+    // =========================================================================================================
+    // [LÕI HỆ THỐNG] THUẬT TOÁN KIỂM TRA KHẢ DỤNG KHUNG THỜI GIAN THEO MÔ HÌNH ĐẶT CHỖ (INTERVAL AVAILABILITY ENGINE)
+    // - Cơ chế:
+    //   1. Kiểm tra lịch bảo trì: Nếu có block bảo trì giao thoa trong khung giờ -> Phòng không khả dụng (false).
+    //   2. Nếu có đơn đặt trọn phòng (Whole Room Booking) -> Khóa toàn bộ phòng, bàn, ghế (false).
+    //   3. Với WHOLE_SPACE: Không được có bất kỳ booking nào chiếm chỗ trong khoảng [searchStart, searchEnd].
+    //   4. Với PER_SEAT: Lấy tập hợp mã ghế đã chiếm (occupiedSeatCodes). Phòng khả dụng nếu còn ít nhất 1 ghế AVAILABLE chưa bị đặt.
+    //   5. Với PER_TABLE: Lọc các bàn AVAILABLE có sức chứa >= requestedParticipants và chưa bị giữ chỗ bởi bất kỳ booking nào.
+    // =========================================================================================================
     public boolean isSpaceAvailableInInterval(
             SpaceCatalogItem space,
             LocalDateTime searchStart,
@@ -668,6 +676,7 @@ public class AvailabilityService {
         int requestedParticipants = participantCount != null ? participantCount : 1;
         if (!supportsParticipantCount(space, requestedParticipants)) return false;
 
+        // Kiểm tra lịch bảo trì giao nhau với khoảng thời gian tra cứu.
         List<com.eduspace.backend.space.entity.MaintenanceBlock> maintenanceBlocks = Collections.emptyList();
         if (bookingMaintenanceRepository != null) {
             maintenanceBlocks = bookingMaintenanceRepository.findOverlappingBlocks(space.getId(), searchStart, searchEnd);
@@ -676,18 +685,22 @@ public class AvailabilityService {
         }
         if (!maintenanceBlocks.isEmpty()) return false;
 
+        // Truy vấn các đơn đặt chỗ đang chiếm chỗ giao thoa với khoảng thời gian tra cứu.
         List<Booking> overlappingBookings = bookingRepository.findOverlappingSpaceBookings(
                 space.getId(), searchStart, searchEnd, OCCUPYING_STATUSES
         );
 
+        // Với WHOLE_SPACE: Phòng chỉ khả dụng khi hoàn toàn không có booking nào trong khung giờ.
         if (isWholeSpace(space)) {
             return overlappingBookings.isEmpty();
         }
 
+        // Với PER_SEAT hoặc PER_TABLE: Nếu có booking đặt trọn phòng thì cả phòng đều bị khóa.
         boolean hasWholeRoomBooking = overlappingBookings.stream()
                 .anyMatch(booking -> booking.getTableId() == null && booking.getSelectedSeatsList().isEmpty());
         if (hasWholeRoomBooking) return false;
 
+        // Với PER_SEAT: Kiểm tra còn ít nhất 1 vị trí ghế khả dụng chưa bị đặt.
         if (isPerSeat(space)) {
             if (seatRepository == null) return false;
 
@@ -705,6 +718,7 @@ public class AvailabilityService {
                     .anyMatch(code -> !occupiedSeatCodes.contains(code));
         }
 
+        // Với PER_TABLE: Kiểm tra còn ít nhất 1 bàn khả dụng có sức chứa phù hợp chưa bị đặt.
         if (isPerTable(space)) {
             if (spaceTableRepository == null) return false;
 
@@ -923,16 +937,19 @@ public class AvailabilityService {
         }
     }
 
+    // Lấy danh sách lịch bảo trì sắp diễn ra của một không gian.
     public List<com.eduspace.backend.staff.dto.response.MaintenanceResponseKT> getUpcomingMaintenancesBySpace(Long spaceId) {
         return getUpcomingMaintenanceDtos(spaceId);
     }
 
+    // Lấy danh sách toàn bộ không gian phòng học trong hệ thống.
     public List<SpaceResponse> getAllSpaces() {
         return getAllCatalogItems().stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
+    // Tra cứu thông tin chi tiết một phòng theo ID kèm tiện ích và trạng thái.
     public SpaceResponse getSpaceById(Long id) {
         SpaceCatalogItem space = getSpaceCatalogItem(id);
         if (space == null) {
@@ -941,18 +958,22 @@ public class AvailabilityService {
         return mapToResponse(space);
     }
 
+    // Kiểm tra không gian có thuộc chế độ đặt theo từng ghế lẻ (PER_SEAT) hay không.
     public boolean isPerSeat(SpaceCatalogItem space) {
         return space != null && "PER_SEAT".equalsIgnoreCase(space.getBookingMode());
     }
 
+    // Kiểm tra không gian có thuộc chế độ đặt theo từng bàn (PER_TABLE) hay không.
     public boolean isPerTable(SpaceCatalogItem space) {
         return space != null && "PER_TABLE".equalsIgnoreCase(space.getBookingMode());
     }
 
+    // Kiểm tra không gian có thuộc chế độ đặt trọn gói nguyên phòng (WHOLE_SPACE) hay không.
     public boolean isWholeSpace(SpaceCatalogItem space) {
         return space == null || "WHOLE_SPACE".equalsIgnoreCase(space.getBookingMode());
     }
 
+    // Ánh xạ SpaceCatalogItem sang SpaceResponse DTO kèm tính toán số lượng ghế/bàn hoạt động từ CSDL.
     private SpaceResponse mapToResponse(SpaceCatalogItem space) {
         boolean isPerSeat = "PER_SEAT".equalsIgnoreCase(space.getBookingMode());
         boolean isPerTable = "PER_TABLE".equalsIgnoreCase(space.getBookingMode());
@@ -998,6 +1019,7 @@ public class AvailabilityService {
                 .build();
     }
 
+    // Lấy danh mục các loại không gian (Space Types) phục vụ hiển thị bộ lọc tìm kiếm.
     public List<java.util.Map<String, Object>> getSpaceTypes() {
         if (spaceTypeRepository != null) {
             try {
@@ -1028,6 +1050,7 @@ public class AvailabilityService {
         );
     }
 
+    // Lấy danh mục các trang thiết bị tiện ích (Facilities) phục vụ bộ lọc tìm kiếm.
     public List<java.util.Map<String, Object>> getFacilities() {
         if (facilityRepository != null) {
             try {
@@ -1057,6 +1080,14 @@ public class AvailabilityService {
         );
     }
 
+    // =========================================================================================================
+    // [LÕI HỆ THỐNG] THUẬT TOÁN KIỂM TRA HẠN MỨC KHUNG GIỜ VÀ CHÍNH SÁCH VẬN HÀNH (POLICY TIME VALIDATOR)
+    // - Cơ chế kiểm tra 4 cấp độ:
+    //   1. Thời gian tương lai: Chặn đặt phòng vào thời điểm quá khứ (startTime < now).
+    //   2. Khung giờ hoạt động: Giờ đặt phải nằm hoàn toàn trong khung mở/đóng cửa của trường (VD: 07:00 - 22:00 từ PolicyService).
+    //   3. Thời lượng tối đa: Thời lượng (durationMinutes) không được vượt quá hạn mức tối đa cho phép (mặc định 180 phút / 3 tiếng).
+    //   4. Số ngày đặt trước: Khoảng cách từ hôm nay tới ngày đặt không được vượt quá số ngày cho phép (mặc định 7 ngày).
+    // =========================================================================================================
     public void validateBookingTimeLimits(LocalDateTime startTime, LocalDateTime endTime) {
         if (startTime == null || endTime == null) {
             throw BusinessException.badRequest("INVALID_TIME", "Thời gian bắt đầu và kết thúc không được để trống");
@@ -1068,6 +1099,7 @@ public class AvailabilityService {
             throw BusinessException.badRequest("PAST_TIME_NOT_ALLOWED", "Không được đặt phòng vào thời điểm trong quá khứ");
         }
 
+        // Lấy khung giờ mở/đóng cửa từ hệ thống chính sách vận hành (PolicyService).
         LocalTime openTime = LocalTime.of(7, 0);
         LocalTime closeTime = LocalTime.of(22, 0);
         try {
@@ -1090,6 +1122,7 @@ public class AvailabilityService {
                     "Không gian chỉ hoạt động trong khung giờ từ " + openTime + " đến " + closeTime);
         }
 
+        // Kiểm tra thời lượng đặt phòng tối đa cho một ca.
         long durationMinutes = ChronoUnit.MINUTES.between(startTime, endTime);
         long maxMinutes;
         try {
@@ -1102,6 +1135,7 @@ public class AvailabilityService {
                     "Thời lượng đặt phòng tối đa là " + (maxMinutes / 60) + " giờ (" + maxMinutes + " phút)");
         }
 
+        // Kiểm tra số ngày được phép đặt trước tối đa.
         long maxAdvanceDays = getPolicyLong("MAX_ADVANCE_DAYS", 7L);
         if (ChronoUnit.DAYS.between(LocalDate.now(), startTime.toLocalDate()) > maxAdvanceDays) {
             throw BusinessException.badRequest("ADVANCE_DAYS_EXCEEDED",
@@ -1109,10 +1143,20 @@ public class AvailabilityService {
         }
     }
 
+    // Đọc giá trị cấu hình số nguyên từ dịch vụ chính sách (kèm giá trị mặc định dự phòng).
     public long getPolicyLong(String key, long defaultValue) {
         return policyService.getLong(key, defaultValue);
     }
 
+    // =========================================================================================================
+    // [LÕI HỆ THỐNG] THUẬT TOÁN TRÍCH XUẤT GHẾ & BÀN ĐANG BẬN CHO SƠ ĐỒ THỜI GIAN THỰC (SEAT MAP ENGINE)
+    // - Cơ chế:
+    //   1. Quét giải phóng các đơn chờ duyệt quá hạn để đồng bộ trạng thái mới nhất.
+    //   2. Nếu phòng có đơn đặt trọn gói (Whole Room): Toàn bộ danh sách ghế và bàn trong phòng tự động chuyển sang bận.
+    //   3. Nếu phòng đặt theo ghế/bàn: Thu thập tất cả mã ghế (selectedSeatsList) và mã bàn (tableCode) từ các đơn
+    //      đang chiếm chỗ giao thoa thời gian (PENDING_APPROVAL, CONFIRMED, CHECKED_IN).
+    //   4. Trả về tập danh sách mã duy nhất (distinct) để Frontend đổi màu hiển thị trên sơ đồ ghế.
+    // =========================================================================================================
     @Transactional
     public List<String> getOccupiedSeats(Long spaceId, LocalDateTime startTime, LocalDateTime endTime) {
         if (spaceId == null || startTime == null || endTime == null) {
@@ -1123,6 +1167,7 @@ public class AvailabilityService {
                 spaceId, startTime, endTime, OCCUPYING_STATUSES
         );
 
+        // Trường hợp phòng bị đặt trọn gói: Khóa toàn bộ ghế và bàn trong phòng.
         boolean wholeRoomOccupied = overlapping.stream()
                 .anyMatch(b -> b.getTableId() == null && b.getSelectedSeatsList().isEmpty());
 
@@ -1156,6 +1201,7 @@ public class AvailabilityService {
             return Collections.emptyList();
         }
 
+        // Trường hợp đặt theo ghế hoặc theo bàn: Trích xuất các vị trí cụ thể đã bị chiếm chỗ.
         List<String> occupied = new ArrayList<>();
         for (Booking b : overlapping) {
             b.getSelectedSeatsList().forEach(s -> {
@@ -1176,6 +1222,7 @@ public class AvailabilityService {
         return occupied.stream().distinct().sorted().collect(Collectors.toList());
     }
 
+    // Sinh danh sách mã ghế tự động theo định dạng hàng cột (A1, A2...) dựa vào sức chứa phòng.
     public static List<String> generateDefaultSeatCodes(int capacity) {
         List<String> list = new ArrayList<>();
         int cols = (capacity <= 4) ? 2 : (capacity <= 12) ? Math.max(3, (int) Math.ceil(capacity / 2.0)) : (capacity <= 20) ? 5 : 6;
@@ -1192,6 +1239,7 @@ public class AvailabilityService {
         return list;
     }
 
+    // Trích xuất thời điểm bắt đầu tìm kiếm từ bộ lọc thời gian.
     private LocalDateTime resolveStartDateTime(SearchSpaceFilter filter) {
         if (filter.getStartDateTime() != null) return filter.getStartDateTime();
         if (filter.getDate() != null && filter.getStartTime() != null) {
@@ -1200,6 +1248,7 @@ public class AvailabilityService {
         return null;
     }
 
+    // Trích xuất thời điểm kết thúc tìm kiếm từ bộ lọc thời gian.
     private LocalDateTime resolveEndDateTime(SearchSpaceFilter filter) {
         if (filter.getEndDateTime() != null) return filter.getEndDateTime();
         if (filter.getDate() != null && filter.getEndTime() != null) {
@@ -1208,6 +1257,7 @@ public class AvailabilityService {
         return null;
     }
 
+    // Chuẩn hóa chuỗi thời gian về định dạng chuẩn HH:mm (ví dụ "07:00", "22:00").
     public String normalizeTimeStr(String hourStr, String defaultHour) {
         if (hourStr == null || hourStr.isBlank()) {
             return defaultHour;
@@ -1237,10 +1287,7 @@ public class AvailabilityService {
         return defaultHour;
     }
 
-    /**
-     * Lấy thông tin thời gian mở/đóng cửa của toàn bộ tòa nhà/hệ thống và các hạn mức đặt chỗ từ CSDL chính sách (Ngọc Anh).
-     * Chuẩn hóa luôn định dạng HH:mm (ví dụ 07:00, 22:00) để khớp 100% chuẩn HTML5 time input và logic frontend.
-     */
+    // Lấy thông tin thời gian mở/đóng cửa và hạn mức hệ thống từ CSDL chính sách và chuẩn hóa HH:mm.
     public com.eduspace.backend.policy.dto.response.PolicyResponse getOperatingHours() {
         var policy = policyService.getCurrentPolicy();
         if (policy != null) {

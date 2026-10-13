@@ -9,12 +9,11 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.util.List;
 
-/**
- * Repository tra cứu lịch bảo trì phục vụ module Đặt chỗ (Khánh Vân).
- */
+// Repository tra cứu lịch bảo trì phục vụ kiểm tra khả dụng cho module Đặt chỗ (Khánh Vân).
 @Repository
 public interface BookingMaintenanceRepository extends JpaRepository<MaintenanceBlock, Long> {
 
+    // Tra cứu danh sách các lịch bảo trì sắp tới của một phòng cụ thể.
     @Query("SELECT m FROM MaintenanceBlock m WHERE m.space.id = :spaceId " +
            "AND m.deletedAt IS NULL " +
            "AND m.endTime >= :now " +
@@ -24,6 +23,7 @@ public interface BookingMaintenanceRepository extends JpaRepository<MaintenanceB
             @Param("now") LocalDateTime now
     );
 
+    // Tra cứu các khối lịch bảo trì giao thoa với khoảng thời gian yêu cầu [startTime, endTime].
     @Query("SELECT m FROM MaintenanceBlock m WHERE m.space.id = :spaceId " +
            "AND m.deletedAt IS NULL " +
            "AND m.startTime < :endTime AND m.endTime > :startTime")
@@ -33,6 +33,7 @@ public interface BookingMaintenanceRepository extends JpaRepository<MaintenanceB
             @Param("endTime") LocalDateTime endTime
     );
 
+    // Lấy toàn bộ lịch bảo trì sắp tới của tất cả các phòng kèm thông tin phòng (JOIN FETCH).
     @Query("SELECT m FROM MaintenanceBlock m JOIN FETCH m.space " +
            "WHERE m.deletedAt IS NULL " +
            "AND m.endTime >= :now " +
