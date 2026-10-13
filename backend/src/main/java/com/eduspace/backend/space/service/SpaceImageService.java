@@ -48,6 +48,7 @@ public class SpaceImageService {
     @Value("${eduspace.storage.upload-root:uploads}")
     private String uploadRoot;
 
+    // Lấy danh sách ảnh của phòng (sắp xếp theo thứ tự hiển thị sortOrder)
     @Transactional(readOnly = true)
     public List<SpaceImageResponseKT> getImagesBySpace(Long spaceId) {
         findSpaceOrThrow(spaceId);
@@ -57,10 +58,12 @@ public class SpaceImageService {
                 .collect(Collectors.toList());
     }
 
+    // Thêm ảnh vào phòng bằng đường dẫn URL có sẵn
     @Transactional
     public SpaceImageResponseKT addImageUrl(Long spaceId, SpaceImageCreateRequestKT request) {
         Space space = findSpaceOrThrow(spaceId);
 
+        // 1. Kiểm tra giới hạn: Tối đa 10 ảnh trên một không gian
         if (spaceImageRepository.countBySpaceId(spaceId) >= MAX_IMAGES_PER_SPACE) {
             throw new AppException(
                     HttpStatus.CONFLICT,
@@ -77,8 +80,10 @@ public class SpaceImageService {
             );
         }
 
+        // 2. Xác định cờ ảnh chính (nếu là ảnh đầu tiên thì tự động thành ảnh chính)
         boolean shouldBePrimary = resolvePrimaryFlagOnAdd(spaceId, request.getIsPrimary());
 
+        // 3. Tạo Entity SpaceImage và lưu DB
         SpaceImage image = SpaceImage.builder()
                 .space(space)
                 .imageUrl(request.getImageUrl().trim())
@@ -90,10 +95,12 @@ public class SpaceImageService {
         return SpaceImageResponseKT.fromEntity(saved);
     }
 
+    // Tải file ảnh thực tế (MultipartFile) lên server và lưu vào phòng
     @Transactional
     public SpaceImageResponseKT uploadImage(Long spaceId, MultipartFile file, Boolean isPrimary, Integer sortOrder) {
         Space space = findSpaceOrThrow(spaceId);
 
+        // 1. Kiểm tra số lượng ảnh tối đa (10 ảnh)
         if (spaceImageRepository.countBySpaceId(spaceId) >= MAX_IMAGES_PER_SPACE) {
             throw new AppException(
                     HttpStatus.CONFLICT,
@@ -110,6 +117,7 @@ public class SpaceImageService {
             );
         }
 
+        // 2. Kiểm tra dung lượng file (tối đa 5MB)
         if (file.getSize() > MAX_FILE_SIZE) {
             throw new AppException(
                     HttpStatus.BAD_REQUEST,
@@ -118,6 +126,7 @@ public class SpaceImageService {
             );
         }
 
+        // 3. Kiểm tra định dạng file (chỉ cho phép JPG, PNG, WEBP)
         String contentType = file.getContentType();
         if (contentType == null || !ALLOWED_CONTENT_TYPES.contains(contentType.toLowerCase())) {
             throw new AppException(
@@ -127,6 +136,7 @@ public class SpaceImageService {
             );
         }
 
+        // 4. Lưu file vật lý vào thư mục uploads trên máy chủ
         StoredFile storedFile = saveFileLocally(file, contentType);
         boolean shouldBePrimary = resolvePrimaryFlagOnAdd(spaceId, isPrimary);
 
@@ -145,11 +155,13 @@ public class SpaceImageService {
         }
     }
 
+    // Đặt một ảnh làm ảnh đại diện chính (tự động bỏ cờ chính của ảnh cũ)
     @Transactional
     public SpaceImageResponseKT setPrimaryImage(Long imageId) {
         SpaceImage targetImage = findImageOrThrow(imageId);
         Long spaceId = targetImage.getSpace().getId();
 
+        // 1. Tìm ảnh chính hiện tại và bỏ cờ isPrimary = false
         Optional<SpaceImage> currentPrimaryOpt = spaceImageRepository.findBySpaceIdAndIsPrimaryTrue(spaceId);
         if (currentPrimaryOpt.isPresent()) {
             SpaceImage currentPrimary = currentPrimaryOpt.get();
@@ -159,11 +171,13 @@ public class SpaceImageService {
             }
         }
 
+        // 2. Đặt ảnh này thành ảnh chính isPrimary = true
         targetImage.setPrimary(true);
         SpaceImage saved = spaceImageRepository.save(targetImage);
         return SpaceImageResponseKT.fromEntity(saved);
     }
 
+    // Xóa ảnh (xóa bản ghi DB, xóa file vật lý, tự chọn ảnh tiếp theo làm ảnh chính nếu xóa ảnh chính)
     @Transactional
     public void deleteImage(Long imageId) {
         SpaceImage image = findImageOrThrow(imageId);
@@ -171,10 +185,12 @@ public class SpaceImageService {
         boolean wasPrimary = image.isPrimary();
         String imageUrl = image.getImageUrl();
 
+        // 1. Xóa trong database và xóa file trên đĩa cứng
         spaceImageRepository.delete(image);
         spaceImageRepository.flush();
         deleteStoredFile(imageUrl);
 
+        // 2. Nếu vừa xóa ảnh chính, tự động đôn ảnh đầu tiên còn lại lên làm ảnh chính mới
         if (wasPrimary) {
             List<SpaceImage> remainingImages = spaceImageRepository.findBySpaceIdOrderBySortOrderAscIdAsc(spaceId);
             if (!remainingImages.isEmpty()) {
@@ -185,10 +201,12 @@ public class SpaceImageService {
         }
     }
 
+    // Thay đổi thứ tự sắp xếp của danh sách ảnh
     @Transactional
     public List<SpaceImageResponseKT> reorderImages(Long spaceId, SpaceImageReorderRequestKT request) {
         findSpaceOrThrow(spaceId);
 
+        // Cập nhật lại trường sortOrder cho từng ảnh trong danh sách gửi lên
         if (request.getItems() != null) {
             for (SpaceImageReorderRequestKT.ImageOrderItemKT item : request.getItems()) {
                 SpaceImage img = findImageOrThrow(item.getImageId());
