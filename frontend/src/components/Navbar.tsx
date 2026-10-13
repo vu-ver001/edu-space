@@ -1,54 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import api from '../services/api';
 
 export const Navbar: React.FC = () => {
   const location = useLocation();
-  const [currentUser, setCurrentUser] = useState<string>('student@eduspace.vn');
-  const [userRole, setUserRole] = useState<string>('STUDENT');
-  const [loadingLogin, setLoadingLogin] = useState<boolean>(false);
+  const [currentUser, setCurrentUser] = useState<string>('');
+  const [userRole, setUserRole] = useState<string>('');
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('eduspace_demo_user');
-    if (savedUser) {
-      setCurrentUser(savedUser);
-      if (savedUser.includes('staff')) setUserRole('STAFF');
-      else if (savedUser.includes('admin')) setUserRole('ADMIN');
-      else setUserRole('STUDENT');
-    } else {
-      // Tự động đăng nhập test ban đầu
-      switchUser('student@eduspace.vn', 'STUDENT');
+    try {
+      const savedUser = JSON.parse(localStorage.getItem('eduspace_user') || 'null');
+      setCurrentUser(savedUser?.email || '');
+      setUserRole(savedUser?.role || '');
+    } catch {
+      setCurrentUser('');
+      setUserRole('');
     }
   }, []);
-
-  const switchUser = async (email: string, role: string) => {
-    setLoadingLogin(true);
-    try {
-      const res = await api.post<{ token: string }>('/api/auth/login', {
-        email,
-        password: '123456' // Mật khẩu chuẩn trong DB
-      }).catch(async () => {
-        // Fallback thử password
-        return await api.post<{ token: string }>('/api/auth/login', {
-          email,
-          password: 'password'
-        });
-      });
-
-      if (res?.data?.token) {
-        localStorage.setItem('eduspace_token', res.data.token);
-      }
-    } catch {
-      // Trong trường hợp chưa gọi được auth, vẫn lưu thông tin để fallback
-    } finally {
-      localStorage.setItem('eduspace_demo_user', email);
-      setCurrentUser(email);
-      setUserRole(role);
-      setLoadingLogin(false);
-      // Reload nhẹ để các component đồng bộ
-      window.dispatchEvent(new Event('user-switched'));
-    }
-  };
 
   const navItems = [
     { to: '/student/spaces', label: 'Tìm Không Gian', icon: '🔍', badge: 'M03' },
@@ -85,7 +52,7 @@ export const Navbar: React.FC = () => {
           })}
         </nav>
 
-        {/* Role Switcher Demo */}
+        {/* Hiển thị phiên hiện tại, không tự đăng nhập hoặc đổi danh tính. */}
         <div className="navbar-user-switcher">
           <div className="user-profile-badge">
             <span className="avatar-dot" />
@@ -96,30 +63,7 @@ export const Navbar: React.FC = () => {
           </div>
 
           <div className="quick-switch-buttons">
-            <button
-              title="Chuyển sang Sinh viên Lê Minh Tân"
-              className={`role-btn ${currentUser === 'student@eduspace.vn' ? 'active' : ''}`}
-              onClick={() => switchUser('student@eduspace.vn', 'STUDENT')}
-              disabled={loadingLogin}
-            >
-              SV: Tân
-            </button>
-            <button
-              title="Chuyển sang Sinh viên Nguyễn Thị Khánh Vân"
-              className={`role-btn ${currentUser === 'khanhvan@eduspace.vn' ? 'active' : ''}`}
-              onClick={() => switchUser('khanhvan@eduspace.vn', 'STUDENT')}
-              disabled={loadingLogin}
-            >
-              SV: Vân
-            </button>
-            <button
-              title="Chuyển sang Nhân viên Staff (Duyệt/Check-in)"
-              className={`role-btn ${currentUser === 'staff@eduspace.vn' ? 'active' : ''}`}
-              onClick={() => switchUser('staff@eduspace.vn', 'STAFF')}
-              disabled={loadingLogin}
-            >
-              Staff
-            </button>
+            <Link to="/login" className="role-btn">Đăng nhập tài khoản khác</Link>
           </div>
         </div>
       </div>

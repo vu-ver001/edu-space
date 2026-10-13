@@ -14,6 +14,8 @@ import com.eduspace.backend.booking.repository.BookingRepository;
 import com.eduspace.backend.booking.service.AvailabilityService;
 import com.eduspace.backend.booking.service.BookingService;
 import com.eduspace.backend.common.exception.BusinessException;
+import com.eduspace.backend.staff.entity.StaffAuditAction;
+import com.eduspace.backend.staff.service.StaffAuditService;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +34,7 @@ public class CheckInService {
     private final UserRepository userRepository;
     private final Clock checkInClock;
     private final BookingService bookingService;
+    private final StaffAuditService staffAuditService;
 
     @Transactional
     public BookingResponse checkIn(Long id) {
@@ -81,6 +84,11 @@ public class CheckInService {
                 .reason("Xác nhận có mặt sử dụng phòng")
                 .note("Check-in thành công")
                 .build());
+        if (role == Role.STAFF || role == Role.ADMIN) {
+            staffAuditService.logAction(actor.getId(), actor.getEmail(),
+                    StaffAuditAction.STAFF_CHECKED_IN_BOOKING, "BOOKING", booking.getId(),
+                    booking.getSpaceId(), "Nhân viên hỗ trợ check-in tại quầy cho sinh viên");
+        }
         return bookingService.toBookingResponse(booking, now);
     }
 

@@ -1,5 +1,6 @@
 package com.eduspace.backend.booking.service;
 
+import com.eduspace.backend.auth.entity.Role;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -16,6 +17,7 @@ import java.util.stream.Collectors;
 
 import com.eduspace.backend.booking.dto.request.CreateBookingRequest;
 import com.eduspace.backend.booking.dto.response.BookingResponse;
+import com.eduspace.backend.booking.dto.response.BookingAuditLogResponse;
 import com.eduspace.backend.booking.dto.response.BulkBookingFailureItem;
 import com.eduspace.backend.booking.dto.response.BulkBookingOperationResponse;
 import com.eduspace.backend.booking.dto.response.ConflictDetail;
@@ -38,6 +40,9 @@ import com.eduspace.backend.auth.repository.UserRepository;
 import com.eduspace.backend.auth.entity.User;
 import com.eduspace.backend.space.entity.SpaceTable;
 import com.eduspace.backend.space.repository.SpaceTableRepository;
+import com.eduspace.backend.notification.type.NotificationType;
+import com.eduspace.backend.staff.entity.StaffAuditAction;
+import com.eduspace.backend.staff.service.StaffAuditService;
 /**
  * Phân hệ Quản lý Đặt chỗ Lõi (Module M04).
  * Phụ trách: Nguyễn Thị Khánh Vân (Lead kỹ thuật).
@@ -58,6 +63,8 @@ public class BookingService {
     private final SpaceTableRepository spaceTableRepository;
     private final UserRepository userRepository;
     private final java.time.Clock checkInClock;
+    private final com.eduspace.backend.notification.service.NotificationService notificationService;
+    private final StaffAuditService staffAuditService;
     // ================= BEGIN KT =================
     private final com.eduspace.backend.staff.repository.MaintenanceBlockRepository maintenanceBlockRepository;
     // ================= END KT =================
@@ -417,6 +424,30 @@ public class BookingService {
         log.info("Tạo booking #{} thành công cho sinh viên {} tại phòng {} với trạng thái {}", 
                 booking.getId(), userEmail, space.getName(), initialStatus);
 
+        // === BẮN THÔNG BÁO TỰ ĐỘNG SAU KHI TẠO BOOKING ===
+        if (requiresApproval) {
+            // Nếu cần duyệt, gửi thông báo cho tất cả tài khoản STAFF
+            List<User> staffUsers = userRepository.findByRole(Role.STAFF);
+            for (User staff : staffUsers) {
+                notificationService.sendNotification(
+                        staff.getId(),
+                        NotificationType.PENDING_APPROVAL,
+                        "Yêu cầu đặt phòng mới cần duyệt",
+                        "Sinh viên " + userEmail + " vừa tạo yêu cầu đặt phòng tại " + space.getName() + " cần được phê duyệt.",
+                        booking.getId()
+                );
+            }
+        } else {
+            // Nếu duyệt tự động (CONFIRMED), gửi thông báo xác nhận cho sinh viên
+            notificationService.sendNotification(
+                    studentId,
+                    NotificationType.BOOKING_CONFIRMED,
+                    "Đặt phòng thành công",
+                    "Lịch đặt phòng " + space.getName() + " của bạn đã được xác nhận.",
+                    booking.getId()
+            );
+        }
+
         return toBookingResponse(booking, now);
     }
 
@@ -499,6 +530,30 @@ public class BookingService {
         return toBookingResponse(booking, LocalDateTime.now());
     }
 
+    @Transactional(readOnly = true)
+    public List<BookingAuditLogResponse> getBookingAuditLogs(Long id, String userEmail) {
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> BusinessException.notFound("BOOKING_NOT_FOUND", "Không tìm thấy booking với ID: " + id));
+        requireOwnerOrStaff(booking, userEmail);
+        return auditLogRepository.findByBookingIdOrderByPerformedAtDesc(id).stream()
+                .map(audit -> {
+                    String actorName = audit.getPerformedBy() == null ? null
+                            : userRepository.findById(audit.getPerformedBy())
+                                    .map(User::getFullName).orElse(null);
+                    return BookingAuditLogResponse.builder()
+                            .id(audit.getId())
+                            .bookingId(audit.getBookingId())
+                            .action(audit.getAction())
+                            .actionDescription(audit.getAction().getDescription())
+                            .performedByName(actorName)
+                            .performedByEmail(audit.getPerformedByEmail())
+                            .performedAt(audit.getPerformedAt())
+                            .reason(audit.getReason())
+                            .note(audit.getNote())
+                            .build();
+                }).toList();
+    }
+
     /**
      * Hủy booking trước giờ bắt đầu.
      */
@@ -538,6 +593,17 @@ public class BookingService {
                 .note("Giải phóng phòng cho sinh viên khác")
                 .build();
         auditLogRepository.save(audit);
+
+        AvailabilityService.SpaceCatalogItem space = availabilityService.getSpaceCatalogItem(booking.getSpaceId());
+        String spaceName = space != null ? space.getName() : "Phòng #" + booking.getSpaceId();
+
+        notificationService.sendNotification(
+                booking.getStudentId(),
+                NotificationType.CANCELLED,
+                "Hủy đặt phòng thành công",
+                "Lịch đặt phòng " + spaceName + " của bạn đã được hủy theo yêu cầu.",
+                booking.getId()
+        );
 
         log.info("Booking #{} đã bị hủy bởi {}", booking.getId(), userEmail);
         return toBookingResponse(booking, now);
@@ -583,9 +649,22 @@ public class BookingService {
                 .build();
         auditLogRepository.save(audit);
 
+        staffAuditService.logAction(audit.getPerformedBy(), staffEmail,
+                StaffAuditAction.BOOKING_APPROVED, "BOOKING", booking.getId(),
+                booking.getSpaceId(), "Staff phê duyệt đặt chỗ #" + booking.getId());
+
         log.info("Booking #{} đã được duyệt thành công bởi Staff {}", booking.getId(), staffEmail);
         BookingResponse response = toBookingResponse(booking, now);
         response.setMessage("Duyệt đặt phòng thành công");
+
+        notificationService.sendNotification(
+                booking.getStudentId(),
+                NotificationType.APPROVED,
+                "Đơn đặt phòng đã được duyệt",
+                "Yêu cầu đặt phòng của bạn đã được nhân viên vận hành phê duyệt.",
+                booking.getId()
+        );
+
         return response;
     }
 
@@ -628,9 +707,22 @@ public class BookingService {
                 .build();
         auditLogRepository.save(audit);
 
+        staffAuditService.logAction(audit.getPerformedBy(), staffEmail,
+                StaffAuditAction.BOOKING_REJECTED, "BOOKING", booking.getId(),
+                booking.getSpaceId(), "Lý do: " + rejectReason.trim());
+
         log.info("Booking #{} đã bị từ chối bởi Staff {}. Lý do: {}", booking.getId(), staffEmail, rejectReason);
         BookingResponse response = toBookingResponse(booking, now);
         response.setMessage("Từ chối đặt phòng thành công");
+
+        notificationService.sendNotification(
+                booking.getStudentId(),
+                NotificationType.REJECTED,
+                "Đơn đặt phòng bị từ chối",
+                "Lý do từ chối: " + rejectReason.trim(),
+                booking.getId()
+        );
+
         return response;
     }
 
@@ -799,9 +891,7 @@ public class BookingService {
         }
 
         LocalDateTime now = LocalDateTime.now();
-        List<Booking> bookings = bookingRepository.findTimelineBookings(
-                spaceId, fromTime, toTime, AvailabilityService.OCCUPYING_STATUSES
-        );
+        List<Booking> bookings = bookingRepository.findTimelineBookings(spaceId, fromTime, toTime);
 
         return bookings.stream()
                 .map(b -> toBookingResponse(b, now))

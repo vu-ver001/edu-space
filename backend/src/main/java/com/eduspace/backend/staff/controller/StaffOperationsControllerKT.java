@@ -22,7 +22,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/staff")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('STAFF')")
 public class StaffOperationsControllerKT {
 
     private final StaffOperationsService staffOperationsService;
@@ -33,6 +32,7 @@ public class StaffOperationsControllerKT {
      * GET /api/staff/bookings?status={optional}
      */
     @GetMapping("/bookings")
+    @PreAuthorize("hasRole('STAFF')")
     public ResponseEntity<List<BookingResponse>> getBookings(
             @RequestParam(required = false) BookingStatus status) {
         return ResponseEntity.ok(staffOperationsService.getBookingsForStaff(status));
@@ -43,6 +43,7 @@ public class StaffOperationsControllerKT {
      * GET /api/staff/spaces/{spaceId}/timeline?from={ISO-8601}&to={ISO-8601}
      */
     @GetMapping("/spaces/{spaceId}/timeline")
+    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")
     public ResponseEntity<StaffTimelineResponseKT> getSpaceTimeline(
             @PathVariable Long spaceId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
@@ -55,6 +56,7 @@ public class StaffOperationsControllerKT {
      * GET /api/staff/bookings/pending?spaceId={optional}
      */
     @GetMapping("/bookings/pending")
+    @PreAuthorize("hasRole('STAFF')")
     public ResponseEntity<List<PendingBookingResponseKT>> getPendingBookings(
             @RequestParam(required = false) Long spaceId) {
         return ResponseEntity.ok(staffOperationsService.getPendingBookings(spaceId));
@@ -65,6 +67,7 @@ public class StaffOperationsControllerKT {
      * POST /api/staff/bookings/{bookingId}/approve
      */
     @PostMapping("/bookings/{bookingId}/approve")
+    @PreAuthorize("hasRole('STAFF')")
     public ResponseEntity<BookingResponse> approveBooking(@PathVariable Long bookingId) {
         return ResponseEntity.ok(staffOperationsService.approveBooking(bookingId));
     }
@@ -74,6 +77,7 @@ public class StaffOperationsControllerKT {
      * POST /api/staff/bookings/{bookingId}/reject
      */
     @PostMapping("/bookings/{bookingId}/reject")
+    @PreAuthorize("hasRole('STAFF')")
     public ResponseEntity<BookingResponse> rejectBooking(
             @PathVariable Long bookingId,
             @Valid @RequestBody BookingRejectRequestKT request) {
@@ -85,6 +89,7 @@ public class StaffOperationsControllerKT {
      * POST /api/staff/bookings/{bookingId}/check-in
      */
     @PostMapping("/bookings/{bookingId}/check-in")
+    @PreAuthorize("hasRole('STAFF')")
     public ResponseEntity<BookingResponse> staffAssistedCheckIn(@PathVariable Long bookingId) {
         return ResponseEntity.ok(staffOperationsService.staffAssistedCheckIn(bookingId));
     }
@@ -95,9 +100,10 @@ public class StaffOperationsControllerKT {
      *     &actorUserId=...&from=yyyy-MM-dd&to=yyyy-MM-dd&page=0&size=10
      * - Có page/size (hoặc from/to/spaceName/actorUserId) -> trả trang (chuẩn cho AuditLogPage).
      * - Không có -> trả List (tương thích API cũ).
-     * - STAFF tự bị scope theo JWT.
+     * - STAFF tự bị scope theo JWT; ADMIN xem toàn hệ thống hoặc lọc theo actor.
      */
     @GetMapping("/audit-logs")
+    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")
     public ResponseEntity<?> getAuditLogs(
             @RequestParam(required = false) String action,
             @RequestParam(required = false) String targetType,
@@ -124,6 +130,7 @@ public class StaffOperationsControllerKT {
      * GET /api/staff/audit-logs/stats?... (cùng bộ lọc như /audit-logs)
      */
     @GetMapping("/audit-logs/stats")
+    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")
     public ResponseEntity<StaffAuditStatsResponseKT> getAuditStats(
             @RequestParam(required = false) String action,
             @RequestParam(required = false) String targetType,

@@ -181,14 +181,12 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
      * Lấy danh sách booking của một phòng trong khoảng thời gian cụ thể (dành cho hiển thị Space Timeline).
      */
     @Query("SELECT b FROM Booking b WHERE b.spaceId = :spaceId " +
-           "AND b.status IN :statuses " +
            "AND b.startTime < :toTime AND b.endTime > :fromTime " +
            "ORDER BY b.startTime ASC")
     List<Booking> findTimelineBookings(
             @Param("spaceId") Long spaceId,
             @Param("fromTime") LocalDateTime fromTime,
-            @Param("toTime") LocalDateTime toTime,
-            @Param("statuses") Collection<BookingStatus> statuses
+            @Param("toTime") LocalDateTime toTime
     );
     /**
      * Đếm booking đang chiếm chỗ của bàn cụ thể (chặn xóa bàn nếu > 0).

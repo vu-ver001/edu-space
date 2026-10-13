@@ -31,12 +31,4 @@ export const policyService = {
     });
   },
 
-  async quickAdminLogin(): Promise<string> {
-    const res = await api.post<{ token: string; tokenType: string }>('/api/auth/login', {
-      email: 'admin@eduspace.vn',
-      password: '123456',
-    });
-    localStorage.setItem('eduspace_token', res.data.token);
-    return res.data.token;
-  },
 };

@@ -103,6 +103,16 @@ export const staffApi = {
   },
 
   /**
+   * POST /api/staff/check-in/inspect
+   * Tra cứu thông tin booking từ mã một lần của sinh viên để đối chiếu thẻ SV.
+   * Chưa thực hiện check-in và chưa tiêu thụ token.
+   */
+  inspectCheckInToken: async (token: string): Promise<StaffBooking> => {
+    const res = await api.post<StaffBooking>('/api/staff/check-in/inspect', { token });
+    return res.data;
+  },
+
+  /**
    * POST /api/staff/check-in/scan
    * Quét mã một lần của sinh viên; backend tự tra token về booking rồi chạy
    * chung lệnh check-in. Trả về BookingResponse đầy đủ để hiển thị kết quả.

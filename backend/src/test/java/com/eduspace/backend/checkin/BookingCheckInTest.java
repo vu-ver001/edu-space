@@ -24,6 +24,7 @@ class BookingCheckInTest {
     BookingAuditLogRepository audits;
     UserRepository users;
     AvailabilityService availability;
+    com.eduspace.backend.staff.service.StaffAuditService staffAudits;
     CheckInService service;
     Booking booking;
     User actor;
@@ -51,12 +52,16 @@ class BookingCheckInTest {
     }
 
     void at(LocalDateTime now) {
+        staffAudits = mock(com.eduspace.backend.staff.service.StaffAuditService.class);
         var bookingService = new BookingService(bookings, audits, mock(StudentScheduleRepository.class),
                 availability, mock(com.eduspace.backend.space.repository.SpaceTableRepository.class), users,
                 Clock.fixed(now.toInstant(ZoneOffset.UTC), ZoneOffset.UTC),
+                mock(com.eduspace.backend.notification.service.NotificationService.class),
+                staffAudits,
                 mock(com.eduspace.backend.staff.repository.MaintenanceBlockRepository.class));
         service = new CheckInService(bookings, audits, availability, users,
-                Clock.fixed(now.toInstant(ZoneOffset.UTC), ZoneOffset.UTC), bookingService);
+                Clock.fixed(now.toInstant(ZoneOffset.UTC), ZoneOffset.UTC), bookingService,
+                staffAudits);
     }
 
     @AfterEach void clearContext() { SecurityContextHolder.clearContext(); }
@@ -71,6 +76,7 @@ class BookingCheckInTest {
         verify(audits).save(argThat(a -> a.getPerformedBy().equals(42L)
                 && a.getAction() == AuditAction.CHECK_IN && a.getBookingId().equals(7L)
                 && a.getPerformedAt().equals(response.getCheckedInAt())));
+        verifyNoInteractions(staffAudits);
     }
 
     @ParameterizedTest @ValueSource(ints = {-901, 901})
@@ -94,6 +100,9 @@ class BookingCheckInTest {
         actor.setRole(role);
         booking.setStudentId(99L);
         assertEquals(42L, service.checkIn(7L).getCheckedInBy());
+        verify(staffAudits).logAction(eq(42L), eq(actor.getEmail()),
+                eq(com.eduspace.backend.staff.entity.StaffAuditAction.STAFF_CHECKED_IN_BOOKING),
+                eq("BOOKING"), eq(7L), eq(1L), anyString());
     }
 
     @ParameterizedTest @EnumSource(value = BookingStatus.class, names = "CONFIRMED", mode = EnumSource.Mode.EXCLUDE)

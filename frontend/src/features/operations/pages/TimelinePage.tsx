@@ -81,6 +81,7 @@ const statusLabels: Record<string, string> = {
   REJECTED: 'REJECTED',
   EXPIRED: 'EXPIRED',
   COMPLETED: 'COMPLETED',
+  MAINTENANCE: 'Bảo trì',
 };
 
 const detailStatusLabels: Record<string, string> = {
@@ -93,6 +94,7 @@ const detailStatusLabels: Record<string, string> = {
   REJECTED: 'Đã từ chối',
   EXPIRED: 'Đã hết hạn',
   COMPLETED: 'Đã hoàn thành',
+  MAINTENANCE: 'Bảo trì',
 };
 
 const statusOptions = [
@@ -105,6 +107,7 @@ const statusOptions = [
   { value: 'REJECTED', label: 'REJECTED' },
   { value: 'EXPIRED', label: 'EXPIRED' },
   { value: 'COMPLETED', label: 'COMPLETED' },
+  { value: 'MAINTENANCE', label: 'Bảo trì' },
   { value: 'CONFLICT', label: 'Có khả năng xung đột' },
 ];
 
@@ -700,7 +703,7 @@ export const TimelinePage = () => {
           id: space.id,
           name: space.name,
           location: [space.building, space.floor].filter(Boolean).join(' · '),
-        }));
+        })).sort((a, b) => a.id - b.id);
         setSpaces(mapped);
         // Chọn không gian thật đầu tiên; nếu DB rỗng thì để rỗng và hiện thông báo.
         const firstId = mapped[0]?.id ?? '';
